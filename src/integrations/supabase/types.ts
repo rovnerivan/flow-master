@@ -14,16 +14,711 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      certifications: {
+        Row: {
+          certificate_url: string | null
+          certified_at: string
+          id: string
+          process_id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          certified_at?: string
+          id?: string
+          process_id: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          certificate_url?: string | null
+          certified_at?: string
+          id?: string
+          process_id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certifications_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certifications_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_completions: {
+        Row: {
+          checklist_item_id: string
+          completed_at: string
+          completion_date: string
+          id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          checklist_item_id: string
+          completed_at?: string
+          completion_date?: string
+          id?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          checklist_item_id?: string
+          completed_at?: string
+          completion_date?: string
+          id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_completions_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_completions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_items: {
+        Row: {
+          checklist_id: string
+          created_at: string
+          id: string
+          linked_process_id: string | null
+          order_index: number | null
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          team_id: string
+          title: string
+        }
+        Insert: {
+          checklist_id: string
+          created_at?: string
+          id?: string
+          linked_process_id?: string | null
+          order_index?: number | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          team_id: string
+          title: string
+        }
+        Update: {
+          checklist_id?: string
+          created_at?: string
+          id?: string
+          linked_process_id?: string | null
+          order_index?: number | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          team_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "daily_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_items_linked_process_id_fkey"
+            columns: ["linked_process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_items_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_checklists: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_checklists_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      error_logs: {
+        Row: {
+          description: string | null
+          error_type: string | null
+          estimated_loss_value: number | null
+          id: string
+          process_id: string | null
+          reported_at: string
+          team_id: string
+          user_id: string | null
+        }
+        Insert: {
+          description?: string | null
+          error_type?: string | null
+          estimated_loss_value?: number | null
+          id?: string
+          process_id?: string | null
+          reported_at?: string
+          team_id: string
+          user_id?: string | null
+        }
+        Update: {
+          description?: string | null
+          error_type?: string | null
+          estimated_loss_value?: number | null
+          id?: string
+          process_id?: string | null
+          reported_at?: string
+          team_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_logs_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "error_logs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      micro_learnings: {
+        Row: {
+          category: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          is_active: boolean | null
+          scheduled_date: string | null
+          script_text: string | null
+          team_id: string | null
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean | null
+          scheduled_date?: string | null
+          script_text?: string | null
+          team_id?: string | null
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean | null
+          scheduled_date?: string | null
+          script_text?: string | null
+          team_id?: string | null
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "micro_learnings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by_id: string | null
+          completed_at: string | null
+          due_date: string | null
+          id: string
+          process_id: string
+          status: Database["public"]["Enums"]["assignment_status"] | null
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by_id?: string | null
+          completed_at?: string | null
+          due_date?: string | null
+          id?: string
+          process_id: string
+          status?: Database["public"]["Enums"]["assignment_status"] | null
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by_id?: string | null
+          completed_at?: string | null
+          due_date?: string | null
+          id?: string
+          process_id?: string
+          status?: Database["public"]["Enums"]["assignment_status"] | null
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_assignments_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_steps: {
+        Row: {
+          content_type: Database["public"]["Enums"]["content_type"] | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          process_id: string
+          script_text: string | null
+          step_number: number
+          team_id: string
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          content_type?: Database["public"]["Enums"]["content_type"] | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          process_id: string
+          script_text?: string | null
+          step_number: number
+          team_id: string
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          content_type?: Database["public"]["Enums"]["content_type"] | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          process_id?: string
+          script_text?: string | null
+          step_number?: number
+          team_id?: string
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_steps_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_steps_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processes: {
+        Row: {
+          benchmark_time_min: number | null
+          created_at: string
+          creator_id: string | null
+          current_version: string | null
+          description: string | null
+          id: string
+          is_published: boolean | null
+          name: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          benchmark_time_min?: number | null
+          created_at?: string
+          creator_id?: string | null
+          current_version?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          name: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          benchmark_time_min?: number | null
+          created_at?: string
+          creator_id?: string | null
+          current_version?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          name?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processes_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          hire_date: string | null
+          id: string
+          job_title: string | null
+          reports_to_id: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          hire_date?: string | null
+          id: string
+          job_title?: string | null
+          reports_to_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          hire_date?: string | null
+          id?: string
+          job_title?: string | null
+          reports_to_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_reports_to_id_fkey"
+            columns: ["reports_to_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      step_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          process_id: string
+          step_id: string
+          team_id: string
+          time_spent_seconds: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          process_id: string
+          step_id: string
+          team_id: string
+          time_spent_seconds?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          process_id?: string
+          step_id?: string
+          team_id?: string
+          time_spent_seconds?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "step_completions_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "step_completions_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "process_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "step_completions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      step_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          is_confused: boolean | null
+          process_id: string
+          step_id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_confused?: boolean | null
+          process_id: string
+          step_id: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_confused?: boolean | null
+          process_id?: string
+          step_id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "step_feedback_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "step_feedback_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "process_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "step_feedback_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_feed: {
+        Row: {
+          content_text: string | null
+          content_type: Database["public"]["Enums"]["feed_content_type"] | null
+          created_at: string
+          id: string
+          image_url: string | null
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          content_text?: string | null
+          content_type?: Database["public"]["Enums"]["feed_content_type"] | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          content_text?: string | null
+          content_type?: Database["public"]["Enums"]["feed_content_type"] | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_feed_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          invite_code: string
+          is_active: boolean | null
+          name: string
+          subscription_plan: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          is_active?: boolean | null
+          name: string
+          subscription_plan?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          is_active?: boolean | null
+          name?: string
+          subscription_plan?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_team_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_admin_or_supervisor: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "business_admin" | "supervisor" | "employee"
+      assignment_status: "pending" | "in_progress" | "completed"
+      content_type: "video" | "text" | "checklist"
+      feed_content_type: "tip" | "achievement" | "certification"
+      priority_level: "high" | "medium" | "low"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +845,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "business_admin", "supervisor", "employee"],
+      assignment_status: ["pending", "in_progress", "completed"],
+      content_type: ["video", "text", "checklist"],
+      feed_content_type: ["tip", "achievement", "certification"],
+      priority_level: ["high", "medium", "low"],
+    },
   },
 } as const
