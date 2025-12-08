@@ -153,6 +153,75 @@ export type Database = {
           },
         ]
       }
+      culture_content: {
+        Row: {
+          category: string
+          content: string
+          content_type: string
+          created_at: string
+          creator_id: string
+          id: string
+          include_indirect_subordinates: boolean | null
+          is_active: boolean | null
+          target_branch_user_ids: string[] | null
+          target_levels: Database["public"]["Enums"]["hierarchy_level"][] | null
+          target_type: Database["public"]["Enums"]["culture_target_type"]
+          target_user_ids: string[] | null
+          team_id: string
+          title: string
+          updated_at: string
+          views_count: number | null
+        }
+        Insert: {
+          category?: string
+          content: string
+          content_type: string
+          created_at?: string
+          creator_id: string
+          id?: string
+          include_indirect_subordinates?: boolean | null
+          is_active?: boolean | null
+          target_branch_user_ids?: string[] | null
+          target_levels?:
+            | Database["public"]["Enums"]["hierarchy_level"][]
+            | null
+          target_type?: Database["public"]["Enums"]["culture_target_type"]
+          target_user_ids?: string[] | null
+          team_id: string
+          title: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          content_type?: string
+          created_at?: string
+          creator_id?: string
+          id?: string
+          include_indirect_subordinates?: boolean | null
+          is_active?: boolean | null
+          target_branch_user_ids?: string[] | null
+          target_levels?:
+            | Database["public"]["Enums"]["hierarchy_level"][]
+            | null
+          target_type?: Database["public"]["Enums"]["culture_target_type"]
+          target_user_ids?: string[] | null
+          team_id?: string
+          title?: string
+          updated_at?: string
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "culture_content_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_checklists: {
         Row: {
           created_at: string
@@ -696,12 +765,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_culture_content: {
+        Args: { content_id: string; viewer_id: string }
+        Returns: boolean
+      }
+      get_user_hierarchy_level: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["hierarchy_level"]
+      }
       get_user_team_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_direct_subordinate_of: {
+        Args: { subordinate_id: string; superior_id: string }
+        Returns: boolean
+      }
+      is_subordinate_of: {
+        Args: { subordinate_id: string; superior_id: string }
         Returns: boolean
       }
       is_team_admin_or_supervisor: {
@@ -717,7 +802,15 @@ export type Database = {
       app_role: "super_admin" | "business_admin" | "supervisor" | "employee"
       assignment_status: "pending" | "in_progress" | "completed"
       content_type: "video" | "text" | "checklist"
+      culture_target_type:
+        | "all_organization"
+        | "direct_reports"
+        | "all_subordinates"
+        | "specific_users"
+        | "specific_levels"
+        | "specific_branches"
       feed_content_type: "tip" | "achievement" | "certification"
+      hierarchy_level: "owner" | "admin" | "supervisor" | "employee"
       priority_level: "high" | "medium" | "low"
     }
     CompositeTypes: {
@@ -849,7 +942,16 @@ export const Constants = {
       app_role: ["super_admin", "business_admin", "supervisor", "employee"],
       assignment_status: ["pending", "in_progress", "completed"],
       content_type: ["video", "text", "checklist"],
+      culture_target_type: [
+        "all_organization",
+        "direct_reports",
+        "all_subordinates",
+        "specific_users",
+        "specific_levels",
+        "specific_branches",
+      ],
       feed_content_type: ["tip", "achievement", "certification"],
+      hierarchy_level: ["owner", "admin", "supervisor", "employee"],
       priority_level: ["high", "medium", "low"],
     },
   },
