@@ -40,6 +40,7 @@ import { PrerequisiteStatus } from '@/components/analytics/ProcessPrerequisites'
 interface ProcessViewerModalProps {
   processId: string;
   onClose: () => void;
+  isSimulation?: boolean;
 }
 
 // Mock process data with Phase 1 & 3 features
@@ -192,6 +193,7 @@ const ExtendedContentViewer: React.FC<{ items: ExtendedContentItem[] }> = ({ ite
 export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   processId,
   onClose,
+  isSimulation = false,
 }) => {
   const [view, setView] = useState<'overview' | 'learning'>('overview');
   const [currentStep, setCurrentStep] = useState(0);
@@ -744,6 +746,16 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      {/* Simulation Banner */}
+      {isSimulation && (
+        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-center gap-2 shrink-0">
+          <Eye className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-primary">
+            Modo simulación - Así lo verá un empleado
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <button
