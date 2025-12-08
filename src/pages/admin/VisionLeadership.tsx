@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Video, Mic, FileText, Link2, MoreVertical, Edit, Trash2, Eye, Play, Search, Users, Building2, UserCheck, GitBranch, Layers } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Video, Mic, FileText, Link2, MoreVertical, Edit, Trash2, Eye, Play, Search, Users, Building2, UserCheck, GitBranch, Layers, Upload, Image, File, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -23,12 +24,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 type TargetType = 'all_organization' | 'direct_reports' | 'all_subordinates' | 'specific_users' | 'specific_levels' | 'specific_branches';
 type HierarchyLevel = 'owner' | 'admin' | 'supervisor' | 'employee';
-type ContentType = 'video' | 'audio' | 'text' | 'link';
+
+interface ContentItem {
+  id: string;
+  type: 'video' | 'audio' | 'text' | 'link' | 'image' | 'document';
+  content: string;
+  fileName?: string;
+}
 
 interface CultureContent {
   id: string;
   title: string;
-  content_type: ContentType;
+  content_type: string;
   content: string;
   category: string;
   target_type: TargetType;
@@ -68,22 +75,13 @@ const hierarchyLevelLabels: Record<HierarchyLevel, string> = {
   employee: 'Empleados',
 };
 
-const getTypeIcon = (type: ContentType) => {
-  switch (type) {
-    case 'video': return Video;
-    case 'audio': return Mic;
-    case 'text': return FileText;
-    case 'link': return Link2;
-  }
-};
-
-const getTypeColor = (type: ContentType) => {
-  switch (type) {
-    case 'video': return 'bg-red-500/20 text-red-400';
-    case 'audio': return 'bg-purple-500/20 text-purple-400';
-    case 'text': return 'bg-blue-500/20 text-blue-400';
-    case 'link': return 'bg-green-500/20 text-green-400';
-  }
+const contentTypeConfig = {
+  text: { icon: FileText, label: 'Texto', color: 'bg-blue-500/20 text-blue-400' },
+  video: { icon: Video, label: 'Video', color: 'bg-red-500/20 text-red-400' },
+  audio: { icon: Mic, label: 'Audio', color: 'bg-purple-500/20 text-purple-400' },
+  link: { icon: Link2, label: 'Enlace', color: 'bg-green-500/20 text-green-400' },
+  image: { icon: Image, label: 'Imagen', color: 'bg-amber-500/20 text-amber-400' },
+  document: { icon: File, label: 'Documento', color: 'bg-cyan-500/20 text-cyan-400' },
 };
 
 const getTargetLabel = (content: CultureContent) => {
@@ -97,22 +95,37 @@ const getTargetLabel = (content: CultureContent) => {
   }
 };
 
+const getMainContentType = (content: CultureContent) => {
+  // Parse content_type which might be comma-separated now
+  const types = content.content_type.split(',');
+  return types[0] as keyof typeof contentTypeConfig;
+};
+
 export const VisionLeadership: React.FC = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreator, setShowCreator] = useState(false);
-  const [selectedType, setSelectedType] = useState<ContentType>('text');
+  
+  // Multiple content items
+  const [contentItems, setContentItems] = useState<ContentItem[]>([
+    { id: '1', type: 'text', content: '' }
+  ]);
+  
   const [formData, setFormData] = useState({
     title: '',
-    content: '',
     category: 'Visión',
-    url: '',
     targetType: 'direct_reports' as TargetType,
     targetUserIds: [] as string[],
     targetLevels: [] as HierarchyLevel[],
     targetBranchUserIds: [] as string[],
     includeIndirectSubordinates: true,
   });
+
+  // File input refs
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch current user
   const { data: currentUser } = useQuery({
@@ -123,7 +136,7 @@ export const VisionLeadership: React.FC = () => {
     },
   });
 
-  // Fetch user's role to determine available options
+  // Fetch user's role
   const { data: userRole } = useQuery({
     queryKey: ['userRole', currentUser?.id],
     queryFn: async () => {
@@ -138,13 +151,12 @@ export const VisionLeadership: React.FC = () => {
     enabled: !!currentUser?.id,
   });
 
-  // Fetch subordinates (for selecting specific users/branches)
+  // Fetch subordinates
   const { data: subordinates = [] } = useQuery({
     queryKey: ['subordinates', currentUser?.id],
     queryFn: async () => {
       if (!currentUser?.id) return [];
       
-      // Get user's team_id first
       const { data: profile } = await supabase
         .from('profiles')
         .select('team_id')
@@ -153,7 +165,6 @@ export const VisionLeadership: React.FC = () => {
       
       if (!profile?.team_id) return [];
 
-      // Get all team members with their roles
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, job_title, reports_to_id')
@@ -161,7 +172,6 @@ export const VisionLeadership: React.FC = () => {
       
       if (!profiles) return [];
 
-      // Get roles for all users
       const userIds = profiles.map(p => p.id);
       const { data: roles } = await supabase
         .from('user_roles')
@@ -178,10 +188,6 @@ export const VisionLeadership: React.FC = () => {
     enabled: !!currentUser?.id,
   });
 
-  // Get direct subordinates (those who report to current user)
-  const directSubordinates = subordinates.filter(s => s.reports_to_id === currentUser?.id);
-  
-  // Get managers/supervisors who can be branch roots
   const branchRoots = subordinates.filter(s => 
     s.role === 'business_admin' || s.role === 'supervisor'
   );
@@ -250,13 +256,11 @@ export const VisionLeadership: React.FC = () => {
   // Set active mutation
   const setActiveMutation = useMutation({
     mutationFn: async (id: string) => {
-      // First deactivate all
       await supabase
         .from('culture_content')
         .update({ is_active: false })
         .neq('id', id);
       
-      // Then activate selected
       const { error } = await supabase
         .from('culture_content')
         .update({ is_active: true })
@@ -289,16 +293,42 @@ export const VisionLeadership: React.FC = () => {
   const resetForm = () => {
     setFormData({
       title: '',
-      content: '',
       category: 'Visión',
-      url: '',
       targetType: 'direct_reports',
       targetUserIds: [],
       targetLevels: [],
       targetBranchUserIds: [],
       includeIndirectSubordinates: true,
     });
-    setSelectedType('text');
+    setContentItems([{ id: '1', type: 'text', content: '' }]);
+  };
+
+  const addContentItem = (type: ContentItem['type']) => {
+    setContentItems([...contentItems, { 
+      id: Date.now().toString(), 
+      type, 
+      content: '' 
+    }]);
+  };
+
+  const updateContentItem = (id: string, content: string, fileName?: string) => {
+    setContentItems(contentItems.map(item => 
+      item.id === id ? { ...item, content, fileName } : item
+    ));
+  };
+
+  const removeContentItem = (id: string) => {
+    if (contentItems.length > 1) {
+      setContentItems(contentItems.filter(item => item.id !== id));
+    }
+  };
+
+  const handleFileUpload = (itemId: string, file: File, type: ContentItem['type']) => {
+    // In real implementation, upload to Supabase Storage
+    // For now, create a local URL
+    const url = URL.createObjectURL(file);
+    updateContentItem(itemId, url, file.name);
+    toast.success(`${file.name} cargado`);
   };
 
   const handleCreate = () => {
@@ -306,19 +336,27 @@ export const VisionLeadership: React.FC = () => {
       toast.error('Ingresa un título');
       return;
     }
-    if (selectedType === 'text' && !formData.content) {
-      toast.error('Ingresa el contenido del mensaje');
-      return;
-    }
-    if ((selectedType === 'video' || selectedType === 'audio' || selectedType === 'link') && !formData.url) {
-      toast.error('Ingresa la URL');
+    
+    const validItems = contentItems.filter(item => item.content.trim());
+    if (validItems.length === 0) {
+      toast.error('Agrega al menos un contenido');
       return;
     }
 
+    // Build content string (JSON for multiple items)
+    const contentTypes = validItems.map(item => item.type).join(',');
+    const contentData = validItems.length === 1 
+      ? validItems[0].content 
+      : JSON.stringify(validItems.map(item => ({
+          type: item.type,
+          content: item.content,
+          fileName: item.fileName
+        })));
+
     createMutation.mutate({
       title: formData.title,
-      content_type: selectedType,
-      content: selectedType === 'text' ? formData.content : formData.url,
+      content_type: contentTypes,
+      content: contentData,
       category: formData.category,
       target_type: formData.targetType,
       target_user_ids: formData.targetUserIds,
@@ -336,16 +374,154 @@ export const VisionLeadership: React.FC = () => {
 
   // Determine available target options based on role
   const availableTargetOptions = targetTypeOptions.filter(opt => {
-    // Owners can use all options
     if (userRole === 'business_admin' || userRole === 'super_admin') {
       return true;
     }
-    // Supervisors can't send to all organization
     if (userRole === 'supervisor' && opt.value === 'all_organization') {
       return false;
     }
     return true;
   });
+
+  const renderContentItemEditor = (item: ContentItem, index: number) => {
+    const config = contentTypeConfig[item.type];
+    const Icon = config.icon;
+
+    return (
+      <div key={item.id} className="p-4 rounded-xl bg-secondary/30 border border-border space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={cn("p-2 rounded-lg", config.color)}>
+              <Icon className="w-4 h-4" />
+            </div>
+            <span className="font-medium text-sm text-foreground">{config.label}</span>
+            {item.fileName && (
+              <span className="text-xs text-muted-foreground">({item.fileName})</span>
+            )}
+          </div>
+          {contentItems.length > 1 && (
+            <button
+              onClick={() => removeContentItem(item.id)}
+              className="p-1 rounded hover:bg-destructive/10 text-destructive"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {item.type === 'text' && (
+          <Textarea
+            placeholder="Escribe tu mensaje inspiracional..."
+            value={item.content}
+            onChange={(e) => updateContentItem(item.id, e.target.value)}
+            rows={4}
+          />
+        )}
+
+        {item.type === 'link' && (
+          <Input
+            placeholder="https://..."
+            value={item.content}
+            onChange={(e) => updateContentItem(item.id, e.target.value)}
+          />
+        )}
+
+        {(item.type === 'video' || item.type === 'audio') && (
+          <div className="space-y-3">
+            <Input
+              placeholder={item.type === 'video' ? 'https://youtube.com/...' : 'https://soundcloud.com/...'}
+              value={item.content}
+              onChange={(e) => updateContentItem(item.id, e.target.value)}
+            />
+            <div className="text-center">
+              <span className="text-xs text-muted-foreground">o</span>
+            </div>
+            <input
+              ref={item.type === 'video' ? videoInputRef : audioInputRef}
+              type="file"
+              accept={item.type === 'video' ? 'video/*' : 'audio/*'}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(item.id, file, item.type);
+              }}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => {
+                if (item.type === 'video') videoInputRef.current?.click();
+                else audioInputRef.current?.click();
+              }}
+            >
+              <Upload className="w-4 h-4" />
+              Subir archivo {item.type === 'video' ? 'de video' : 'de audio'}
+            </Button>
+          </div>
+        )}
+
+        {item.type === 'image' && (
+          <div className="space-y-3">
+            {item.content && (
+              <div className="rounded-lg overflow-hidden max-h-48">
+                <img src={item.content} alt="Preview" className="w-full object-cover" />
+              </div>
+            )}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(item.id, file, 'image');
+              }}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <Upload className="w-4 h-4" />
+              {item.content ? 'Cambiar imagen' : 'Subir imagen'}
+            </Button>
+          </div>
+        )}
+
+        {item.type === 'document' && (
+          <div className="space-y-3">
+            {item.fileName && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-background border border-border">
+                <File className="w-5 h-5 text-primary" />
+                <span className="text-sm text-foreground flex-1">{item.fileName}</span>
+              </div>
+            )}
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFileUpload(item.id, file, 'document');
+              }}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => documentInputRef.current?.click()}
+            >
+              <Upload className="w-4 h-4" />
+              {item.content ? 'Cambiar documento' : 'Subir documento'}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -377,7 +553,11 @@ export const VisionLeadership: React.FC = () => {
       {/* Content Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredContents.map((content) => {
-          const TypeIcon = getTypeIcon(content.content_type);
+          const mainType = getMainContentType(content);
+          const TypeIcon = contentTypeConfig[mainType]?.icon || FileText;
+          const typeColor = contentTypeConfig[mainType]?.color || 'bg-blue-500/20 text-blue-400';
+          const hasMultiple = content.content_type.includes(',');
+          
           return (
             <div
               key={content.id}
@@ -387,10 +567,15 @@ export const VisionLeadership: React.FC = () => {
               )}
             >
               <div className="flex items-start justify-between mb-3">
-                <div className={cn("p-2 rounded-lg", getTypeColor(content.content_type))}>
+                <div className={cn("p-2 rounded-lg", typeColor)}>
                   <TypeIcon className="w-5 h-5" />
                 </div>
                 <div className="flex items-center gap-2">
+                  {hasMultiple && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-muted-foreground">
+                      +{content.content_type.split(',').length - 1}
+                    </span>
+                  )}
                   {content.is_active && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
                       Activo
@@ -438,7 +623,6 @@ export const VisionLeadership: React.FC = () => {
                 <span>{new Date(content.created_at).toLocaleDateString()}</span>
               </div>
 
-              {/* Target info */}
               <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                 <Users className="w-3 h-3" />
                 <span>{getTargetLabel(content)}</span>
@@ -446,7 +630,9 @@ export const VisionLeadership: React.FC = () => {
 
               <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
                 <span>{content.views_count} visualizaciones</span>
-                <span className="capitalize">{content.content_type === 'text' ? 'Mensaje' : content.content_type}</span>
+                <span className="capitalize">
+                  {hasMultiple ? 'Múltiple' : contentTypeConfig[mainType]?.label || mainType}
+                </span>
               </div>
             </div>
           );
@@ -473,38 +659,12 @@ export const VisionLeadership: React.FC = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Crear mensaje de liderazgo</DialogTitle>
+            <DialogDescription>
+              Combina texto, videos, audios, imágenes y documentos en un solo mensaje
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 pt-4">
-            {/* Type Selection */}
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                Tipo de contenido
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { type: 'text' as const, icon: FileText, label: 'Texto' },
-                  { type: 'video' as const, icon: Video, label: 'Video' },
-                  { type: 'audio' as const, icon: Mic, label: 'Audio' },
-                  { type: 'link' as const, icon: Link2, label: 'Enlace' },
-                ].map(({ type, icon: Icon, label }) => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedType(type)}
-                    className={cn(
-                      "p-3 rounded-xl border text-center transition-all",
-                      selectedType === type
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card hover:border-primary/50"
-                    )}
-                  >
-                    <Icon className="w-5 h-5 mx-auto mb-1" />
-                    <span className="text-xs">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Title */}
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">
@@ -537,6 +697,35 @@ export const VisionLeadership: React.FC = () => {
                     {cat}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Content Items */}
+            <div className="space-y-4">
+              <label className="text-sm font-medium text-foreground block">
+                Contenido
+              </label>
+              
+              {contentItems.map((item, index) => renderContentItemEditor(item, index))}
+
+              {/* Add Content Buttons */}
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(contentTypeConfig).map(([type, config]) => {
+                  const Icon = config.icon;
+                  return (
+                    <Button
+                      key={type}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => addContentItem(type as ContentItem['type'])}
+                    >
+                      <Icon className="w-4 h-4" />
+                      + {config.label}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 
@@ -713,46 +902,6 @@ export const VisionLeadership: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* Content based on type */}
-            {selectedType === 'text' ? (
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Contenido del mensaje
-                </label>
-                <Textarea
-                  placeholder="Escribe tu mensaje inspiracional..."
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  rows={8}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Puedes usar **texto** para negrita y saltos de línea para párrafos
-                </p>
-              </div>
-            ) : (
-              <div>
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  URL del {selectedType === 'video' ? 'video' : selectedType === 'audio' ? 'audio' : 'enlace'}
-                </label>
-                <Input
-                  placeholder={
-                    selectedType === 'video' 
-                      ? 'https://youtube.com/watch?v=...' 
-                      : selectedType === 'audio'
-                      ? 'https://soundcloud.com/...'
-                      : 'https://...'
-                  }
-                  value={formData.url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-                />
-                {selectedType === 'video' && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Soporta YouTube, Vimeo, Loom y enlaces directos
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">

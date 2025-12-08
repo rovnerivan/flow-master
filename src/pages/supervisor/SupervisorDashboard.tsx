@@ -1335,18 +1335,10 @@ const ProcessesPage: React.FC = () => {
 };
 
 // Vision Leadership Page (reuses admin component)
+import VisionLeadership from '../admin/VisionLeadership';
+
 const VisionLeadershipPage: React.FC = () => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Visión y Liderazgo</h1>
-        <p className="text-muted-foreground">Crea contenido inspiracional para tu equipo</p>
-      </div>
-      <div className="text-center py-12 text-muted-foreground">
-        Usa esta sección para compartir mensajes de liderazgo con tu equipo.
-      </div>
-    </div>
-  );
+  return <VisionLeadership />;
 };
 
 // Supervisor Settings Page
