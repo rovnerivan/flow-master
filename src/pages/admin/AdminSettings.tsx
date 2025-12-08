@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Users, Bell, Shield, Palette, Copy, Check } from 'lucide-react';
+import { Building2, Users, Bell, Shield, Palette, Copy, Check, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 const AdminSettings: React.FC = () => {
   const [codeCopied, setCodeCopied] = useState(false);
+  const [allowManualTimeEntry, setAllowManualTimeEntry] = useState(false);
   const inviteCode = 'FLOW12345';
 
   const copyCode = () => {
@@ -14,6 +15,15 @@ const AdminSettings: React.FC = () => {
     setCodeCopied(true);
     toast.success('Código copiado');
     setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  const handleManualTimeToggle = (checked: boolean) => {
+    setAllowManualTimeEntry(checked);
+    // In real implementation, save to Supabase
+    toast.success(checked 
+      ? 'Registro manual de tiempo habilitado para la empresa' 
+      : 'Registro manual de tiempo deshabilitado para la empresa'
+    );
   };
 
   return (
@@ -85,6 +95,37 @@ const AdminSettings: React.FC = () => {
                 <Copy className="w-4 h-4" />
               )}
             </Button>
+          </div>
+        </div>
+
+        {/* Task & Time Settings */}
+        <div className="kpi-card">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Clock className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Configuración de Tareas
+            </h2>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
+              <div className="flex-1 pr-4">
+                <p className="font-medium text-foreground">Permitir registro manual de tiempo</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Los empleados podrán ingresar el tiempo de sus tareas manualmente en lugar de usar el temporizador. 
+                  Útil cuando la precisión del cronómetro no es crítica.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2 italic">
+                  Los supervisores pueden anular esta configuración para su equipo específico.
+                </p>
+              </div>
+              <Switch 
+                checked={allowManualTimeEntry}
+                onCheckedChange={handleManualTimeToggle}
+              />
+            </div>
           </div>
         </div>
 

@@ -1354,6 +1354,87 @@ const VisionLeadershipPage: React.FC = () => {
   );
 };
 
+// Supervisor Settings Page
+const SupervisorSettingsPage: React.FC = () => {
+  const [manualTimeOverride, setManualTimeOverride] = useState<boolean | null>(null);
+
+  const handleOverrideChange = (value: 'inherit' | 'allow' | 'deny') => {
+    const newValue = value === 'inherit' ? null : value === 'allow';
+    setManualTimeOverride(newValue);
+    // In real implementation, save to Supabase profiles.manual_time_entry_override
+    if (value === 'inherit') {
+      toast.success('Usando configuración de la empresa');
+    } else if (value === 'allow') {
+      toast.success('Tiempo manual habilitado para tu equipo');
+    } else {
+      toast.success('Tiempo manual deshabilitado para tu equipo');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Configuración del Equipo</h1>
+        <p className="text-muted-foreground">
+          Personaliza las opciones para tu equipo
+        </p>
+      </div>
+
+      <div className="kpi-card">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Clock className="w-5 h-5 text-primary" />
+          </div>
+          <h2 className="text-lg font-semibold text-foreground">
+            Registro de Tiempo
+          </h2>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg bg-secondary/50 border border-border">
+            <p className="font-medium text-foreground mb-2">Registro manual de tiempo para empleados</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Decide si los miembros de tu equipo pueden ingresar tiempos manualmente o deben usar el temporizador.
+            </p>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={manualTimeOverride === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleOverrideChange('inherit')}
+              >
+                Usar config. empresa
+              </Button>
+              <Button
+                variant={manualTimeOverride === true ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleOverrideChange('allow')}
+                className={manualTimeOverride === true ? "bg-success hover:bg-success/90" : ""}
+              >
+                Permitir manual
+              </Button>
+              <Button
+                variant={manualTimeOverride === false ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleOverrideChange('deny')}
+                className={manualTimeOverride === false ? "bg-destructive hover:bg-destructive/90" : ""}
+              >
+                Solo temporizador
+              </Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground mt-3">
+              {manualTimeOverride === null && "📋 Tu equipo seguirá la configuración global de la empresa."}
+              {manualTimeOverride === true && "✅ Tu equipo puede registrar tiempos manualmente."}
+              {manualTimeOverride === false && "⏱️ Tu equipo debe usar el temporizador obligatoriamente."}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Sidebar
 const SupervisorSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
   const navigate = useNavigate();
@@ -1483,6 +1564,7 @@ const SupervisorDashboard: React.FC = () => {
             <Route path="vision" element={<VisionLeadershipPage />} />
             <Route path="performance" element={<PerformancePage />} />
             <Route path="my-cargo" element={<MyCargoPage />} />
+            <Route path="settings" element={<SupervisorSettingsPage />} />
             <Route path="*" element={<SupervisorHome />} />
           </Routes>
         </main>
