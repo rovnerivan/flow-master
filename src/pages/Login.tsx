@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -12,20 +14,84 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate login - replace with actual auth
-    setTimeout(() => {
-      setIsLoading(false);
-      // Demo: route based on email
-      if (email.includes('admin')) {
-        navigate('/admin');
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        redirectBasedOnRole(session.user.id);
+      }
+    };
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        redirectBasedOnRole(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const redirectBasedOnRole = async (userId: string) => {
+    try {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (roles && roles.length > 0) {
+        const userRoles = roles.map(r => r.role);
+        
+        if (userRoles.includes('super_admin')) {
+          navigate('/superadmin');
+        } else if (userRoles.includes('business_admin')) {
+          navigate('/admin');
+        } else if (userRoles.includes('supervisor')) {
+          navigate('/admin');
+        } else {
+          navigate('/employee');
+        }
       } else {
         navigate('/employee');
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Error checking roles:', error);
+      navigate('/employee');
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Email o contraseña incorrectos');
+        } else {
+          toast.error(error.message);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        toast.success('¡Bienvenido de vuelta!');
+        // Redirect will happen via auth state change listener
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Error al iniciar sesión. Intenta de nuevo.');
+    }
+
+    setIsLoading(false);
   };
 
   return (
@@ -123,16 +189,8 @@ const Login: React.FC = () => {
                 onClick={() => navigate('/register')}
                 className="text-primary font-medium hover:underline"
               >
-                Regístrate con código de invitación
+                Regístrate aquí
               </button>
-            </p>
-          </div>
-
-          {/* Demo hint */}
-          <div className="mt-6 p-4 rounded-xl bg-secondary/50 border border-border">
-            <p className="text-xs text-muted-foreground text-center">
-              <strong>Demo:</strong> Usa "admin@test.com" para ver el panel de administración
-              o cualquier otro email para la vista de empleado.
             </p>
           </div>
         </div>
