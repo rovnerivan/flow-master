@@ -212,18 +212,18 @@ const SuperAdminAnalytics: React.FC = () => {
   const { dateRange } = useDateRangeFilter();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Analíticas SaaS</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Analíticas SaaS</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Métricas de negocio, producto y salud de clientes
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[130px] sm:w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -233,10 +233,10 @@ const SuperAdminAnalytics: React.FC = () => {
               <SelectItem value="12m">Últimos 12 meses</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" className="shrink-0">
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2 hidden sm:flex">
             <Download className="w-4 h-4" />
             Exportar
           </Button>
@@ -245,11 +245,11 @@ const SuperAdminAnalytics: React.FC = () => {
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="revenue">Ingresos</TabsTrigger>
-          <TabsTrigger value="product">Producto</TabsTrigger>
-          <TabsTrigger value="customers">Clientes</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-4 h-auto">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">Resumen</TabsTrigger>
+          <TabsTrigger value="revenue" className="text-xs sm:text-sm py-2">Ingresos</TabsTrigger>
+          <TabsTrigger value="product" className="text-xs sm:text-sm py-2">Producto</TabsTrigger>
+          <TabsTrigger value="customers" className="text-xs sm:text-sm py-2">Clientes</TabsTrigger>
         </TabsList>
 
         {/* OVERVIEW TAB */}

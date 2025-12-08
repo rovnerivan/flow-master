@@ -1,25 +1,18 @@
-import React, { useState } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import {
   Building2,
   Users,
   BarChart3,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
   TrendingUp,
   AlertTriangle,
   DollarSign,
   Activity,
-  MessageCircle,
 } from 'lucide-react';
-import { Logo } from '@/components/icons/Logo';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import SuperAdminCompanies from './SuperAdminCompanies';
 import SuperAdminUsers from './SuperAdminUsers';
 import SuperAdminAnalytics from './SuperAdminAnalytics';
@@ -58,21 +51,29 @@ const mockCompanies = [
   },
 ];
 
+const superAdminNavItems = [
+  { icon: BarChart3, label: 'Dashboard', path: '/superadmin' },
+  { icon: Building2, label: 'Empresas', path: '/superadmin/companies' },
+  { icon: Users, label: 'Usuarios', path: '/superadmin/users' },
+  { icon: TrendingUp, label: 'Analíticas', path: '/superadmin/analytics' },
+  { icon: Activity, label: 'Sistema', path: '/superadmin/system' },
+];
+
 const SuperAdminHome: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Panel de Control SaaS</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Panel de Control SaaS</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Vista general de todas las empresas y métricas del sistema
         </p>
       </div>
 
       {/* Global KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
           title="Empresas Activas"
           value={mockCompanies.length.toString()}
@@ -106,8 +107,8 @@ const SuperAdminHome: React.FC = () => {
 
       {/* Companies Table */}
       <div className="kpi-card">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">
             Empresas Registradas
           </h2>
           <Button variant="outline" size="sm">
@@ -115,7 +116,52 @@ const SuperAdminHome: React.FC = () => {
           </Button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="space-y-3 lg:hidden">
+          {mockCompanies.map((company) => (
+            <div
+              key={company.id}
+              className="p-4 rounded-lg border border-border hover:bg-secondary/30 transition-colors"
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground truncate">{company.name}</p>
+                  <p className="text-xs text-muted-foreground">Desde {company.createdAt}</p>
+                </div>
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success shrink-0">
+                  Activo
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Plan</p>
+                  <span className={cn(
+                    'px-2 py-0.5 rounded-full text-xs font-medium inline-block mt-1',
+                    company.plan === 'Enterprise' && 'bg-purple-500/20 text-purple-500',
+                    company.plan === 'Pro' && 'bg-primary/20 text-primary',
+                    company.plan === 'Basic' && 'bg-secondary text-muted-foreground'
+                  )}>
+                    {company.plan}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Empleados</p>
+                  <p className="font-medium text-foreground">{company.employees}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Cumplimiento</p>
+                  <p className="font-medium text-foreground">{company.compliance}%</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
@@ -183,22 +229,22 @@ const SuperAdminHome: React.FC = () => {
 
       {/* System Alerts */}
       <div className="kpi-card">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
+        <h2 className="text-base sm:text-lg font-semibold text-foreground mb-4">
           Alertas del Sistema
         </h2>
         <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/10 border border-warning/20">
-            <AlertTriangle className="w-5 h-5 text-warning" />
-            <div className="flex-1">
+          <div className="flex items-start sm:items-center gap-3 p-3 rounded-lg bg-warning/10 border border-warning/20">
+            <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5 sm:mt-0" />
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
                 Retail Corp tiene bajo cumplimiento (75%)
               </p>
               <p className="text-xs text-muted-foreground">Hace 2 horas</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <div className="flex-1">
+          <div className="flex items-start sm:items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <TrendingUp className="w-5 h-5 text-primary shrink-0 mt-0.5 sm:mt-0" />
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
                 Tech Solutions alcanzó 92% de cumplimiento
               </p>
@@ -211,130 +257,26 @@ const SuperAdminHome: React.FC = () => {
   );
 };
 
-const SuperAdminSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({
-  collapsed,
-  onToggle,
-}) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const navItems = [
-    { icon: BarChart3, label: 'Dashboard', path: '/superadmin' },
-    { icon: Building2, label: 'Empresas', path: '/superadmin/companies' },
-    { icon: Users, label: 'Usuarios', path: '/superadmin/users' },
-    { icon: TrendingUp, label: 'Analíticas', path: '/superadmin/analytics' },
-    { icon: Activity, label: 'Sistema', path: '/superadmin/system' },
-  ];
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
-
-  const isActive = (path: string) => {
-    if (path === '/superadmin') return location.pathname === '/superadmin';
-    return location.pathname.startsWith(path);
-  };
-
-  return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 z-40',
-        collapsed ? 'w-[72px]' : 'w-64'
-      )}
-    >
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <Logo size="sm" />
-            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">
-              SUPER
-            </span>
-          </div>
-        )}
-        <Button variant="ghost" size="icon" onClick={onToggle} className="shrink-0 ml-auto">
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </Button>
-      </div>
-
-      <nav className="flex-1 py-4 px-3 overflow-y-auto">
-        <div className="space-y-1">
-          {navItems.map(({ icon: Icon, label, path }) => (
-            <button
-              key={path}
-              onClick={() => navigate(path)}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all',
-                collapsed && 'justify-center',
-                isActive(path) && 'bg-sidebar-accent text-sidebar-primary font-medium'
-              )}
-            >
-              <Icon className="w-5 h-5 shrink-0" />
-              {!collapsed && <span className="text-sm">{label}</span>}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      <div className="p-3 border-t border-sidebar-border space-y-1">
-        <button
-          onClick={() => navigate('/superadmin/settings')}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent transition-all',
-            collapsed && 'justify-center'
-          )}
-        >
-          <Settings className="w-5 h-5 shrink-0" />
-          {!collapsed && <span className="text-sm">Configuración</span>}
-        </button>
-        <button
-          onClick={handleLogout}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-all',
-            collapsed && 'justify-center'
-          )}
-        >
-          <LogOut className="w-5 h-5 shrink-0" />
-          {!collapsed && <span className="text-sm">Cerrar sesión</span>}
-        </button>
-      </div>
-    </aside>
-  );
-};
-
 const SuperAdminDashboard: React.FC = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
   return (
-    <div className="min-h-screen bg-background flex">
-      <SuperAdminSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-
-      <main
-        className={cn(
-          'flex-1 p-6 lg:p-8 transition-all duration-300',
-          sidebarCollapsed ? 'ml-[72px]' : 'ml-64'
-        )}
-      >
-        <Routes>
-          <Route path="/" element={<SuperAdminHome />} />
-          <Route path="/companies" element={<SuperAdminCompanies />} />
-          <Route path="/users" element={<SuperAdminUsers />} />
-          <Route path="/analytics" element={<SuperAdminAnalytics />} />
-          <Route path="/system" element={<div className="text-foreground">Estado del Sistema (próximamente)</div>} />
-          <Route path="/settings" element={<div className="text-foreground">Configuración SuperAdmin (próximamente)</div>} />
-        </Routes>
-
-        <button
-          onClick={() => toast.info('Soporte próximamente')}
-          className="fixed bottom-6 right-6 p-4 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 z-40"
-        >
-          <MessageCircle className="w-6 h-6" />
-        </button>
-      </main>
-    </div>
+    <DashboardLayout
+      navItems={superAdminNavItems}
+      basePath="/superadmin"
+      roleIndicator={{
+        icon: BarChart3,
+        label: 'SUPER ADMIN',
+        className: 'bg-primary/10 text-primary',
+      }}
+    >
+      <Routes>
+        <Route path="/" element={<SuperAdminHome />} />
+        <Route path="/companies" element={<SuperAdminCompanies />} />
+        <Route path="/users" element={<SuperAdminUsers />} />
+        <Route path="/analytics" element={<SuperAdminAnalytics />} />
+        <Route path="/system" element={<div className="text-foreground">Estado del Sistema (próximamente)</div>} />
+        <Route path="/settings" element={<div className="text-foreground">Configuración SuperAdmin (próximamente)</div>} />
+      </Routes>
+    </DashboardLayout>
   );
 };
 

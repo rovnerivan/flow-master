@@ -8,10 +8,6 @@ import {
   CheckCircle,
   AlertTriangle,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-  LogOut,
   Shield,
   Play,
   Pause,
@@ -26,12 +22,10 @@ import {
   Trash2,
   FileText,
   Heart,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
 import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
@@ -39,6 +33,7 @@ import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import AdminProcesses from '../admin/AdminProcesses';
 import AdminTasks from '../admin/AdminTasks';
 import { Input } from '@/components/ui/input';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1435,141 +1430,57 @@ const SupervisorSettingsPage: React.FC = () => {
   );
 };
 
-// Sidebar
-const SupervisorSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
-  const navigate = useNavigate();
-
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/supervisor' },
-    { icon: FileText, label: 'Procesos', path: '/supervisor/processes' },
-    { icon: Calendar, label: 'Tareas del Equipo', path: '/supervisor/team-tasks' },
-    { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
-    { icon: Heart, label: 'Visión y Liderazgo', path: '/supervisor/vision' },
-    { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
-    { icon: Briefcase, label: 'Mi Cargo', path: '/supervisor/my-cargo' },
-  ];
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Sesión cerrada');
-    navigate('/login');
-  };
-
-  return (
-    <aside className={cn(
-      'fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 z-40',
-      collapsed ? 'w-[72px]' : 'w-64'
-    )}>
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        {!collapsed && <Logo size="sm" />}
-        <Button variant="ghost" size="icon" onClick={onToggle} className="ml-auto">
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </Button>
-      </div>
-
-      {!collapsed && (
-        <div className="px-4 py-2 border-b border-sidebar-border">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10">
-            <Shield className="w-4 h-4 text-warning" />
-            <span className="text-sm font-medium text-warning">Supervisor</span>
-          </div>
-        </div>
-      )}
-
-      <nav className="flex-1 py-4 px-3 overflow-y-auto">
-        <div className="space-y-1">
-          {navItems.map(({ icon: Icon, label, path }) => (
-            <button
-              key={path}
-              onClick={() => navigate(path)}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent transition-colors',
-                collapsed && 'justify-center'
-              )}
-            >
-              <Icon className="w-5 h-5 shrink-0" />
-              {!collapsed && <span className="text-sm">{label}</span>}
-            </button>
-          ))}
-        </div>
-
-        {!collapsed && (
-          <div className="mt-6 pt-4 border-t border-sidebar-border">
-            <p className="text-xs text-sidebar-foreground/50 px-3 mb-2">Vista Colaborador</p>
-            <button
-              onClick={() => navigate('/employee', { state: { fromSupervisor: true } })}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent"
-            >
-              <LayoutDashboard className="w-5 h-5 shrink-0" />
-              <span className="text-sm">Mi Espacio</span>
-            </button>
-          </div>
-        )}
-      </nav>
-
-      <div className="p-3 border-t border-sidebar-border space-y-1">
-        <button
-          onClick={() => navigate('/supervisor/settings')}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent',
-            collapsed && 'justify-center'
-          )}
-        >
-          <Settings className="w-5 h-5 shrink-0" />
-          {!collapsed && <span className="text-sm">Configuración</span>}
-        </button>
-        <button
-          onClick={handleLogout}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-destructive/70 hover:bg-destructive/10 w-full',
-            collapsed && 'justify-center'
-          )}
-        >
-          <LogOut className="w-5 h-5 shrink-0" />
-          {!collapsed && <span className="text-sm">Cerrar sesión</span>}
-        </button>
-      </div>
-    </aside>
-  );
-};
+// Supervisor nav items for layout
+const supervisorNavItems = [
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/supervisor' },
+  { icon: FileText, label: 'Procesos', path: '/supervisor/processes' },
+  { icon: Calendar, label: 'Tareas del Equipo', path: '/supervisor/team-tasks' },
+  { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
+  { icon: Heart, label: 'Visión y Liderazgo', path: '/supervisor/vision' },
+  { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
+  { icon: Briefcase, label: 'Mi Cargo', path: '/supervisor/my-cargo' },
+];
 
 // Main Supervisor Dashboard
 const SupervisorDashboard: React.FC = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const navigate = useNavigate();
+
+  const extraSidebarContent = (
+    <>
+      <p className="text-xs text-sidebar-foreground/50 px-3 mb-2">Vista Colaborador</p>
+      <button
+        onClick={() => navigate('/employee', { state: { fromSupervisor: true } })}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent"
+      >
+        <LayoutDashboard className="w-5 h-5 shrink-0" />
+        <span className="text-sm">Mi Espacio</span>
+      </button>
+    </>
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      <SupervisorSidebar 
-        collapsed={sidebarCollapsed} 
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-      />
-
-      <div className={cn(
-        'transition-all duration-300',
-        sidebarCollapsed ? 'ml-[72px]' : 'ml-64'
-      )}>
-        <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-card sticky top-0 z-30">
-          <div>
-            <h2 className="font-semibold text-foreground">Panel de Supervisor</h2>
-          </div>
-          <NotificationBell />
-        </header>
-
-        <main className="p-6">
-          <Routes>
-            <Route index element={<SupervisorHome />} />
-            <Route path="processes" element={<AdminProcesses />} />
-            <Route path="team-tasks" element={<AdminTasks />} />
-            <Route path="team" element={<SupervisorTeamPage />} />
-            <Route path="vision" element={<VisionLeadershipPage />} />
-            <Route path="performance" element={<PerformancePage />} />
-            <Route path="my-cargo" element={<MyCargoPage />} />
-            <Route path="settings" element={<SupervisorSettingsPage />} />
-            <Route path="*" element={<SupervisorHome />} />
-          </Routes>
-        </main>
-      </div>
-    </div>
+    <DashboardLayout
+      navItems={supervisorNavItems}
+      basePath="/supervisor"
+      roleIndicator={{
+        icon: Shield,
+        label: 'Supervisor',
+        className: 'bg-warning/10 text-warning',
+      }}
+      extraSidebarContent={extraSidebarContent}
+    >
+      <Routes>
+        <Route index element={<SupervisorHome />} />
+        <Route path="processes" element={<AdminProcesses />} />
+        <Route path="team-tasks" element={<AdminTasks />} />
+        <Route path="team" element={<SupervisorTeamPage />} />
+        <Route path="vision" element={<VisionLeadershipPage />} />
+        <Route path="performance" element={<PerformancePage />} />
+        <Route path="my-cargo" element={<MyCargoPage />} />
+        <Route path="settings" element={<SupervisorSettingsPage />} />
+        <Route path="*" element={<SupervisorHome />} />
+      </Routes>
+    </DashboardLayout>
   );
 };
 

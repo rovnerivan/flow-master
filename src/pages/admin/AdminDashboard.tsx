@@ -8,15 +8,22 @@ import {
   Copy,
   Check,
   Plus,
-  MessageCircle,
   UserPlus,
+  LayoutDashboard,
+  Layers,
+  ListTodo,
+  Network,
+  Heart,
+  BarChart3,
+  FileText,
+  Shield,
+  Compass,
 } from 'lucide-react';
-import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { ProcessHealthCard } from '@/components/dashboard/ProcessHealthCard';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 // Import admin pages
 import AdminProcesses from './AdminProcesses';
@@ -62,6 +69,20 @@ const mockProcessHealth = [
   },
 ];
 
+const adminNavItems = [
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+  { icon: Compass, label: 'Gestión', path: '/admin/planning' },
+  { icon: Layers, label: 'Procesos', path: '/admin/processes' },
+  { icon: ListTodo, label: 'Tareas', path: '/admin/tasks' },
+  { icon: Users, label: 'Equipo', path: '/admin/team' },
+  { icon: Network, label: 'Jerarquía', path: '/admin/hierarchy' },
+  { icon: Heart, label: 'Visión y Liderazgo', path: '/admin/vision' },
+  { icon: UserPlus, label: 'Onboardings', path: '/admin/onboardings' },
+  { icon: AlertTriangle, label: 'Errores', path: '/admin/errors' },
+  { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
+  { icon: FileText, label: 'Reportes', path: '/admin/reports' },
+];
+
 const DashboardHome: React.FC = () => {
   const navigate = useNavigate();
   const [codeCopied, setCodeCopied] = useState(false);
@@ -75,23 +96,23 @@ const DashboardHome: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Vista general de tu operación
           </p>
         </div>
-        <Button variant="hero" className="gap-2" onClick={() => navigate('/admin/processes')}>
+        <Button variant="hero" className="gap-2 w-full sm:w-auto" onClick={() => navigate('/admin/processes')}>
           <Plus className="w-4 h-4" />
           Nuevo Proceso
         </Button>
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div onClick={() => navigate('/admin/onboardings')} className="cursor-pointer">
           <KPICard
             title="Onboardings Activos"
@@ -129,18 +150,18 @@ const DashboardHome: React.FC = () => {
       </div>
 
       {/* Process Health Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-2">
           <div className="kpi-card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-foreground">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">
                 Salud de Procesos
               </h2>
               <Button variant="ghost" size="sm" onClick={() => navigate('/admin/processes')}>
                 Ver más
               </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {mockProcessHealth.map((process) => (
                 <ProcessHealthCard key={process.name} {...process} />
               ))}
@@ -149,26 +170,26 @@ const DashboardHome: React.FC = () => {
         </div>
 
         {/* Quick Stats & Invite Code */}
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           <div className="kpi-card">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">
               Resumen Rápido
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Empleados activos</span>
+                <span className="text-sm text-muted-foreground">Empleados activos</span>
                 <span className="font-semibold text-foreground">24</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Procesos publicados</span>
+                <span className="text-sm text-muted-foreground">Procesos publicados</span>
                 <span className="font-semibold text-foreground">12</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Completados hoy</span>
+                <span className="text-sm text-muted-foreground">Completados hoy</span>
                 <span className="font-semibold text-foreground">89</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Tareas pendientes</span>
+                <span className="text-sm text-muted-foreground">Tareas pendientes</span>
                 <span className="font-semibold text-foreground">7</span>
               </div>
             </div>
@@ -176,14 +197,14 @@ const DashboardHome: React.FC = () => {
 
           {/* Invite Code Card */}
           <div className="kpi-card bg-primary/5 border-primary/20">
-            <h3 className="text-lg font-semibold text-foreground mb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">
               Código de Invitación
             </h3>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
               Comparte este código con nuevos empleados
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-4 py-3 rounded-lg bg-background border border-border font-mono text-lg text-center tracking-wider">
+              <code className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg bg-background border border-border font-mono text-base sm:text-lg text-center tracking-wider">
                 {inviteCode}
               </code>
               <Button
@@ -207,50 +228,31 @@ const DashboardHome: React.FC = () => {
 };
 
 const AdminDashboard: React.FC = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  const handleSupport = () => {
-    toast.info('Función de soporte próximamente disponible');
-  };
-
   return (
-    <div className="min-h-screen bg-background flex">
-      <AdminSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-
-      {/* Main Content */}
-      <main
-        className={cn(
-          'flex-1 p-6 lg:p-8 transition-all duration-300',
-          sidebarCollapsed ? 'ml-[72px]' : 'ml-64'
-        )}
-      >
-        <Routes>
-          <Route path="/" element={<DashboardHome />} />
-          <Route path="/planning" element={<AdminPlanning />} />
-          <Route path="/processes/*" element={<AdminProcesses />} />
-          <Route path="/tasks" element={<AdminTasks />} />
-          <Route path="/team/*" element={<AdminTeam />} />
-          <Route path="/hierarchy" element={<AdminHierarchy />} />
-          <Route path="/vision" element={<VisionLeadership />} />
-          <Route path="/analytics" element={<AdminAnalytics />} />
-          <Route path="/reports" element={<AdminReports />} />
-          <Route path="/settings" element={<AdminSettings />} />
-          <Route path="/errors" element={<AdminErrors />} />
-          <Route path="/onboardings" element={<AdminOnboardings />} />
-        </Routes>
-
-        {/* Floating Support Button */}
-        <button
-          onClick={handleSupport}
-          className="fixed bottom-6 right-6 p-4 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 z-40"
-        >
-          <MessageCircle className="w-6 h-6" />
-        </button>
-      </main>
-    </div>
+    <DashboardLayout
+      navItems={adminNavItems}
+      basePath="/admin"
+      roleIndicator={{
+        icon: Shield,
+        label: 'Administrador',
+        className: 'bg-primary/10 text-primary',
+      }}
+    >
+      <Routes>
+        <Route path="/" element={<DashboardHome />} />
+        <Route path="/planning" element={<AdminPlanning />} />
+        <Route path="/processes/*" element={<AdminProcesses />} />
+        <Route path="/tasks" element={<AdminTasks />} />
+        <Route path="/team/*" element={<AdminTeam />} />
+        <Route path="/hierarchy" element={<AdminHierarchy />} />
+        <Route path="/vision" element={<VisionLeadership />} />
+        <Route path="/analytics" element={<AdminAnalytics />} />
+        <Route path="/reports" element={<AdminReports />} />
+        <Route path="/settings" element={<AdminSettings />} />
+        <Route path="/errors" element={<AdminErrors />} />
+        <Route path="/onboardings" element={<AdminOnboardings />} />
+      </Routes>
+    </DashboardLayout>
   );
 };
 
