@@ -494,7 +494,12 @@ const PlanningItemModal: React.FC<PlanningItemModalProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(planningStatusConfig).map(([key, val]) => (
-                    <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                    <SelectItem key={key} value={key}>
+                      <div className="flex flex-col">
+                        <span className={val.color}>{val.label}</span>
+                        <span className="text-xs text-muted-foreground">{val.description}</span>
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
