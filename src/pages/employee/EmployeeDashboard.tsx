@@ -16,6 +16,8 @@ import {
   ChevronDown,
   X,
   Tag,
+  ClipboardList,
+  AlertTriangle,
 } from 'lucide-react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -510,10 +512,14 @@ interface TeamMemberData {
   isMe?: boolean;
 }
 
-// Profile Page with Mi Cargo
+// Lazy load error and tasks views
+const EmployeeErrorsView = React.lazy(() => import('@/components/employee/EmployeeErrorsView'));
+const EmployeeTasksView = React.lazy(() => import('@/components/employee/EmployeeTasksView'));
+
+// Profile Page with Mi Cargo and Errors
 const EmployeeProfile: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'profile' | 'cargo'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'cargo' | 'errors'>('profile');
 
   const handleLogout = async () => {
     try {
@@ -530,32 +536,44 @@ const EmployeeProfile: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Mi Perfil</h1>
-        <p className="text-muted-foreground">Información personal y de cargo</p>
+        <p className="text-muted-foreground">Información personal, cargo y aprendizaje</p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 p-1 rounded-xl bg-secondary/50">
+      <div className="flex gap-1 p-1 rounded-xl bg-secondary/50">
         <button
           onClick={() => setActiveTab('profile')}
           className={cn(
-            "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors",
+            "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors",
             activeTab === 'profile' 
               ? "bg-background text-foreground shadow-sm" 
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          Datos Personales
+          Datos
         </button>
         <button
           onClick={() => setActiveTab('cargo')}
           className={cn(
-            "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors",
+            "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors",
             activeTab === 'cargo' 
               ? "bg-background text-foreground shadow-sm" 
               : "text-muted-foreground hover:text-foreground"
           )}
         >
           Mi Cargo
+        </button>
+        <button
+          onClick={() => setActiveTab('errors')}
+          className={cn(
+            "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1",
+            activeTab === 'errors' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <AlertTriangle className="w-3 h-3" />
+          Errores
         </button>
       </div>
 
@@ -604,7 +622,7 @@ const EmployeeProfile: React.FC = () => {
             </Button>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'cargo' ? (
         /* Mi Cargo Tab */
         <div className="space-y-4">
           <div className="mobile-card">
@@ -659,6 +677,11 @@ const EmployeeProfile: React.FC = () => {
             <p className="text-xs text-muted-foreground">Supervisora de Operaciones</p>
           </div>
         </div>
+      ) : (
+        /* Errors Tab */
+        <React.Suspense fallback={<div className="text-center py-8 text-muted-foreground">Cargando...</div>}>
+          <EmployeeErrorsView />
+        </React.Suspense>
       )}
     </div>
   );
@@ -710,6 +733,11 @@ const EmployeeDashboard: React.FC = () => {
       <main className="px-4 py-6 max-w-lg mx-auto">
         <Routes>
           <Route path="/" element={<EmployeeHome />} />
+          <Route path="/tasks" element={
+            <React.Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
+              <EmployeeTasksView />
+            </React.Suspense>
+          } />
           <Route path="/processes" element={<EmployeeProcesses onProcessClick={handleProcessClick} />} />
           <Route path="/team" element={<EmployeeTeam />} />
           <Route path="/profile" element={<EmployeeProfile />} />
