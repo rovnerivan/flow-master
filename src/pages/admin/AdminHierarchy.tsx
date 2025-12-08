@@ -19,15 +19,31 @@ interface TeamMember {
   id: string;
   name: string;
   email: string;
-  role: 'business_admin' | 'supervisor' | 'employee';
+  role: 'owner' | 'business_admin' | 'supervisor' | 'employee';
   jobTitle: string;
   supervisorLevel?: number; // 1 = top supervisor, 2 = second level, etc.
   reportsToId?: string;
   subordinates?: TeamMember[];
 }
 
-// Mock data with hierarchy
+// Mock data with hierarchy - owners at the top
 const mockTeamData: TeamMember[] = [
+  {
+    id: 'owner-1',
+    name: 'Carlos Mendoza',
+    email: 'carlos.mendoza@empresa.com',
+    role: 'owner',
+    jobTitle: 'Socio Fundador',
+    subordinates: [],
+  },
+  {
+    id: 'owner-2',
+    name: 'Patricia Vega',
+    email: 'patricia.vega@empresa.com',
+    role: 'owner',
+    jobTitle: 'Socia Inversora',
+    subordinates: [],
+  },
   {
     id: 'admin-1',
     name: 'Roberto Fernández',
@@ -116,12 +132,14 @@ const flattenHierarchy = (members: TeamMember[]): TeamMember[] => {
 };
 
 const roleLabels: Record<string, string> = {
+  owner: 'Dueño/Socio',
   business_admin: 'Administrador',
   supervisor: 'Supervisor',
   employee: 'Colaborador',
 };
 
 const roleColors: Record<string, string> = {
+  owner: 'bg-violet-500/20 text-violet-400',
   business_admin: 'bg-primary text-primary-foreground',
   supervisor: 'bg-warning/20 text-warning',
   employee: 'bg-muted text-muted-foreground',
@@ -129,7 +147,7 @@ const roleColors: Record<string, string> = {
 
 const AdminHierarchy: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['admin-1', 'sup-1', 'sup-3']));
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['owner-1', 'owner-2', 'admin-1', 'sup-1', 'sup-3']));
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [allMembers] = useState(() => flattenHierarchy(mockTeamData));
@@ -425,11 +443,11 @@ const AssignSubordinationModal: React.FC<{
   const [supervisorLevel, setSupervisorLevel] = useState(member?.supervisorLevel || 1);
 
   const supervisorCandidates = allMembers.filter(m => 
-    m.role === 'supervisor' || m.role === 'business_admin'
+    m.role === 'owner' || m.role === 'supervisor' || m.role === 'business_admin'
   );
 
   const subordinateCandidates = allMembers.filter(m => 
-    m.role === 'supervisor' || m.role === 'employee'
+    m.role === 'business_admin' || m.role === 'supervisor' || m.role === 'employee'
   );
 
   const getInitials = (name: string) => {
