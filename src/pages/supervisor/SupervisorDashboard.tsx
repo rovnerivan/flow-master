@@ -36,6 +36,8 @@ import { toast } from 'sonner';
 import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
 import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
 import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
+import AdminProcesses from '../admin/AdminProcesses';
+import AdminTasks from '../admin/AdminTasks';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -1475,8 +1477,8 @@ const SupervisorDashboard: React.FC = () => {
         <main className="p-6">
           <Routes>
             <Route index element={<SupervisorHome />} />
-            <Route path="processes" element={<ProcessesPage />} />
-            <Route path="team-tasks" element={<TeamTasksPage />} />
+            <Route path="processes" element={<AdminProcesses />} />
+            <Route path="team-tasks" element={<AdminTasks />} />
             <Route path="team" element={<SupervisorTeamPage />} />
             <Route path="vision" element={<VisionLeadershipPage />} />
             <Route path="performance" element={<PerformancePage />} />
