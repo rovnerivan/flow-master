@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown, History, AlertTriangle, Archive, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -7,10 +7,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
 import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
 import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
+import { ProcessStatusModal, ProcessStatus, StatusChangeDetails, statusConfig } from '@/components/admin/ProcessStatusModal';
+import { ProcessVersionHistory, ProcessVersion } from '@/components/admin/ProcessVersionHistory';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -22,13 +25,24 @@ interface Process {
   description: string;
   steps: number;
   compliance: number;
-  status: 'published' | 'draft';
+  status: ProcessStatus;
   lastUpdated: string;
   tags: string[];
+  currentVersion: string;
   // Hierarchy info
   verticalId?: string;
   managementId?: string;
   departmentId?: string;
+  // Review details
+  reviewDescription?: string;
+  reviewReason?: string;
+  reviewRisks?: string;
+  reviewStartedAt?: string;
+  reviewStartedBy?: string;
+  // Discontinued details
+  discontinuedAt?: string;
+  discontinuedBy?: string;
+  discontinuedReason?: string;
 }
 
 const initialProcesses: Process[] = [
@@ -41,6 +55,7 @@ const initialProcesses: Process[] = [
     status: 'published',
     lastUpdated: '2024-01-15',
     tags: ['operaciones', 'almacen'],
+    currentVersion: '1.2',
     verticalId: 'v1',
     managementId: 'm1',
     departmentId: 'd1',
@@ -51,12 +66,16 @@ const initialProcesses: Process[] = [
     description: 'Protocolo de atención y resolución de consultas',
     steps: 5,
     compliance: 78,
-    status: 'published',
+    status: 'under_review',
     lastUpdated: '2024-01-10',
     tags: ['atencion', 'ventas'],
+    currentVersion: '2.0',
     verticalId: 'v2',
     managementId: 'm3',
     departmentId: 'd4',
+    reviewDescription: 'Se está revisando el protocolo de escalamiento',
+    reviewReason: 'Nuevas políticas de atención al cliente',
+    reviewRisks: 'Evitar prometer tiempos de respuesta sin confirmar con supervisor',
   },
   {
     id: '3',
@@ -67,6 +86,7 @@ const initialProcesses: Process[] = [
     status: 'published',
     lastUpdated: '2024-01-08',
     tags: ['finanzas', 'operaciones'],
+    currentVersion: '1.0',
     verticalId: 'v3',
     managementId: 'm5',
     departmentId: 'd6',
@@ -80,6 +100,7 @@ const initialProcesses: Process[] = [
     status: 'draft',
     lastUpdated: '2024-01-05',
     tags: ['almacen', 'calidad'],
+    currentVersion: '0.1',
     verticalId: 'v1',
     managementId: 'm1',
     departmentId: 'd2',
@@ -90,14 +111,29 @@ const initialProcesses: Process[] = [
     description: 'Proceso de campañas y contenido digital',
     steps: 7,
     compliance: 88,
-    status: 'published',
+    status: 'discontinued',
     lastUpdated: '2024-01-12',
     tags: ['marketing'],
+    currentVersion: '3.0',
     verticalId: 'v2',
     managementId: 'm4',
     departmentId: 'd5',
+    discontinuedReason: 'Absorbido por el nuevo proceso de Marketing Integral',
   },
 ];
+
+// Mock version history
+const mockVersions: Record<string, ProcessVersion[]> = {
+  '1': [
+    { id: 'v1-1', versionNumber: '1.2', name: 'Preparación de Pedidos', createdAt: '2024-01-15T10:30:00Z', createdByName: 'Juan Admin', changeSummary: 'Se actualizó el paso de verificación' },
+    { id: 'v1-2', versionNumber: '1.1', name: 'Preparación de Pedidos', createdAt: '2024-01-10T14:20:00Z', createdByName: 'María Supervisor', changeSummary: 'Se añadió video explicativo' },
+    { id: 'v1-3', versionNumber: '1.0', name: 'Preparación de Pedidos', createdAt: '2024-01-01T09:00:00Z', createdByName: 'Juan Admin', changeSummary: 'Versión inicial' },
+  ],
+  '2': [
+    { id: 'v2-1', versionNumber: '2.0', name: 'Atención al Cliente', createdAt: '2024-01-10T11:00:00Z', createdByName: 'Juan Admin', changeSummary: 'Rediseño completo del protocolo' },
+    { id: 'v2-2', versionNumber: '1.0', name: 'Atención al Cliente', createdAt: '2023-12-01T08:00:00Z', createdByName: 'Juan Admin', changeSummary: 'Versión inicial' },
+  ],
+};
 
 const AdminProcesses: React.FC = () => {
   const [showCreator, setShowCreator] = useState(false);
@@ -107,12 +143,14 @@ const AdminProcesses: React.FC = () => {
   const [showEditor, setShowEditor] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | ProcessStatus>('all');
   const [processes, setProcesses] = useState<Process[]>(initialProcesses);
   const [availableTags, setAvailableTags] = useState<TagInfo[]>(defaultTags);
   const [newTagName, setNewTagName] = useState('');
   const [showTagCreator, setShowTagCreator] = useState(false);
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   const toggleTagFilter = (tagId: string) => {
     setSelectedTagFilters(prev => 
@@ -126,6 +164,36 @@ const AdminProcesses: React.FC = () => {
     setSelectedTagFilters([]);
     setStatusFilter('all');
     setSearchQuery('');
+  };
+
+  const handleStatusChange = (processId: string, newStatus: ProcessStatus, details?: StatusChangeDetails) => {
+    setProcesses(prev => prev.map(p => {
+      if (p.id !== processId) return p;
+      
+      const updated: Process = { ...p, status: newStatus, lastUpdated: new Date().toISOString().split('T')[0] };
+      
+      if (newStatus === 'under_review' && details) {
+        updated.reviewDescription = details.reviewDescription;
+        updated.reviewReason = details.reviewReason;
+        updated.reviewRisks = details.reviewRisks;
+        updated.reviewStartedAt = new Date().toISOString();
+      } else if (newStatus === 'discontinued' && details) {
+        updated.discontinuedReason = details.discontinuedReason;
+        updated.discontinuedAt = new Date().toISOString();
+      } else {
+        // Clear review/discontinued data when changing to other statuses
+        updated.reviewDescription = undefined;
+        updated.reviewReason = undefined;
+        updated.reviewRisks = undefined;
+        updated.discontinuedReason = undefined;
+      }
+      
+      return updated;
+    }));
+    
+    toast.success(`Estado actualizado a "${statusConfig[newStatus].label}"`);
+    setShowStatusModal(false);
+    setSelectedProcess(null);
   };
 
   const createCustomTag = () => {
@@ -264,11 +332,13 @@ const AdminProcesses: React.FC = () => {
               {/* Status Filter */}
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">Estado</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {[
                     { value: 'all', label: 'Todos' },
                     { value: 'published', label: 'Publicados' },
                     { value: 'draft', label: 'Borradores' },
+                    { value: 'under_review', label: 'En Revisión' },
+                    { value: 'discontinued', label: 'Descontinuados' },
                   ].map(option => (
                     <button
                       key={option.value}
@@ -371,7 +441,7 @@ const AdminProcesses: React.FC = () => {
           <span className="text-sm text-muted-foreground">Filtros activos:</span>
           {statusFilter !== 'all' && (
             <span className="px-2 py-1 rounded-full text-xs font-medium bg-secondary text-foreground flex items-center gap-1">
-              {statusFilter === 'published' ? 'Publicados' : 'Borradores'}
+              {statusConfig[statusFilter].label}
               <button onClick={() => setStatusFilter('all')} className="hover:text-destructive">
                 <X className="w-3 h-3" />
               </button>
@@ -429,6 +499,22 @@ const AdminProcesses: React.FC = () => {
                     <Edit className="w-4 h-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedProcess(process);
+                    setShowStatusModal(true);
+                  }}>
+                    {React.createElement(statusConfig[process.status].icon, { className: "w-4 h-4 mr-2" })}
+                    Cambiar estado
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedProcess(process);
+                    setShowVersionHistory(true);
+                  }}>
+                    <History className="w-4 h-4 mr-2" />
+                    Ver historial
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="text-destructive"
                     onClick={() => handleDeleteProcess(process)}
@@ -461,15 +547,45 @@ const AdminProcesses: React.FC = () => {
               <span className="text-muted-foreground">
                 {process.steps} pasos
               </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                  process.status === 'published'
-                    ? 'bg-success/20 text-success'
-                    : 'bg-warning/20 text-warning'
-                }`}
+              <button
+                onClick={() => {
+                  setSelectedProcess(process);
+                  setShowStatusModal(true);
+                }}
+                className={cn(
+                  "px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 hover:ring-2 hover:ring-offset-1 hover:ring-primary/30 transition-all",
+                  statusConfig[process.status].bgColor,
+                  statusConfig[process.status].color
+                )}
               >
-                {process.status === 'published' ? 'Publicado' : 'Borrador'}
-              </span>
+                {React.createElement(statusConfig[process.status].icon, { className: "w-3 h-3" })}
+                {statusConfig[process.status].label}
+              </button>
+            </div>
+
+            {/* Review Alert */}
+            {process.status === 'under_review' && process.reviewRisks && (
+              <div className="mt-2 p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                <p className="text-xs text-orange-600 flex items-start gap-1">
+                  <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                  {process.reviewRisks}
+                </p>
+              </div>
+            )}
+
+            {/* Version Badge */}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">v{process.currentVersion}</span>
+              <button
+                onClick={() => {
+                  setSelectedProcess(process);
+                  setShowVersionHistory(true);
+                }}
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <History className="w-3 h-3" />
+                Historial
+              </button>
             </div>
 
             <div className="mt-4 pt-4 border-t border-border">
@@ -602,6 +718,44 @@ const AdminProcesses: React.FC = () => {
           }}
         />
       )}
+
+      {/* Process Status Modal */}
+      {showStatusModal && selectedProcess && (
+        <ProcessStatusModal
+          open={showStatusModal}
+          onClose={() => {
+            setShowStatusModal(false);
+            setSelectedProcess(null);
+          }}
+          currentStatus={selectedProcess.status}
+          processName={selectedProcess.name}
+          onStatusChange={(newStatus, details) => {
+            handleStatusChange(selectedProcess.id, newStatus, details);
+          }}
+        />
+      )}
+
+      {/* Process Version History Modal */}
+      {showVersionHistory && selectedProcess && (
+        <ProcessVersionHistory
+          open={showVersionHistory}
+          onClose={() => {
+            setShowVersionHistory(false);
+            setSelectedProcess(null);
+          }}
+          processName={selectedProcess.name}
+          currentVersion={selectedProcess.currentVersion}
+          versions={mockVersions[selectedProcess.id] || []}
+          onViewVersion={(version) => {
+            toast.info(`Viendo versión ${version.versionNumber}`);
+          }}
+          onRestoreVersion={(version) => {
+            toast.success(`Restaurando a versión ${version.versionNumber}`);
+            setShowVersionHistory(false);
+            setSelectedProcess(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -662,13 +816,59 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
 
           <div className="p-4 rounded-lg bg-secondary/50">
             <p className="text-sm text-muted-foreground mb-1">Estado</p>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-              process.status === 'published'
-                ? 'bg-success/20 text-success'
-                : 'bg-warning/20 text-warning'
-            }`}>
-              {process.status === 'published' ? 'Publicado' : 'Borrador'}
+            <span className={cn(
+              "px-3 py-1 rounded-full text-sm font-medium inline-flex items-center gap-1",
+              statusConfig[process.status].bgColor,
+              statusConfig[process.status].color
+            )}>
+              {React.createElement(statusConfig[process.status].icon, { className: "w-4 h-4" })}
+              {statusConfig[process.status].label}
             </span>
+          </div>
+
+          {/* Review Info */}
+          {process.status === 'under_review' && (
+            <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20 space-y-2">
+              <div className="flex items-center gap-2 text-orange-500 font-medium">
+                <AlertTriangle className="w-4 h-4" />
+                En Revisión
+              </div>
+              {process.reviewDescription && (
+                <div>
+                  <p className="text-xs text-muted-foreground">¿Qué se revisa?</p>
+                  <p className="text-sm text-foreground">{process.reviewDescription}</p>
+                </div>
+              )}
+              {process.reviewReason && (
+                <div>
+                  <p className="text-xs text-muted-foreground">¿Por qué?</p>
+                  <p className="text-sm text-foreground">{process.reviewReason}</p>
+                </div>
+              )}
+              {process.reviewRisks && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Riesgos a considerar</p>
+                  <p className="text-sm text-orange-600 font-medium">{process.reviewRisks}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Discontinued Info */}
+          {process.status === 'discontinued' && process.discontinuedReason && (
+            <div className="p-4 rounded-lg bg-muted border border-border space-y-2">
+              <div className="flex items-center gap-2 text-muted-foreground font-medium">
+                <Archive className="w-4 h-4" />
+                Descontinuado
+              </div>
+              <p className="text-sm text-foreground">{process.discontinuedReason}</p>
+            </div>
+          )}
+
+          {/* Version */}
+          <div className="p-4 rounded-lg bg-secondary/50">
+            <p className="text-sm text-muted-foreground mb-1">Versión Actual</p>
+            <p className="text-lg font-bold text-foreground">v{process.currentVersion}</p>
           </div>
 
           <div className="flex gap-3">

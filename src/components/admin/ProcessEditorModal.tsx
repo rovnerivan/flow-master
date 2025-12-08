@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { defaultTags, TagInfo } from '@/lib/processTags';
 import { ExtendedContentEditor, ExtendedContentItem } from './ExtendedContentEditor';
 import { MediaUploader } from './MediaUploader';
+import { ProcessStatus } from './ProcessStatusModal';
 
 interface Process {
   id: string;
@@ -15,9 +16,10 @@ interface Process {
   description: string;
   steps: number;
   compliance: number;
-  status: 'published' | 'draft';
+  status: ProcessStatus;
   lastUpdated: string;
   tags?: string[];
+  currentVersion?: string;
 }
 
 interface Step {
