@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, GripVertical, Save, Tag, Video, FileAudio, Image, File } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, Save, Tag, AlertTriangle, Wrench, User, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,16 @@ import { defaultTags, TagInfo } from '@/lib/processTags';
 import { ExtendedContentEditor, ExtendedContentItem } from './ExtendedContentEditor';
 import { MediaUploader } from './MediaUploader';
 import { ProcessStatus } from './ProcessStatusModal';
+import { 
+  ProcessStep, 
+  RiskLevel, 
+  ProcessFrequency, 
+  riskLevelConfig, 
+  frequencyConfig,
+  ChecklistItem 
+} from '@/lib/processTypes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Process {
   id: string;
@@ -20,18 +30,6 @@ interface Process {
   lastUpdated: string;
   tags?: string[];
   currentVersion?: string;
-}
-
-interface Step {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  videoUrl?: string;
-  audioUrl?: string;
-  imageUrl?: string;
-  documentUrl?: string;
-  extendedContent?: ExtendedContentItem[];
 }
 
 interface ProcessEditorModalProps {
@@ -55,14 +53,28 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
     importance: '',
     expectedResult: '',
     estimatedTime: '15',
+    // Phase 1 fields
+    owner: '',
+    riskLevel: 'low' as RiskLevel,
+    frequency: 'daily' as ProcessFrequency,
+    requiredTools: '',
+    successCriteria: '',
   });
 
   const [selectedTags, setSelectedTags] = useState<string[]>(process.tags || []);
   const [newTagName, setNewTagName] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
 
-  const [steps, setSteps] = useState<Step[]>([
-    { id: '1', title: 'Paso 1', description: 'Descripción del paso', duration: '2', videoUrl: '', audioUrl: '', imageUrl: '', documentUrl: '', extendedContent: [] },
+  const [steps, setSteps] = useState<ProcessStep[]>([
+    { 
+      id: '1', 
+      title: 'Paso 1', 
+      description: 'Descripción del paso', 
+      duration: '2', 
+      isCritical: false,
+      checklist: [],
+      troubleshooting: ''
+    },
   ]);
 
   const toggleTag = (tagId: string) => {
@@ -74,16 +86,14 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
   };
 
   const addStep = () => {
-    const newStep: Step = {
+    const newStep: ProcessStep = {
       id: Date.now().toString(),
       title: `Paso ${steps.length + 1}`,
       description: '',
       duration: '2',
-      videoUrl: '',
-      audioUrl: '',
-      imageUrl: '',
-      documentUrl: '',
-      extendedContent: [],
+      isCritical: false,
+      checklist: [],
+      troubleshooting: '',
     };
     setSteps([...steps, newStep]);
   };
@@ -98,8 +108,41 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
     }
   };
 
-  const updateStep = (id: string, field: keyof Step, value: string) => {
+  const updateStep = (id: string, field: keyof ProcessStep, value: any) => {
     setSteps(steps.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+  };
+
+  const addChecklistItem = (stepId: string) => {
+    setSteps(steps.map(s => {
+      if (s.id === stepId) {
+        const newItem: ChecklistItem = { id: Date.now().toString(), text: '', checked: false };
+        return { ...s, checklist: [...(s.checklist || []), newItem] };
+      }
+      return s;
+    }));
+  };
+
+  const updateChecklistItem = (stepId: string, itemId: string, text: string) => {
+    setSteps(steps.map(s => {
+      if (s.id === stepId) {
+        return {
+          ...s,
+          checklist: (s.checklist || []).map(item => 
+            item.id === itemId ? { ...item, text } : item
+          )
+        };
+      }
+      return s;
+    }));
+  };
+
+  const removeChecklistItem = (stepId: string, itemId: string) => {
+    setSteps(steps.map(s => {
+      if (s.id === stepId) {
+        return { ...s, checklist: (s.checklist || []).filter(item => item.id !== itemId) };
+      }
+      return s;
+    }));
   };
 
   const handleSave = () => {
@@ -153,6 +196,89 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
               />
             </div>
 
+            {/* Phase 1: Owner and Risk Level */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Responsable del proceso
+                </label>
+                <Input
+                  value={formData.owner}
+                  onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+                  placeholder="Nombre del responsable"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Nivel de riesgo
+                </label>
+                <Select 
+                  value={formData.riskLevel} 
+                  onValueChange={(value: RiskLevel) => setFormData({ ...formData, riskLevel: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(riskLevelConfig).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        <span className={config.color}>{config.label}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Phase 1: Frequency and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Frecuencia esperada
+                </label>
+                <Select 
+                  value={formData.frequency} 
+                  onValueChange={(value: ProcessFrequency) => setFormData({ ...formData, frequency: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(frequencyConfig).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Tiempo estimado (minutos)</label>
+                <Input
+                  type="number"
+                  value={formData.estimatedTime}
+                  onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+                  placeholder="15"
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Phase 1: Required Tools */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Wrench className="w-4 h-4" />
+                Herramientas/Recursos necesarios
+              </label>
+              <Input
+                value={formData.requiredTools}
+                onChange={(e) => setFormData({ ...formData, requiredTools: e.target.value })}
+                placeholder="Ej: Computadora, escáner, etiquetadora (separados por coma)"
+              />
+              <p className="text-xs text-muted-foreground">Separa cada herramienta con una coma</p>
+            </div>
+
             {/* Tags Section */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -175,7 +301,6 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
                     {tag.name}
                   </button>
                 ))}
-                {/* Add new tag button */}
                 {onCreateTag && !showTagInput && (
                   <button
                     type="button"
@@ -187,7 +312,6 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
                   </button>
                 )}
               </div>
-              {/* New tag input */}
               {showTagInput && onCreateTag && (
                 <div className="flex gap-2 items-center">
                   <Input
@@ -233,11 +357,6 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
                   </Button>
                 </div>
               )}
-              {selectedTags.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedTags.length} etiqueta{selectedTags.length > 1 ? 's' : ''} seleccionada{selectedTags.length > 1 ? 's' : ''}
-                </p>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -261,14 +380,14 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
               </div>
             </div>
 
+            {/* Phase 1: Success Criteria */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Tiempo estimado (minutos)</label>
-              <Input
-                type="number"
-                value={formData.estimatedTime}
-                onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
-                placeholder="15"
-                className="w-32"
+              <label className="text-sm font-medium text-foreground">Criterios de éxito</label>
+              <Textarea
+                value={formData.successCriteria}
+                onChange={(e) => setFormData({ ...formData, successCriteria: e.target.value })}
+                placeholder="¿Cómo saber si el proceso se completó correctamente?"
+                rows={2}
               />
             </div>
           </div>
@@ -287,13 +406,21 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
               {steps.map((step, index) => (
                 <div
                   key={step.id}
-                  className="p-4 rounded-lg border border-border bg-secondary/30 space-y-3"
+                  className={cn(
+                    "p-4 rounded-lg border bg-secondary/30 space-y-3",
+                    step.isCritical ? "border-warning/50 bg-warning/5" : "border-border"
+                  )}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <GripVertical className="w-4 h-4 cursor-grab" />
-                      <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                        {index + 1}
+                      <span className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium",
+                        step.isCritical 
+                          ? "bg-warning/20 text-warning" 
+                          : "bg-primary/10 text-primary"
+                      )}>
+                        {step.isCritical ? '⚠️' : index + 1}
                       </span>
                     </div>
                     <Input
@@ -319,6 +446,23 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
                       </button>
                     )}
                   </div>
+
+                  {/* Critical step toggle */}
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`critical-${step.id}`}
+                      checked={step.isCritical}
+                      onCheckedChange={(checked) => updateStep(step.id, 'isCritical', checked)}
+                    />
+                    <label 
+                      htmlFor={`critical-${step.id}`}
+                      className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1"
+                    >
+                      <AlertTriangle className="w-3 h-3 text-warning" />
+                      Marcar como punto crítico/precaución
+                    </label>
+                  </div>
+
                   <Textarea
                     value={step.description}
                     onChange={(e) => updateStep(step.id, 'description', e.target.value)}
@@ -353,7 +497,60 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
                       label="Documento"
                     />
                   </div>
-                  {/* Extended version - optional with rich content */}
+
+                  {/* Checklist for step */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+                      <Plus className="w-3 h-3 group-open:rotate-45 transition-transform" />
+                      Checklist de verificación - {step.checklist?.length || 0} item(s)
+                    </summary>
+                    <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+                      {(step.checklist || []).map((item) => (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <Input
+                            value={item.text}
+                            onChange={(e) => updateChecklistItem(step.id, item.id, e.target.value)}
+                            placeholder="Item de verificación..."
+                            className="flex-1 h-8 text-sm"
+                          />
+                          <button
+                            onClick={() => removeChecklistItem(step.id, item.id)}
+                            className="p-1 rounded hover:bg-destructive/10 text-destructive"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => addChecklistItem(step.id)}
+                        className="gap-1 text-xs"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Agregar item
+                      </Button>
+                    </div>
+                  </details>
+
+                  {/* Troubleshooting */}
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+                      <Plus className="w-3 h-3 group-open:rotate-45 transition-transform" />
+                      ¿Qué hacer si algo falla? (Troubleshooting)
+                    </summary>
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <Textarea
+                        value={step.troubleshooting || ''}
+                        onChange={(e) => updateStep(step.id, 'troubleshooting', e.target.value)}
+                        placeholder="Describe qué hacer si algo sale mal en este paso..."
+                        rows={2}
+                      />
+                    </div>
+                  </details>
+
+                  {/* Extended version */}
                   <details className="group">
                     <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
                       <Plus className="w-3 h-3 group-open:rotate-45 transition-transform" />
