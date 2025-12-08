@@ -14,6 +14,7 @@ import {
   UserPlus,
   ListTodo,
   Shield,
+  Network,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -32,6 +33,7 @@ const adminNavItems = [
   { icon: Layers, label: 'Procesos', path: '/admin/processes' },
   { icon: ListTodo, label: 'Tareas', path: '/admin/tasks' },
   { icon: Users, label: 'Equipo', path: '/admin/team' },
+  { icon: Network, label: 'Jerarquía', path: '/admin/hierarchy' },
   { icon: UserPlus, label: 'Onboardings', path: '/admin/onboardings' },
   { icon: AlertTriangle, label: 'Errores', path: '/admin/errors' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
