@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bell, Search, MessageCircle } from 'lucide-react';
+import { Bell, Search, MessageCircle, ArrowLeft } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { DailyChecklist } from '@/components/mobile/DailyChecklist';
 import { MicroLearningCard } from '@/components/mobile/MicroLearningCard';
@@ -41,8 +42,21 @@ const mockProcesses = [
   },
 ];
 
+// Mock user data
+const mockUser = {
+  name: 'Carlos López',
+  cargo: 'Operador de Caja',
+  supervisor: 'María García',
+  team: 'Equipo Ventas Norte',
+};
+
 const EmployeeDashboard: React.FC = () => {
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check if coming from supervisor view
+  const fromSupervisor = location.state?.fromSupervisor;
 
   const handleSupport = () => {
     toast.info('Función de soporte próximamente disponible');
@@ -52,12 +66,23 @@ const EmployeeDashboard: React.FC = () => {
     setSelectedProcess(processId);
   };
 
+  const handleBackToSupervisor = () => {
+    navigate('/supervisor');
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 glass-card border-b border-border">
         <div className="flex items-center justify-between px-4 h-16 max-w-lg mx-auto">
-          <Logo size="sm" />
+          {fromSupervisor ? (
+            <Button variant="ghost" size="sm" onClick={handleBackToSupervisor} className="gap-2 text-primary">
+              <ArrowLeft className="w-4 h-4" />
+              Volver a Supervisor
+            </Button>
+          ) : (
+            <Logo size="sm" />
+          )}
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="relative">
               <Search className="w-5 h-5" />
@@ -69,12 +94,16 @@ const EmployeeDashboard: React.FC = () => {
 
       {/* Content */}
       <main className="px-4 py-6 max-w-lg mx-auto space-y-6">
-        {/* Greeting */}
+        {/* Greeting with name and cargo */}
         <div className="animate-slide-up">
           <h1 className="text-2xl font-bold text-foreground">
-            ¡Hola! 👋
+            ¡Hola, {mockUser.name}! 👋
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-primary font-medium">{mockUser.cargo}</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Supervisor: {mockUser.supervisor}
+          </p>
+          <p className="text-muted-foreground mt-2">
             Tienes 3 tareas pendientes para hoy
           </p>
         </div>

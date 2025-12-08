@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, Play, Pause, CheckCircle, Square, Link2, ChevronDown, X, Edit } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, Play, Pause, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -128,7 +129,7 @@ const AdminTasks: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTimers, setActiveTimers] = useState<Record<string, { running: boolean; seconds: number }>>({});
   const [expandedProcess, setExpandedProcess] = useState<string | null>(null);
-  const [showProcessViewer, setShowProcessViewer] = useState<{ taskId: string; processId: string } | null>(null);
+  const [showProcessViewer, setShowProcessViewer] = useState<{ taskId: string; processId: string; allProcesses: { id: string; name: string }[] } | null>(null);
   const timerRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
   const filterTasks = (frequency: string) => {
@@ -193,8 +194,8 @@ const AdminTasks: React.FC = () => {
     setShowEditTaskModal(true);
   };
 
-  const openProcessViewer = (taskId: string, processId: string) => {
-    setShowProcessViewer({ taskId, processId });
+  const openProcessViewer = (taskId: string, processId: string, allProcesses: { id: string; name: string }[]) => {
+    setShowProcessViewer({ taskId, processId, allProcesses });
   };
 
   useEffect(() => {
@@ -274,7 +275,7 @@ const AdminTasks: React.FC = () => {
                       {task.linkedProcesses.map((proc) => (
                         <button
                           key={proc.id}
-                          onClick={() => openProcessViewer(task.id, proc.id)}
+                          onClick={() => openProcessViewer(task.id, proc.id, task.linkedProcesses || [])}
                           className="w-full text-left px-3 py-2 text-sm rounded hover:bg-secondary transition-colors"
                         >
                           {proc.name}
@@ -422,7 +423,9 @@ const AdminTasks: React.FC = () => {
         <ProcessViewerOverlay
           taskId={showProcessViewer.taskId}
           processId={showProcessViewer.processId}
+          allProcesses={showProcessViewer.allProcesses}
           onClose={() => setShowProcessViewer(null)}
+          onSwitchProcess={(newProcessId) => setShowProcessViewer({ ...showProcessViewer, processId: newProcessId })}
         />
       )}
     </div>
@@ -641,45 +644,125 @@ const EditTaskModal: React.FC<{ open: boolean; task: Task; onClose: () => void }
   );
 };
 
-// Process Viewer Overlay (dentro de tareas)
-const ProcessViewerOverlay: React.FC<{ taskId: string; processId: string; onClose: () => void }> = ({ onClose }) => {
+// Process Viewer Overlay (dentro de tareas) - Full featured
+const ProcessViewerOverlay: React.FC<{ taskId: string; processId: string; allProcesses: { id: string; name: string }[]; onClose: () => void; onSwitchProcess: (processId: string) => void }> = ({ taskId, processId, allProcesses, onClose, onSwitchProcess }) => {
+  const [view, setView] = useState<'list' | 'detail'>('detail');
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  const mockProcessDetail = {
+    id: processId,
+    name: allProcesses.find(p => p.id === processId)?.name || 'Proceso',
+    description: 'Este proceso define los pasos correctos para completar esta tarea.',
+    steps: [
+      { id: 's1', number: 1, title: 'Paso inicial', description: 'Descripción del paso inicial.', duration: '2 min' },
+      { id: 's2', number: 2, title: 'Verificación', description: 'Verifica que todo esté correcto.', duration: '3 min' },
+      { id: 's3', number: 3, title: 'Ejecución', description: 'Ejecuta la acción principal.', duration: '5 min' },
+      { id: 's4', number: 4, title: 'Cierre', description: 'Finaliza y registra.', duration: '2 min' },
+    ],
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      <header className="flex items-center justify-between p-4 border-b border-border">
-        <div>
-          <p className="text-xs text-muted-foreground">Viendo proceso de la tarea</p>
-          <h1 className="font-semibold text-foreground">Cierre de Caja</h1>
+      {/* Header with task context */}
+      <header className="flex items-center justify-between p-4 border-b border-border shrink-0">
+        <div className="flex items-center gap-4">
+          {view === 'detail' && allProcesses.length > 1 && (
+            <Button variant="ghost" size="sm" onClick={() => setView('list')} className="gap-1">
+              <ChevronLeft className="w-4 h-4" />
+              Ver procesos
+            </Button>
+          )}
+          <div>
+            <p className="text-xs text-muted-foreground">Viendo proceso de la tarea</p>
+            <h1 className="font-semibold text-foreground">{mockProcessDetail.name}</h1>
+          </div>
         </div>
         <Button variant="outline" onClick={onClose}>
           Cerrar proceso
         </Button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center">
-            <p className="text-muted-foreground">Diagrama del proceso</p>
-          </div>
-          
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Cierre de Caja</h2>
-            <p className="text-muted-foreground">
-              Procedimiento estándar para el cierre diario de caja registradora.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((step) => (
-              <div key={step} className="p-3 rounded-lg border border-border flex items-center gap-3">
-                <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                  {step}
-                </span>
-                <span className="text-foreground">Paso {step} del proceso</span>
-              </div>
-            ))}
+      {view === 'list' ? (
+        // List of associated processes
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-xl font-bold mb-4">Procesos Asociados a esta Tarea</h2>
+            <div className="space-y-3">
+              {allProcesses.map((proc) => (
+                <button
+                  key={proc.id}
+                  onClick={() => { onSwitchProcess(proc.id); setView('detail'); }}
+                  className={cn(
+                    'w-full text-left p-4 rounded-lg border transition-colors',
+                    proc.id === processId ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  )}
+                >
+                  <p className="font-medium text-foreground">{proc.name}</p>
+                  {proc.id === processId && <span className="text-xs text-primary">Viendo actualmente</span>}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        // Process detail view
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center">
+              <p className="text-muted-foreground">Diagrama del proceso</p>
+            </div>
+            
+            <div>
+              <h2 className="text-2xl font-bold mb-2">{mockProcessDetail.name}</h2>
+              <p className="text-muted-foreground">{mockProcessDetail.description}</p>
+            </div>
+
+            <div className="space-y-2">
+              {mockProcessDetail.steps.map((step, index) => (
+                <div 
+                  key={step.id} 
+                  className={cn(
+                    'p-4 rounded-lg border transition-colors cursor-pointer',
+                    index === currentStep ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'
+                  )}
+                  onClick={() => setCurrentStep(index)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                      {step.number}
+                    </span>
+                    <div className="flex-1">
+                      <span className="text-foreground font-medium">{step.title}</span>
+                      <p className="text-sm text-muted-foreground">{step.description}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{step.duration}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-between pt-4 border-t border-border">
+              <Button 
+                variant="outline" 
+                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                disabled={currentStep === 0}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Paso anterior
+              </Button>
+              <Button 
+                variant="hero" 
+                onClick={() => setCurrentStep(Math.min(mockProcessDetail.steps.length - 1, currentStep + 1))}
+                disabled={currentStep === mockProcessDetail.steps.length - 1}
+              >
+                Siguiente
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
