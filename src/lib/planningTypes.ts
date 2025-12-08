@@ -1,6 +1,6 @@
 // Types for strategic planning system
 export type PlanningLevel = 'strategy' | 'objective' | 'initiative' | 'action';
-export type PlanningStatus = 'draft' | 'active' | 'completed' | 'on_hold' | 'cancelled';
+export type PlanningStatus = 'draft' | 'active' | 'completed' | 'on_hold' | 'cancelled' | 'not_achieved';
 
 export interface PlanningItem {
   id: string;
@@ -73,33 +73,52 @@ export const planningLevelConfig: Record<PlanningLevel, {
 
 export const planningStatusConfig: Record<PlanningStatus, {
   label: string;
+  description: string;
   color: string;
   bgColor: string;
+  icon: string;
 }> = {
   draft: {
     label: 'Borrador',
+    description: 'En preparación, aún no iniciado',
     color: 'text-muted-foreground',
     bgColor: 'bg-muted',
+    icon: 'FileEdit',
   },
   active: {
     label: 'Activo',
+    description: 'En progreso actualmente',
     color: 'text-primary',
     bgColor: 'bg-primary/10',
+    icon: 'Play',
   },
   completed: {
     label: 'Completado',
+    description: 'Logrado exitosamente (incluso prematuramente)',
     color: 'text-success',
     bgColor: 'bg-success/10',
+    icon: 'CheckCircle',
   },
   on_hold: {
     label: 'En pausa',
+    description: 'Temporalmente detenido',
     color: 'text-warning',
     bgColor: 'bg-warning/10',
+    icon: 'Pause',
+  },
+  not_achieved: {
+    label: 'No alcanzado',
+    description: 'No se logró el objetivo esperado',
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-500/10',
+    icon: 'XCircle',
   },
   cancelled: {
-    label: 'Cancelado',
+    label: 'Abandonado',
+    description: 'Descartado o abandonado definitivamente',
     color: 'text-destructive',
     bgColor: 'bg-destructive/10',
+    icon: 'Ban',
   },
 };
 

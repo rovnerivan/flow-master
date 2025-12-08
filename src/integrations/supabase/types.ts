@@ -1414,6 +1414,7 @@ export type Database = {
         | "completed"
         | "on_hold"
         | "cancelled"
+        | "not_achieved"
       priority_level: "high" | "medium" | "low"
       process_status: "draft" | "published" | "under_review" | "discontinued"
     }
@@ -1557,7 +1558,14 @@ export const Constants = {
       feed_content_type: ["tip", "achievement", "certification"],
       hierarchy_level: ["owner", "admin", "supervisor", "employee"],
       planning_level: ["strategy", "objective", "initiative", "action"],
-      planning_status: ["draft", "active", "completed", "on_hold", "cancelled"],
+      planning_status: [
+        "draft",
+        "active",
+        "completed",
+        "on_hold",
+        "cancelled",
+        "not_achieved",
+      ],
       priority_level: ["high", "medium", "low"],
       process_status: ["draft", "published", "under_review", "discontinued"],
     },
