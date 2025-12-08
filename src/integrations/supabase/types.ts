@@ -671,6 +671,174 @@ export type Database = {
           },
         ]
       }
+      task_assignees: {
+        Row: {
+          assignment_id: string
+          completed_at: string | null
+          id: string
+          started_at: string | null
+          status: string | null
+          team_id: string
+          time_spent_seconds: number | null
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          completed_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string | null
+          team_id: string
+          time_spent_seconds?: number | null
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          completed_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string | null
+          team_id?: string
+          time_spent_seconds?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignees_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignees_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_assignments: {
+        Row: {
+          assigned_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          due_date: string | null
+          due_time: string | null
+          id: string
+          instance_label: string | null
+          is_shared: boolean | null
+          notes: string | null
+          status: string | null
+          task_id: string
+          team_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          instance_label?: string | null
+          is_shared?: boolean | null
+          notes?: string | null
+          status?: string | null
+          task_id: string
+          team_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          instance_label?: string | null
+          is_shared?: boolean | null
+          notes?: string | null
+          status?: string | null
+          task_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          estimated_duration_min: number | null
+          frequency: string | null
+          id: string
+          is_active: boolean | null
+          linked_process_id: string | null
+          name: string
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_duration_min?: number | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          linked_process_id?: string | null
+          name: string
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_duration_min?: number | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          linked_process_id?: string | null
+          name?: string
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_linked_process_id_fkey"
+            columns: ["linked_process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_feed: {
         Row: {
           content_text: string | null

@@ -439,26 +439,84 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
     description: '',
     frequency: 'daily',
     estimatedTime: '15',
-    assignedTo: '',
     dueDate: '',
   });
+  const [assignmentType, setAssignmentType] = useState<'individual' | 'shared'>('individual');
+  const [assignments, setAssignments] = useState<{ userId: string; userName: string; instanceLabel: string }[]>([]);
+  const [sharedAssignees, setSharedAssignees] = useState<{ userId: string; userName: string }[]>([]);
+  const [showAssigneeSelector, setShowAssigneeSelector] = useState(false);
+
+  // Mock team members - in real implementation, fetch from Supabase
+  const teamMembers = [
+    { id: 'u1', name: 'Carlos López', role: 'Cajero' },
+    { id: 'u2', name: 'Ana Martínez', role: 'Cajera' },
+    { id: 'u3', name: 'María García', role: 'Almacén' },
+    { id: 'u4', name: 'Pedro Sánchez', role: 'Ventas' },
+  ];
 
   if (!open) return null;
+
+  const addIndividualAssignment = (userId: string, userName: string) => {
+    if (assignments.some(a => a.userId === userId)) {
+      toast.error('Este empleado ya tiene asignación');
+      return;
+    }
+    setAssignments([...assignments, { userId, userName, instanceLabel: '' }]);
+  };
+
+  const removeIndividualAssignment = (userId: string) => {
+    setAssignments(assignments.filter(a => a.userId !== userId));
+  };
+
+  const updateInstanceLabel = (userId: string, label: string) => {
+    setAssignments(assignments.map(a => 
+      a.userId === userId ? { ...a, instanceLabel: label } : a
+    ));
+  };
+
+  const toggleSharedAssignee = (userId: string, userName: string) => {
+    if (sharedAssignees.some(a => a.userId === userId)) {
+      setSharedAssignees(sharedAssignees.filter(a => a.userId !== userId));
+    } else {
+      setSharedAssignees([...sharedAssignees, { userId, userName }]);
+    }
+  };
 
   const handleSubmit = () => {
     if (!formData.title) {
       toast.error('El título es requerido');
       return;
     }
-    toast.success('Tarea creada exitosamente');
+    if (assignmentType === 'individual' && assignments.length === 0) {
+      toast.error('Asigna al menos a un empleado');
+      return;
+    }
+    if (assignmentType === 'shared' && sharedAssignees.length === 0) {
+      toast.error('Selecciona al menos un responsable');
+      return;
+    }
+
+    // In real implementation, save to Supabase
+    toast.success(
+      assignmentType === 'individual' 
+        ? `Tarea creada con ${assignments.length} asignación(es) individual(es)` 
+        : `Tarea compartida creada con ${sharedAssignees.length} responsable(s)`
+    );
     onClose();
-    setFormData({ title: '', description: '', frequency: 'daily', estimatedTime: '15', assignedTo: '', dueDate: '' });
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setFormData({ title: '', description: '', frequency: 'daily', estimatedTime: '15', dueDate: '' });
+    setAssignmentType('individual');
+    setAssignments([]);
+    setSharedAssignees([]);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl">
+      <div className="relative w-full max-w-2xl mx-4 bg-card border border-border rounded-2xl shadow-xl">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <h2 className="text-xl font-semibold text-foreground">Nueva Tarea</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary">
@@ -466,69 +524,223 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
           </button>
         </div>
 
-        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Título *</label>
-            <Input
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Título de la tarea"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Descripción</label>
-            <Textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descripción de la tarea"
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+          {/* Basic Info */}
+          <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Frecuencia</label>
-              <select
-                value={formData.frequency}
-                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-              >
-                <option value="daily">Diaria</option>
-                <option value="weekly">Semanal</option>
-                <option value="monthly">Mensual</option>
-                <option value="annual">Anual</option>
-                <option value="occasional">Ocasional</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tiempo estimado (min)</label>
+              <label className="text-sm font-medium">Título de la tarea *</label>
               <Input
-                type="number"
-                value={formData.estimatedTime}
-                onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Ej: Contar caja, Verificar inventario..."
               />
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descripción</label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descripción de la tarea"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Frecuencia</label>
+                <select
+                  value={formData.frequency}
+                  onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  <option value="daily">Diaria</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensual</option>
+                  <option value="annual">Anual</option>
+                  <option value="occasional">Ocasional</option>
+                  <option value="one_time">Única vez</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tiempo est. (min)</label>
+                <Input
+                  type="number"
+                  value={formData.estimatedTime}
+                  onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha límite</label>
+                <Input
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Asignar a</label>
-            <Input
-              value={formData.assignedTo}
-              onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-              placeholder="Nombres separados por coma"
-            />
+          {/* Assignment Type */}
+          <div className="space-y-4">
+            <label className="text-sm font-medium">Tipo de asignación</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setAssignmentType('individual')}
+                className={cn(
+                  "p-4 rounded-xl border text-left transition-all",
+                  assignmentType === 'individual'
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-primary/50"
+                )}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <User className="w-5 h-5 text-primary" />
+                  <span className="font-medium">Individual</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Cada persona tiene su propia instancia de la tarea. Ej: "Contar Caja 1" y "Contar Caja 2" son tareas separadas.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAssignmentType('shared')}
+                className={cn(
+                  "p-4 rounded-xl border text-left transition-all",
+                  assignmentType === 'shared'
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-primary/50"
+                )}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <User className="w-5 h-5 text-primary" />
+                  <User className="w-5 h-5 text-primary -ml-4" />
+                  <span className="font-medium">Compartida</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Una sola tarea con múltiples responsables. Cuando se completa, se completa para todos.
+                </p>
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Fecha límite</label>
-            <Input
-              type="date"
-              value={formData.dueDate}
-              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            />
-          </div>
+          {/* Individual Assignments */}
+          {assignmentType === 'individual' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Asignaciones individuales</label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAssigneeSelector(!showAssigneeSelector)}
+                  className="gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar persona
+                </Button>
+              </div>
+
+              {showAssigneeSelector && (
+                <div className="p-3 rounded-lg border border-border bg-secondary/30 space-y-2">
+                  <p className="text-xs text-muted-foreground">Selecciona empleados:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {teamMembers.map(member => (
+                      <button
+                        key={member.id}
+                        onClick={() => addIndividualAssignment(member.id, member.name)}
+                        disabled={assignments.some(a => a.userId === member.id)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-sm transition-colors",
+                          assignments.some(a => a.userId === member.id)
+                            ? "bg-muted text-muted-foreground cursor-not-allowed"
+                            : "bg-card border border-border hover:border-primary"
+                        )}
+                      >
+                        {member.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {assignments.length > 0 && (
+                <div className="space-y-2">
+                  {assignments.map((assignment, idx) => (
+                    <div key={assignment.userId} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                      <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                        {idx + 1}
+                      </span>
+                      <span className="font-medium text-sm flex-shrink-0">{assignment.userName}</span>
+                      <Input
+                        value={assignment.instanceLabel}
+                        onChange={(e) => updateInstanceLabel(assignment.userId, e.target.value)}
+                        placeholder="Etiqueta (ej: Caja 1, Zona Norte...)"
+                        className="flex-1 h-8 text-sm"
+                      />
+                      <button
+                        onClick={() => removeIndividualAssignment(assignment.userId)}
+                        className="p-1.5 rounded hover:bg-destructive/10 text-destructive"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <p className="text-xs text-muted-foreground">
+                    La etiqueta ayuda a diferenciar instancias de la misma tarea (ej: "Caja 1", "Caja 2")
+                  </p>
+                </div>
+              )}
+
+              {assignments.length === 0 && (
+                <div className="text-center py-6 text-muted-foreground border border-dashed border-border rounded-lg">
+                  <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Agrega empleados para asignar instancias individuales</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Shared Assignment */}
+          {assignmentType === 'shared' && (
+            <div className="space-y-4">
+              <label className="text-sm font-medium">Responsables de la tarea compartida</label>
+              <div className="p-3 rounded-lg border border-border bg-secondary/30">
+                <p className="text-xs text-muted-foreground mb-3">Selecciona todos los responsables:</p>
+                <div className="flex flex-wrap gap-2">
+                  {teamMembers.map(member => (
+                    <button
+                      key={member.id}
+                      onClick={() => toggleSharedAssignee(member.id, member.name)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-sm transition-colors",
+                        sharedAssignees.some(a => a.userId === member.id)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card border border-border hover:border-primary"
+                      )}
+                    >
+                      {member.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {sharedAssignees.length > 0 && (
+                <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+                  <p className="text-sm text-success font-medium mb-1">
+                    Tarea compartida entre {sharedAssignees.length} persona(s)
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {sharedAssignees.map(a => a.userName).join(', ')} trabajarán juntos en esta tarea. 
+                    Cuando cualquiera la marque como completada, se completará para todos.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="p-6 border-t border-border flex gap-3">
