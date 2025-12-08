@@ -46,8 +46,10 @@ const supervisorNavItems = [
   { icon: LayoutDashboard, label: 'Mi Dashboard', path: '/supervisor' },
   { icon: ListTodo, label: 'Mis Tareas', path: '/supervisor/my-tasks' },
   { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
+  { icon: UserPlus, label: 'Onboardings', path: '/supervisor/onboardings' },
+  { icon: AlertTriangle, label: 'Errores', path: '/supervisor/errors' },
+  { icon: BarChart3, label: 'Analytics', path: '/supervisor/analytics' },
   { icon: Heart, label: 'Visión y Liderazgo', path: '/supervisor/vision' },
-  { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
