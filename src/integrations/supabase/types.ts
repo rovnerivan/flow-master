@@ -463,6 +463,67 @@ export type Database = {
           },
         ]
       }
+      process_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          process_id: string
+          steps_snapshot: Json | null
+          team_id: string
+          version_number: string
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          process_id: string
+          steps_snapshot?: Json | null
+          team_id: string
+          version_number: string
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          process_id?: string
+          steps_snapshot?: Json | null
+          team_id?: string
+          version_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_versions_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_versions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       processes: {
         Row: {
           benchmark_time_min: number | null
@@ -470,9 +531,18 @@ export type Database = {
           creator_id: string | null
           current_version: string | null
           description: string | null
+          discontinued_at: string | null
+          discontinued_by: string | null
+          discontinued_reason: string | null
           id: string
           is_published: boolean | null
           name: string
+          review_description: string | null
+          review_reason: string | null
+          review_risks: string | null
+          review_started_at: string | null
+          review_started_by: string | null
+          status: Database["public"]["Enums"]["process_status"] | null
           team_id: string
           updated_at: string
         }
@@ -482,9 +552,18 @@ export type Database = {
           creator_id?: string | null
           current_version?: string | null
           description?: string | null
+          discontinued_at?: string | null
+          discontinued_by?: string | null
+          discontinued_reason?: string | null
           id?: string
           is_published?: boolean | null
           name: string
+          review_description?: string | null
+          review_reason?: string | null
+          review_risks?: string | null
+          review_started_at?: string | null
+          review_started_by?: string | null
+          status?: Database["public"]["Enums"]["process_status"] | null
           team_id: string
           updated_at?: string
         }
@@ -494,13 +573,36 @@ export type Database = {
           creator_id?: string | null
           current_version?: string | null
           description?: string | null
+          discontinued_at?: string | null
+          discontinued_by?: string | null
+          discontinued_reason?: string | null
           id?: string
           is_published?: boolean | null
           name?: string
+          review_description?: string | null
+          review_reason?: string | null
+          review_risks?: string | null
+          review_started_at?: string | null
+          review_started_by?: string | null
+          status?: Database["public"]["Enums"]["process_status"] | null
           team_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "processes_discontinued_by_fkey"
+            columns: ["discontinued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processes_review_started_by_fkey"
+            columns: ["review_started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "processes_team_id_fkey"
             columns: ["team_id"]
@@ -986,6 +1088,7 @@ export type Database = {
       feed_content_type: "tip" | "achievement" | "certification"
       hierarchy_level: "owner" | "admin" | "supervisor" | "employee"
       priority_level: "high" | "medium" | "low"
+      process_status: "draft" | "published" | "under_review" | "discontinued"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1127,6 +1230,7 @@ export const Constants = {
       feed_content_type: ["tip", "achievement", "certification"],
       hierarchy_level: ["owner", "admin", "supervisor", "employee"],
       priority_level: ["high", "medium", "low"],
+      process_status: ["draft", "published", "under_review", "discontinued"],
     },
   },
 } as const
