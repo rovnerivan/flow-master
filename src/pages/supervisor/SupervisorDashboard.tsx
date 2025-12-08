@@ -31,7 +31,7 @@ import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
 import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
 import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import AdminProcesses from '../admin/AdminProcesses';
-import AdminTasks from '../admin/AdminTasks';
+import AdminTasksRefactored from '@/components/tasks/AdminTasksRefactored';
 import { Input } from '@/components/ui/input';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import {
@@ -1464,7 +1464,7 @@ const SupervisorDashboard: React.FC = () => {
       <Routes>
         <Route index element={<SupervisorHome />} />
         <Route path="processes" element={<AdminProcesses />} />
-        <Route path="team-tasks" element={<AdminTasks />} />
+        <Route path="team-tasks" element={<AdminTasksRefactored />} />
         <Route path="team" element={<SupervisorTeamPage />} />
         <Route path="vision" element={<VisionLeadershipPage />} />
         <Route path="performance" element={<PerformancePage />} />

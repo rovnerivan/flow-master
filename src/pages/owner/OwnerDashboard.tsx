@@ -33,7 +33,7 @@ import AdminReports from '../admin/AdminReports';
 import AdminSettings from '../admin/AdminSettings';
 import AdminErrors from '../admin/AdminErrors';
 import AdminOnboardings from '../admin/AdminOnboardings';
-import AdminTasks from '../admin/AdminTasks';
+import AdminTasksRefactored from '@/components/tasks/AdminTasksRefactored';
 import AdminHierarchy from '../admin/AdminHierarchy';
 import VisionLeadership from '../admin/VisionLeadership';
 import AdminPlanning from '../admin/AdminPlanning';
@@ -242,7 +242,7 @@ const OwnerDashboard: React.FC = () => {
         <Route path="/" element={<DashboardHome />} />
         <Route path="/planning" element={<AdminPlanning />} />
         <Route path="/processes/*" element={<AdminProcesses />} />
-        <Route path="/tasks" element={<AdminTasks />} />
+        <Route path="/tasks" element={<AdminTasksRefactored />} />
         <Route path="/team/*" element={<AdminTeam />} />
         <Route path="/hierarchy" element={<AdminHierarchy />} />
         <Route path="/vision" element={<VisionLeadership />} />
