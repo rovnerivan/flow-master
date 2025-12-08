@@ -1,203 +1,248 @@
 import React, { useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import {
-  Clock,
-  DollarSign,
-  AlertTriangle,
-  CheckCircle,
-  TrendingUp,
   Users,
-  BookOpen,
+  AlertTriangle,
+  Clock,
+  TrendingUp,
+  Copy,
+  Check,
   Plus,
+  MessageCircle,
+  UserPlus,
 } from 'lucide-react';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { ProcessHealthCard } from '@/components/dashboard/ProcessHealthCard';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+
+// Import admin pages
+import AdminProcesses from './AdminProcesses';
+import AdminTeam from './AdminTeam';
+import AdminAnalytics from './AdminAnalytics';
+import AdminReports from './AdminReports';
+import AdminSettings from './AdminSettings';
+import AdminErrors from './AdminErrors';
+import AdminOnboardings from './AdminOnboardings';
+import AdminTasks from './AdminTasks';
 
 const mockProcessHealth = [
   {
-    name: 'Onboarding de Cajeros',
+    name: 'Preparación de Pedidos',
     completionRate: 92,
     confusionRate: 8,
     status: 'healthy' as const,
     lastUpdated: 'Hace 2 días',
   },
   {
-    name: 'Protocolo de Cierre de Caja',
+    name: 'Atención al Cliente',
     completionRate: 78,
     confusionRate: 35,
     status: 'warning' as const,
     lastUpdated: 'Hace 1 semana',
   },
   {
-    name: 'Atención al Cliente',
-    completionRate: 45,
-    confusionRate: 52,
-    status: 'critical' as const,
+    name: 'Cierre de Caja',
+    completionRate: 95,
+    confusionRate: 5,
+    status: 'healthy' as const,
     lastUpdated: 'Hace 3 días',
   },
   {
-    name: 'Inventario y Stock',
-    completionRate: 88,
-    confusionRate: 12,
-    status: 'healthy' as const,
+    name: 'Inventario Semanal',
+    completionRate: 65,
+    confusionRate: 45,
+    status: 'critical' as const,
     lastUpdated: 'Hace 5 días',
   },
 ];
 
+const DashboardHome: React.FC = () => {
+  const navigate = useNavigate();
+  const [codeCopied, setCodeCopied] = useState(false);
+  const inviteCode = 'FLOW12345';
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(inviteCode);
+    setCodeCopied(true);
+    toast.success('Código copiado');
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Vista general de tu operación
+          </p>
+        </div>
+        <Button variant="hero" className="gap-2" onClick={() => navigate('/admin/processes')}>
+          <Plus className="w-4 h-4" />
+          Nuevo Proceso
+        </Button>
+      </div>
+
+      {/* KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div onClick={() => navigate('/admin/onboardings')} className="cursor-pointer">
+          <KPICard
+            title="Onboardings Activos"
+            value="5"
+            subtitle="3 nuevos esta semana"
+            icon={UserPlus}
+            trend={{ value: 2, isPositive: true }}
+          />
+        </div>
+        <div onClick={() => navigate('/admin/errors')} className="cursor-pointer">
+          <KPICard
+            title="Errores Detectados"
+            value="24"
+            subtitle="este mes"
+            icon={AlertTriangle}
+            trend={{ value: 15, isPositive: false }}
+            variant="warning"
+          />
+        </div>
+        <KPICard
+          title="Tiempo Salvado"
+          value="47h"
+          subtitle="vs mes anterior"
+          icon={Clock}
+          trend={{ value: 23, isPositive: true }}
+          variant="success"
+        />
+        <KPICard
+          title="Cumplimiento"
+          value="87%"
+          subtitle="promedio del equipo"
+          icon={TrendingUp}
+          trend={{ value: 5, isPositive: true }}
+        />
+      </div>
+
+      {/* Process Health Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="kpi-card">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-foreground">
+                Salud de Procesos
+              </h2>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/admin/processes')}>
+                Ver más
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {mockProcessHealth.map((process) => (
+                <ProcessHealthCard key={process.name} {...process} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats & Invite Code */}
+        <div className="space-y-6">
+          <div className="kpi-card">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Resumen Rápido
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Empleados activos</span>
+                <span className="font-semibold text-foreground">24</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Procesos publicados</span>
+                <span className="font-semibold text-foreground">12</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Completados hoy</span>
+                <span className="font-semibold text-foreground">89</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Tareas pendientes</span>
+                <span className="font-semibold text-foreground">7</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Invite Code Card */}
+          <div className="kpi-card bg-primary/5 border-primary/20">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Código de Invitación
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Comparte este código con nuevos empleados
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-4 py-3 rounded-lg bg-background border border-border font-mono text-lg text-center tracking-wider">
+                {inviteCode}
+              </code>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={copyCode}
+                className="flex-shrink-0"
+              >
+                {codeCopied ? (
+                  <Check className="w-4 h-4 text-success" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const handleSupport = () => {
+    toast.info('Función de soporte próximamente disponible');
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex">
       <AdminSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
+      {/* Main Content */}
       <main
         className={cn(
-          'transition-all duration-300 min-h-screen',
+          'flex-1 p-6 lg:p-8 transition-all duration-300',
           sidebarCollapsed ? 'ml-[72px]' : 'ml-64'
         )}
       >
-        <div className="p-6 lg:p-8">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground">
-                Vista general del rendimiento de tu equipo
-              </p>
-            </div>
-            <Button variant="hero" className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nuevo Proceso
-            </Button>
-          </div>
+        <Routes>
+          <Route path="/" element={<DashboardHome />} />
+          <Route path="/processes/*" element={<AdminProcesses />} />
+          <Route path="/tasks" element={<AdminTasks />} />
+          <Route path="/team/*" element={<AdminTeam />} />
+          <Route path="/analytics" element={<AdminAnalytics />} />
+          <Route path="/reports" element={<AdminReports />} />
+          <Route path="/settings" element={<AdminSettings />} />
+          <Route path="/errors" element={<AdminErrors />} />
+          <Route path="/onboardings" element={<AdminOnboardings />} />
+        </Routes>
 
-          {/* KPI Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 stagger-children">
-            <KPICard
-              title="Tiempo de Onboarding"
-              value="4.2 días"
-              subtitle="vs. 12 días benchmark"
-              icon={Clock}
-              trend={{ value: 65, isPositive: true }}
-              variant="primary"
-            />
-            <KPICard
-              title="Ahorro Estimado/Mes"
-              value="$8,450"
-              subtitle="Basado en eficiencia"
-              icon={DollarSign}
-              trend={{ value: 23, isPositive: true }}
-              variant="success"
-            />
-            <KPICard
-              title="Errores Evitados"
-              value="34"
-              subtitle="Este mes"
-              icon={AlertTriangle}
-              trend={{ value: 18, isPositive: true }}
-              variant="warning"
-            />
-            <KPICard
-              title="Compliance General"
-              value="87%"
-              subtitle="24 de 28 empleados"
-              icon={CheckCircle}
-              trend={{ value: 5, isPositive: true }}
-              variant="default"
-            />
-          </div>
-
-          {/* Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Process Health - Takes 2 columns */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-warning" />
-                  Salud de Procesos
-                </h2>
-                <Button variant="ghost" size="sm">
-                  Ver todos
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {mockProcessHealth.map((process) => (
-                  <ProcessHealthCard key={process.name} {...process} />
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-foreground">
-                Resumen Rápido
-              </h2>
-
-              <div className="kpi-card space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Users className="w-4 h-4 text-primary" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      Empleados activos
-                    </span>
-                  </div>
-                  <span className="text-lg font-semibold">28</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-success/10">
-                      <BookOpen className="w-4 h-4 text-success" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      Procesos activos
-                    </span>
-                  </div>
-                  <span className="text-lg font-semibold">12</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-warning/10">
-                      <TrendingUp className="w-4 h-4 text-warning" />
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      Completados hoy
-                    </span>
-                  </div>
-                  <span className="text-lg font-semibold">47</span>
-                </div>
-              </div>
-
-              {/* Invite Code Card */}
-              <div className="kpi-card">
-                <h3 className="font-semibold text-foreground mb-2">
-                  Código de Invitación
-                </h3>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Comparte este código con nuevos empleados
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 px-4 py-2 rounded-lg bg-secondary font-mono text-lg text-center tracking-wider">
-                    FLOW12345
-                  </code>
-                  <Button variant="outline" size="sm">
-                    Copiar
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Floating Support Button */}
+        <button
+          onClick={handleSupport}
+          className="fixed bottom-6 right-6 p-4 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 z-40"
+        >
+          <MessageCircle className="w-6 h-6" />
+        </button>
       </main>
     </div>
   );
