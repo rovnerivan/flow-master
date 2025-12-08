@@ -1082,8 +1082,11 @@ export type Database = {
           due_time: string | null
           id: string
           instance_label: string | null
+          is_from_template: boolean | null
           is_shared: boolean | null
           notes: string | null
+          recurrence_rule_id: string | null
+          scheduled_date: string | null
           status: string | null
           task_id: string
           team_id: string
@@ -1097,8 +1100,11 @@ export type Database = {
           due_time?: string | null
           id?: string
           instance_label?: string | null
+          is_from_template?: boolean | null
           is_shared?: boolean | null
           notes?: string | null
+          recurrence_rule_id?: string | null
+          scheduled_date?: string | null
           status?: string | null
           task_id: string
           team_id: string
@@ -1112,13 +1118,23 @@ export type Database = {
           due_time?: string | null
           id?: string
           instance_label?: string | null
+          is_from_template?: boolean | null
           is_shared?: boolean | null
           notes?: string | null
+          recurrence_rule_id?: string | null
+          scheduled_date?: string | null
           status?: string | null
           task_id?: string
           team_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_assignments_recurrence_rule_id_fkey"
+            columns: ["recurrence_rule_id"]
+            isOneToOne: false
+            referencedRelation: "task_recurrence_rules"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_assignments_task_id_fkey"
             columns: ["task_id"]
@@ -1200,6 +1216,75 @@ export type Database = {
           },
           {
             foreignKeyName: "task_metrics_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_recurrence_rules: {
+        Row: {
+          auto_generate: boolean | null
+          created_at: string | null
+          day_of_month: number | null
+          days_of_week: number[] | null
+          default_due_time: string | null
+          ends_on: string | null
+          id: string
+          is_active: boolean | null
+          month_of_year: number | null
+          pattern_type: Database["public"]["Enums"]["recurrence_pattern_type"]
+          starts_on: string | null
+          task_id: string
+          team_id: string
+          updated_at: string | null
+          week_of_month: number | null
+        }
+        Insert: {
+          auto_generate?: boolean | null
+          created_at?: string | null
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          default_due_time?: string | null
+          ends_on?: string | null
+          id?: string
+          is_active?: boolean | null
+          month_of_year?: number | null
+          pattern_type?: Database["public"]["Enums"]["recurrence_pattern_type"]
+          starts_on?: string | null
+          task_id: string
+          team_id: string
+          updated_at?: string | null
+          week_of_month?: number | null
+        }
+        Update: {
+          auto_generate?: boolean | null
+          created_at?: string | null
+          day_of_month?: number | null
+          days_of_week?: number[] | null
+          default_due_time?: string | null
+          ends_on?: string | null
+          id?: string
+          is_active?: boolean | null
+          month_of_year?: number | null
+          pattern_type?: Database["public"]["Enums"]["recurrence_pattern_type"]
+          starts_on?: string | null
+          task_id?: string
+          team_id?: string
+          updated_at?: string | null
+          week_of_month?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_recurrence_rules_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_recurrence_rules_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -1417,6 +1502,15 @@ export type Database = {
         | "not_achieved"
       priority_level: "high" | "medium" | "low"
       process_status: "draft" | "published" | "under_review" | "discontinued"
+      recurrence_pattern_type:
+        | "daily"
+        | "specific_days"
+        | "weekly"
+        | "biweekly"
+        | "monthly"
+        | "quarterly"
+        | "annual"
+        | "one_time"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1568,6 +1662,16 @@ export const Constants = {
       ],
       priority_level: ["high", "medium", "low"],
       process_status: ["draft", "published", "under_review", "discontinued"],
+      recurrence_pattern_type: [
+        "daily",
+        "specific_days",
+        "weekly",
+        "biweekly",
+        "monthly",
+        "quarterly",
+        "annual",
+        "one_time",
+      ],
     },
   },
 } as const
