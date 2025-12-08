@@ -14,12 +14,14 @@ interface Onboarding {
   totalProcesses: number;
   avgTimePerProcess: string;
   status: 'in_progress' | 'completed';
-  // Hierarchy info
+  // Hierarchy info - must match HierarchyFilter mockHierarchy IDs
   verticalId?: string;
   managementId?: string;
   departmentId?: string;
+  employeeId?: string; // This must match employee IDs in mockHierarchy (e1, e2, e3, etc.)
 }
 
+// Mock onboardings - employeeId must match mockHierarchy employee IDs
 const mockOnboardings: Onboarding[] = [
   {
     id: '1',
@@ -34,10 +36,11 @@ const mockOnboardings: Onboarding[] = [
     verticalId: 'v1',
     managementId: 'm1',
     departmentId: 'd2',
+    employeeId: 'e3', // Pedro Sánchez in mockHierarchy
   },
   {
     id: '2',
-    name: 'Laura Torres',
+    name: 'Laura García',
     email: 'laura@empresa.com',
     startDate: '2024-01-12',
     progress: 30,
@@ -45,14 +48,15 @@ const mockOnboardings: Onboarding[] = [
     totalProcesses: 6,
     avgTimePerProcess: '22 min',
     status: 'in_progress',
-    verticalId: 'v2',
-    managementId: 'm3',
-    departmentId: 'd4',
+    verticalId: 'v1',
+    managementId: 'm2',
+    departmentId: 'd3',
+    employeeId: 'e4', // Laura García in mockHierarchy
   },
   {
     id: '3',
-    name: 'Roberto Díaz',
-    email: 'roberto@empresa.com',
+    name: 'Sofia Ruiz',
+    email: 'sofia@empresa.com',
     startDate: '2024-01-14',
     progress: 15,
     completedProcesses: 1,
@@ -62,11 +66,12 @@ const mockOnboardings: Onboarding[] = [
     verticalId: 'v2',
     managementId: 'm4',
     departmentId: 'd5',
+    employeeId: 'e8', // Sofia Ruiz in mockHierarchy
   },
   {
     id: '4',
-    name: 'Carmen Ruiz',
-    email: 'carmen@empresa.com',
+    name: 'Miguel Torres',
+    email: 'miguel@empresa.com',
     startDate: '2024-01-08',
     progress: 100,
     completedProcesses: 6,
@@ -76,11 +81,12 @@ const mockOnboardings: Onboarding[] = [
     verticalId: 'v1',
     managementId: 'm2',
     departmentId: 'd3',
+    employeeId: 'e5', // Miguel Torres in mockHierarchy
   },
   {
     id: '5',
-    name: 'Diego Morales',
-    email: 'diego@empresa.com',
+    name: 'Andrea Morales',
+    email: 'andrea@empresa.com',
     startDate: '2024-01-05',
     progress: 100,
     completedProcesses: 6,
@@ -90,6 +96,7 @@ const mockOnboardings: Onboarding[] = [
     verticalId: 'v3',
     managementId: 'm5',
     departmentId: 'd6',
+    employeeId: 'e9', // Andrea Morales in mockHierarchy
   },
 ];
 
@@ -101,6 +108,7 @@ const AdminOnboardings: React.FC = () => {
       verticalId: o.verticalId,
       managementId: o.managementId,
       departmentId: o.departmentId,
+      employeeId: o.employeeId,
     })
   );
   

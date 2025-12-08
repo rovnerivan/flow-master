@@ -17,12 +17,23 @@ import {
   Cell,
 } from 'recharts';
 
-const errorsByProcessData = [
-  { name: 'Prep. Pedidos', errors: 12 },
-  { name: 'Cierre Caja', errors: 8 },
-  { name: 'Atención Cliente', errors: 15 },
-  { name: 'Inventario', errors: 5 },
-  { name: 'Devoluciones', errors: 10 },
+// Analytics data with hierarchy info for filtering
+interface AnalyticsDataPoint {
+  name: string;
+  value: number;
+  // Hierarchy IDs to enable filtering
+  verticalId?: string;
+  managementId?: string;
+  departmentId?: string;
+  employeeId?: string;
+}
+
+const errorsByProcessData: AnalyticsDataPoint[] = [
+  { name: 'Prep. Pedidos', value: 12, verticalId: 'v1', managementId: 'm1' },
+  { name: 'Cierre Caja', value: 8, verticalId: 'v3', managementId: 'm5' },
+  { name: 'Atención Cliente', value: 15, verticalId: 'v2', managementId: 'm3' },
+  { name: 'Inventario', value: 5, verticalId: 'v1', managementId: 'm1' },
+  { name: 'Devoluciones', value: 10, verticalId: 'v2', managementId: 'm3' },
 ];
 
 const timeSavedData = [
@@ -33,12 +44,15 @@ const timeSavedData = [
   { month: 'Ene', hours: 45 },
 ];
 
-const complianceByEmployeeData = [
-  { name: 'María G.', compliance: 95 },
-  { name: 'Carlos L.', compliance: 88 },
-  { name: 'Ana M.', compliance: 72 },
-  { name: 'Pedro S.', compliance: 91 },
-  { name: 'Luis R.', compliance: 85 },
+// Employee compliance data with hierarchy info matching mockHierarchy
+const complianceByEmployeeData: AnalyticsDataPoint[] = [
+  { name: 'María Fernández', value: 95, verticalId: 'v2', managementId: 'm3', departmentId: 'd4', employeeId: 'e6' },
+  { name: 'Carlos López', value: 88, verticalId: 'v1', managementId: 'm1', departmentId: 'd1', employeeId: 'e1' },
+  { name: 'Ana Martínez', value: 72, verticalId: 'v1', managementId: 'm1', departmentId: 'd1', employeeId: 'e2' },
+  { name: 'Pedro Sánchez', value: 91, verticalId: 'v1', managementId: 'm1', departmentId: 'd2', employeeId: 'e3' },
+  { name: 'Laura García', value: 85, verticalId: 'v1', managementId: 'm2', departmentId: 'd3', employeeId: 'e4' },
+  { name: 'Sofia Ruiz', value: 79, verticalId: 'v2', managementId: 'm4', departmentId: 'd5', employeeId: 'e8' },
+  { name: 'Andrea Morales', value: 94, verticalId: 'v3', managementId: 'm5', departmentId: 'd6', employeeId: 'e9' },
 ];
 
 const errorTrendData = [
@@ -57,6 +71,27 @@ const errorDistributionData = [
 
 const AdminAnalytics: React.FC = () => {
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+
+  // Filter data based on hierarchy selection
+  const filteredErrorsByProcess = errorsByProcessData.filter(d => 
+    matchesHierarchyFilter(hierarchyFilter, { verticalId: d.verticalId, managementId: d.managementId })
+  );
+  
+  const filteredComplianceData = complianceByEmployeeData.filter(d =>
+    matchesHierarchyFilter(hierarchyFilter, { 
+      verticalId: d.verticalId, 
+      managementId: d.managementId, 
+      departmentId: d.departmentId, 
+      employeeId: d.employeeId 
+    })
+  );
+
+  // Calculate filtered stats
+  const avgCompliance = filteredComplianceData.length > 0 
+    ? Math.round(filteredComplianceData.reduce((sum, d) => sum + d.value, 0) / filteredComplianceData.length)
+    : 0;
+  const totalErrors = filteredErrorsByProcess.reduce((sum, d) => sum + d.value, 0);
+  const activeEmployees = filteredComplianceData.length;
 
   return (
     <div className="space-y-6">
@@ -85,7 +120,7 @@ const AdminAnalytics: React.FC = () => {
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">87%</p>
+              <p className="text-2xl font-bold text-foreground">{avgCompliance}%</p>
               <p className="text-sm text-muted-foreground">Cumplimiento</p>
             </div>
           </div>
@@ -107,8 +142,8 @@ const AdminAnalytics: React.FC = () => {
               <AlertTriangle className="w-5 h-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">23</p>
-              <p className="text-sm text-muted-foreground">Errores mes</p>
+              <p className="text-2xl font-bold text-foreground">{totalErrors}</p>
+              <p className="text-sm text-muted-foreground">Errores</p>
             </div>
           </div>
         </div>
@@ -118,8 +153,8 @@ const AdminAnalytics: React.FC = () => {
               <Users className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">12</p>
-              <p className="text-sm text-muted-foreground">Empleados activos</p>
+              <p className="text-2xl font-bold text-foreground">{activeEmployees}</p>
+              <p className="text-sm text-muted-foreground">Empleados</p>
             </div>
           </div>
         </div>
@@ -134,7 +169,7 @@ const AdminAnalytics: React.FC = () => {
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={errorsByProcessData}>
+              <BarChart data={filteredErrorsByProcess}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
                   dataKey="name" 
@@ -153,7 +188,7 @@ const AdminAnalytics: React.FC = () => {
                   }}
                   labelStyle={{ color: 'hsl(var(--foreground))' }}
                 />
-                <Bar dataKey="errors" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -203,7 +238,7 @@ const AdminAnalytics: React.FC = () => {
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={complianceByEmployeeData} layout="vertical">
+              <BarChart data={filteredComplianceData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
                   type="number" 
@@ -216,7 +251,7 @@ const AdminAnalytics: React.FC = () => {
                   dataKey="name"
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   axisLine={{ stroke: 'hsl(var(--border))' }}
-                  width={80}
+                  width={100}
                 />
                 <Tooltip 
                   contentStyle={{ 
@@ -226,7 +261,7 @@ const AdminAnalytics: React.FC = () => {
                   }}
                   formatter={(value: number) => [`${value}%`, 'Cumplimiento']}
                 />
-                <Bar dataKey="compliance" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
