@@ -5,6 +5,7 @@ import {
   AlertCircle, 
   ChevronDown, 
   ChevronRight,
+  ChevronUp,
   PlayCircle,
   PauseCircle,
   BookOpen,
@@ -19,7 +20,8 @@ import {
   Play,
   Pause,
   X,
-  Edit3
+  Edit3,
+  History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -48,6 +50,13 @@ interface StrategicContext {
   contribution: string;
 }
 
+interface TimeEntry {
+  id: string;
+  minutes: number;
+  type: 'timer' | 'manual';
+  createdAt: Date;
+}
+
 interface TaskItem {
   id: string;
   name: string;
@@ -55,10 +64,11 @@ interface TaskItem {
   estimatedMinutes: number;
   dueTime?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'needs_correction' | 'rejected';
-  linkedProcesses?: LinkedProcess[]; // Support for multiple processes
+  linkedProcesses?: LinkedProcess[];
   strategicContext?: StrategicContext;
   correctionNotes?: string;
   timeSpent?: number;
+  timeEntries?: TimeEntry[];
 }
 
 interface ActiveTimer {
@@ -356,19 +366,23 @@ const StopTimerModal: React.FC<StopTimerModalProps> = ({
   );
 };
 
-// Floating Timer Component
+// Floating Timer Component - More prominent with minimize
 interface FloatingTimerProps {
   timer: ActiveTimer;
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
+  isMinimized: boolean;
+  onToggleMinimize: () => void;
 }
 
 const FloatingTimer: React.FC<FloatingTimerProps> = ({
   timer,
   onPause,
   onResume,
-  onStop
+  onStop,
+  isMinimized,
+  onToggleMinimize
 }) => {
   const [displaySeconds, setDisplaySeconds] = useState(0);
   
@@ -389,57 +403,222 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({
     return () => clearInterval(interval);
   }, [timer]);
 
+  // Minimized version - small floating badge
+  if (isMinimized) {
+    return (
+      <button
+        onClick={onToggleMinimize}
+        className="fixed bottom-4 right-4 z-[100] bg-primary text-primary-foreground rounded-full px-4 py-2 shadow-lg flex items-center gap-2 animate-pulse hover:animate-none hover:scale-105 transition-transform"
+      >
+        <Timer className="w-4 h-4" />
+        <span className="font-mono font-bold">{formatTimerDisplay(displaySeconds)}</span>
+        <ChevronUp className="w-4 h-4" />
+      </button>
+    );
+  }
+
+  // Full version - prominent floating card
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-lg animate-slide-up">
-      <div className="max-w-lg mx-auto px-4 py-3">
-        <div className="flex items-center gap-3">
-          {/* Task name */}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground">Registrando tiempo</p>
-            <p className="text-sm font-medium truncate">{timer.taskName}</p>
-          </div>
-          
-          {/* Timer display */}
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
-            <Timer className="w-4 h-4 text-primary" />
-            <span className="font-mono text-lg font-bold text-primary min-w-[60px] text-center">
-              {formatTimerDisplay(displaySeconds)}
-            </span>
-          </div>
-          
-          {/* Controls */}
-          <div className="flex items-center gap-1">
-            {timer.isPaused ? (
-              <Button 
-                size="icon" 
-                variant="ghost"
-                className="h-10 w-10 rounded-full text-primary hover:bg-primary/10"
-                onClick={onResume}
-              >
-                <Play className="w-5 h-5" />
-              </Button>
-            ) : (
-              <Button 
-                size="icon" 
-                variant="ghost"
-                className="h-10 w-10 rounded-full text-amber-500 hover:bg-amber-500/10"
-                onClick={onPause}
-              >
-                <Pause className="w-5 h-5" />
-              </Button>
-            )}
-            <Button 
-              size="icon" 
-              variant="ghost"
-              className="h-10 w-10 rounded-full text-destructive hover:bg-destructive/10"
-              onClick={onStop}
+    <div className="fixed inset-x-0 bottom-0 z-[100] pointer-events-none">
+      <div className="max-w-lg mx-auto p-4 pointer-events-auto">
+        <div className="bg-card border-2 border-primary rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header with task name and minimize */}
+          <div className="bg-primary/10 px-4 py-2 flex items-center justify-between border-b border-primary/20">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              <span className="text-xs font-medium text-primary">En progreso</span>
+            </div>
+            <button
+              onClick={onToggleMinimize}
+              className="p-1 hover:bg-primary/10 rounded-lg transition-colors"
             >
-              <Square className="w-4 h-4" />
-            </Button>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+          
+          <div className="p-4">
+            <p className="text-sm font-medium text-foreground mb-3 truncate">{timer.taskName}</p>
+            
+            {/* Timer display - large and prominent */}
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="flex items-center gap-3 bg-primary/10 px-6 py-3 rounded-xl">
+                <Timer className="w-6 h-6 text-primary" />
+                <span className="font-mono text-3xl font-bold text-primary">
+                  {formatTimerDisplay(displaySeconds)}
+                </span>
+              </div>
+            </div>
+            
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-3">
+              {timer.isPaused ? (
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 flex-1 border-primary text-primary hover:bg-primary/10"
+                  onClick={onResume}
+                >
+                  <Play className="w-5 h-5" />
+                  Continuar
+                </Button>
+              ) : (
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 flex-1 border-amber-500 text-amber-500 hover:bg-amber-500/10"
+                  onClick={onPause}
+                >
+                  <Pause className="w-5 h-5" />
+                  Pausar
+                </Button>
+              )}
+              <Button 
+                size="lg"
+                variant="destructive"
+                className="gap-2 flex-1"
+                onClick={onStop}
+              >
+                <Square className="w-4 h-4" />
+                Detener
+              </Button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+  );
+};
+
+// Time Log Modal - View and edit time entries
+interface TimeLogModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  task: TaskItem | null;
+  onUpdateEntry: (taskId: string, entryId: string, newMinutes: number) => void;
+  onDeleteEntry: (taskId: string, entryId: string) => void;
+}
+
+const TimeLogModal: React.FC<TimeLogModalProps> = ({
+  isOpen,
+  onClose,
+  task,
+  onUpdateEntry,
+  onDeleteEntry
+}) => {
+  const [editingEntry, setEditingEntry] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+
+  if (!task) return null;
+
+  const entries = task.timeEntries || [];
+  const totalMinutes = entries.reduce((sum, e) => sum + e.minutes, 0);
+
+  const handleSaveEdit = (entryId: string) => {
+    const newMinutes = parseInt(editValue);
+    if (newMinutes > 0) {
+      onUpdateEntry(task.id, entryId, newMinutes);
+    }
+    setEditingEntry(null);
+    setEditValue('');
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base">Registro de tiempo</DialogTitle>
+          <DialogDescription>{task.name}</DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-3 pt-2">
+          {/* Summary */}
+          <div className="p-3 rounded-lg bg-primary/10 flex items-center justify-between">
+            <span className="text-sm font-medium">Total registrado</span>
+            <span className="text-lg font-bold text-primary">{totalMinutes} min</span>
+          </div>
+
+          {/* Entries list */}
+          {entries.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {entries.map((entry) => (
+                <div 
+                  key={entry.id}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border"
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center",
+                    entry.type === 'timer' ? "bg-primary/10" : "bg-amber-500/10"
+                  )}>
+                    {entry.type === 'timer' ? (
+                      <Timer className="w-4 h-4 text-primary" />
+                    ) : (
+                      <Edit3 className="w-4 h-4 text-amber-500" />
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    {editingEntry === entry.id ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="h-8 w-20"
+                          min="1"
+                        />
+                        <span className="text-xs text-muted-foreground">min</span>
+                        <Button size="sm" className="h-7" onClick={() => handleSaveEdit(entry.id)}>
+                          Guardar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7" onClick={() => setEditingEntry(null)}>
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium">{entry.minutes} minutos</p>
+                        <p className="text-xs text-muted-foreground">
+                          {entry.type === 'timer' ? 'Cronómetro' : 'Manual'} • {entry.createdAt.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  
+                  {editingEntry !== entry.id && (
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setEditingEntry(entry.id);
+                          setEditValue(String(entry.minutes));
+                        }}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => onDeleteEntry(task.id, entry.id)}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No hay registros de tiempo</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -450,6 +629,7 @@ interface TaskCardProps {
   onStartTask?: (taskId: string) => void;
   onCompleteTask?: (taskId: string) => void;
   onCorrectTask?: (taskId: string) => void;
+  onViewTimeLog?: (taskId: string) => void;
   hasActiveTimer?: boolean;
 }
 
@@ -460,6 +640,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onStartTask, 
   onCompleteTask,
   onCorrectTask,
+  onViewTimeLog,
   hasActiveTimer
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -685,6 +866,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   Registrar tiempo
                 </Button>
               )}
+              {/* Time log button - show if task has time spent */}
+              {(task.timeSpent && task.timeSpent > 0) && (
+                <Button 
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 h-8 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewTimeLog?.(task.id);
+                  }}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  {task.timeSpent}m
+                </Button>
+              )}
             </div>
           </div>
         </CollapsibleContent>
@@ -709,9 +905,11 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
   const [actionModalTask, setActionModalTask] = useState<TaskItem | null>(null);
   const [manualTimeTask, setManualTimeTask] = useState<TaskItem | null>(null);
   const [stopTimerModal, setStopTimerModal] = useState(false);
+  const [timeLogTask, setTimeLogTask] = useState<TaskItem | null>(null);
   
   // Active timer state
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
+  const [timerMinimized, setTimerMinimized] = useState(false);
   
   // Group tasks by status - keep completed tasks visible in main list
   const urgentTasks = tasks.filter(t => t.status === 'needs_correction' || t.status === 'rejected');
@@ -794,7 +992,16 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
         ? { 
             ...t, 
             status: markComplete ? 'completed' as const : 'in_progress' as const,
-            timeSpent: (t.timeSpent || 0) + minutes
+            timeSpent: (t.timeSpent || 0) + minutes,
+            timeEntries: [
+              ...(t.timeEntries || []),
+              {
+                id: `te-${Date.now()}`,
+                minutes,
+                type: 'manual' as const,
+                createdAt: new Date()
+              }
+            ]
           } 
         : t
     ));
@@ -868,7 +1075,20 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
     
     setTasks(prev => prev.map(t => 
       t.id === activeTimer.taskId 
-        ? { ...t, status: 'completed' as const, timeSpent: totalMinutes } 
+        ? { 
+            ...t, 
+            status: 'completed' as const, 
+            timeSpent: (t.timeSpent || 0) + totalMinutes,
+            timeEntries: [
+              ...(t.timeEntries || []),
+              {
+                id: `te-${Date.now()}`,
+                minutes: totalMinutes,
+                type: 'timer' as const,
+                createdAt: new Date()
+              }
+            ]
+          } 
         : t
     ));
     
@@ -880,11 +1100,74 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
     });
   };
 
+  // "Aún no" - Save time but DON'T complete, close timer
   const handleKeepWorking = () => {
-    // Just close modal, keep timer state (paused)
-    if (activeTimer && !activeTimer.isPaused) {
-      handlePauseTimer();
+    if (!activeTimer) return;
+    
+    // Get elapsed time and save it
+    const totalSeconds = getTimerElapsedSeconds();
+    const totalMinutes = Math.ceil(totalSeconds / 60);
+    
+    if (totalMinutes > 0) {
+      // Save time entry but keep task in_progress
+      setTasks(prev => prev.map(t => 
+        t.id === activeTimer.taskId 
+          ? { 
+              ...t, 
+              timeSpent: (t.timeSpent || 0) + totalMinutes,
+              timeEntries: [
+                ...(t.timeEntries || []),
+                {
+                  id: `te-${Date.now()}`,
+                  minutes: totalMinutes,
+                  type: 'timer' as const,
+                  createdAt: new Date()
+                }
+              ]
+            } 
+          : t
+      ));
+      
+      toast({
+        title: "Tiempo registrado",
+        description: `Se guardaron ${totalMinutes} minutos. La tarea sigue en progreso.`
+      });
     }
+    
+    // Close timer
+    setActiveTimer(null);
+  };
+
+  // Handle time entry updates
+  const handleUpdateTimeEntry = (taskId: string, entryId: string, newMinutes: number) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== taskId) return t;
+      const entries = t.timeEntries || [];
+      const oldEntry = entries.find(e => e.id === entryId);
+      const diff = oldEntry ? newMinutes - oldEntry.minutes : 0;
+      return {
+        ...t,
+        timeSpent: (t.timeSpent || 0) + diff,
+        timeEntries: entries.map(e => 
+          e.id === entryId ? { ...e, minutes: newMinutes } : e
+        )
+      };
+    }));
+    toast({ title: "Tiempo actualizado" });
+  };
+
+  const handleDeleteTimeEntry = (taskId: string, entryId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== taskId) return t;
+      const entries = t.timeEntries || [];
+      const entry = entries.find(e => e.id === entryId);
+      return {
+        ...t,
+        timeSpent: Math.max(0, (t.timeSpent || 0) - (entry?.minutes || 0)),
+        timeEntries: entries.filter(e => e.id !== entryId)
+      };
+    }));
+    toast({ title: "Registro eliminado" });
   };
 
   // Handle correcting a task
@@ -901,6 +1184,14 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
   // Handle viewing a process
   const handleViewProcess = (processId: string) => {
     setSelectedProcess(processId);
+  };
+
+  // Handle viewing time log
+  const handleViewTimeLog = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      setTimeLogTask(task);
+    }
   };
 
   return (
@@ -946,6 +1237,7 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 onViewProcess={handleViewProcess}
                 onTaskAction={handleTaskAction}
                 onCorrectTask={handleCorrectTask}
+                onViewTimeLog={handleViewTimeLog}
                 hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
@@ -973,6 +1265,7 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 onViewProcess={handleViewProcess}
                 onTaskAction={handleTaskAction}
                 onCorrectTask={handleCorrectTask}
+                onViewTimeLog={handleViewTimeLog}
                 hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
@@ -1023,8 +1316,19 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
           onPause={handlePauseTimer}
           onResume={handleResumeTimer}
           onStop={handleStopTimer}
+          isMinimized={timerMinimized}
+          onToggleMinimize={() => setTimerMinimized(!timerMinimized)}
         />
       )}
+
+      {/* Time Log Modal */}
+      <TimeLogModal
+        isOpen={!!timeLogTask}
+        onClose={() => setTimeLogTask(null)}
+        task={timeLogTask}
+        onUpdateEntry={handleUpdateTimeEntry}
+        onDeleteEntry={handleDeleteTimeEntry}
+      />
     </div>
   );
 };
