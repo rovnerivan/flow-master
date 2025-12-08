@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import SuperAdminCompanies from './SuperAdminCompanies';
+import SuperAdminUsers from './SuperAdminUsers';
 
 // Mock data for companies/teams
 const mockCompanies = [
@@ -316,8 +318,8 @@ const SuperAdminDashboard: React.FC = () => {
       >
         <Routes>
           <Route path="/" element={<SuperAdminHome />} />
-          <Route path="/companies" element={<div className="text-foreground">Gestión de Empresas (próximamente)</div>} />
-          <Route path="/users" element={<div className="text-foreground">Gestión de Usuarios (próximamente)</div>} />
+          <Route path="/companies" element={<SuperAdminCompanies />} />
+          <Route path="/users" element={<SuperAdminUsers />} />
           <Route path="/system" element={<div className="text-foreground">Estado del Sistema (próximamente)</div>} />
           <Route path="/settings" element={<div className="text-foreground">Configuración SuperAdmin (próximamente)</div>} />
         </Routes>
