@@ -20,6 +20,7 @@ import TaskMetricsDashboard from '@/components/tasks/TaskMetricsDashboard';
 import MetricConfigEditor from '@/components/metrics/MetricConfigEditor';
 import { TaskMetric } from '@/lib/metricTypes';
 import { ViewMode, Task as SharedTask } from '@/lib/taskTypes';
+import { DateRangeFilter, useDateRangeFilter } from '@/components/filters/DateRangeFilter';
 
 // Review history entry for tracking corrections and rejections
 interface ReviewHistoryEntry {
@@ -239,6 +240,9 @@ const AdminTasks: React.FC = () => {
   const [showMetrics, setShowMetrics] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>();
   
+  // Date range filter
+  const { dateRange, setDateRange, isInRange } = useDateRangeFilter(30);
+  
   // Review modal state
   const [showReviewModal, setShowReviewModal] = useState<{ taskId: string; task: Task; action: 'approve' | 'correct' | 'reject' } | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -268,6 +272,12 @@ const AdminTasks: React.FC = () => {
         departmentId: t.departmentId,
       })
     );
+    
+    // Date range filter - filter by dueDate if available
+    filtered = filtered.filter((t) => {
+      if (!t.dueDate) return true; // Include tasks without due date
+      return isInRange(t.dueDate, dateRange.primary);
+    });
     
     return filtered;
   };
@@ -914,11 +924,18 @@ const AdminTasks: React.FC = () => {
         />
       )}
 
-      {/* Hierarchy Filter */}
-      <HierarchyFilter 
-        value={hierarchyFilter}
-        onChange={setHierarchyFilter}
-      />
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangeFilter
+          value={dateRange}
+          onChange={setDateRange}
+          showComparison={false}
+        />
+        <HierarchyFilter 
+          value={hierarchyFilter}
+          onChange={setHierarchyFilter}
+        />
+      </div>
 
       {/* Search and View Toggle */}
       <div className="flex flex-col sm:flex-row gap-4">

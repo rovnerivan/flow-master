@@ -7,7 +7,9 @@ import {
   CheckSquare,
   TrendingUp,
   BarChart3,
-  Filter
+  Filter,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +26,7 @@ import { toast } from 'sonner';
 import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
 import { DateRangeFilter, useDateRangeFilter } from '@/components/filters/DateRangeFilter';
 import { PlanningTreeView } from '@/components/planning/PlanningTreeView';
+import { BirdEyeView } from '@/components/planning/BirdEyeView';
 import { 
   PlanningItem, 
   PlanningLevel, 
@@ -155,6 +158,8 @@ const mockPlanningItems: PlanningItem[] = [
   },
 ];
 
+type ViewMode = 'tree' | 'birdeye';
+
 const AdminPlanning: React.FC = () => {
   const [items, setItems] = useState<PlanningItem[]>(mockPlanningItems);
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
@@ -163,6 +168,7 @@ const AdminPlanning: React.FC = () => {
   const [editingItem, setEditingItem] = useState<PlanningItem | null>(null);
   const [parentForNew, setParentForNew] = useState<PlanningItem | null>(null);
   const [filterLevel, setFilterLevel] = useState<PlanningLevel | 'all'>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('birdeye');
 
   // Build tree structure
   const filteredItems = items.filter(item => {
@@ -230,29 +236,53 @@ const AdminPlanning: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <DateRangeFilter
-          value={dateRange}
-          onChange={setDateRange}
-          showComparison={false}
-        />
-        <Select 
-          value={filterLevel} 
-          onValueChange={(v) => setFilterLevel(v as PlanningLevel | 'all')}
-        >
-          <SelectTrigger className="w-[180px]">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Filtrar por nivel" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los niveles</SelectItem>
-            <SelectItem value="strategy">Solo Estrategias</SelectItem>
-            <SelectItem value="objective">Solo Objetivos</SelectItem>
-            <SelectItem value="initiative">Solo Iniciativas</SelectItem>
-            <SelectItem value="action">Solo Acciones</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Filters and View Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeFilter
+            value={dateRange}
+            onChange={setDateRange}
+            showComparison={false}
+          />
+          <Select 
+            value={filterLevel} 
+            onValueChange={(v) => setFilterLevel(v as PlanningLevel | 'all')}
+          >
+            <SelectTrigger className="w-[180px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Filtrar por nivel" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los niveles</SelectItem>
+              <SelectItem value="strategy">Solo Estrategias</SelectItem>
+              <SelectItem value="objective">Solo Objetivos</SelectItem>
+              <SelectItem value="initiative">Solo Iniciativas</SelectItem>
+              <SelectItem value="action">Solo Acciones</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/50">
+          <Button
+            variant={viewMode === 'birdeye' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('birdeye')}
+            className="gap-2"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            Vista de pájaro
+          </Button>
+          <Button
+            variant={viewMode === 'tree' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('tree')}
+            className="gap-2"
+          >
+            <List className="w-4 h-4" />
+            Árbol jerárquico
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -314,17 +344,24 @@ const AdminPlanning: React.FC = () => {
         </div>
       </div>
 
-      {/* Tree View */}
-      <div className="kpi-card">
-        <PlanningTreeView
+      {/* Main View */}
+      {viewMode === 'birdeye' ? (
+        <BirdEyeView
           items={treeItems}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onAddChild={handleAddChild}
-          onLinkTask={handleLinkTask}
-          onLinkProcess={handleLinkProcess}
+          onItemClick={handleEdit}
         />
-      </div>
+      ) : (
+        <div className="kpi-card">
+          <PlanningTreeView
+            items={treeItems}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAddChild={handleAddChild}
+            onLinkTask={handleLinkTask}
+            onLinkProcess={handleLinkProcess}
+          />
+        </div>
+      )}
 
       {/* Planning Item Modal */}
       {showModal && (
