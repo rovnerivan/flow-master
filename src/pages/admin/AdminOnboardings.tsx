@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { UserPlus, Clock, CheckCircle, TrendingUp, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
 
 const mockOnboardings = [
   {
@@ -62,6 +63,8 @@ const mockOnboardings = [
 ];
 
 const AdminOnboardings: React.FC = () => {
+  const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+  
   const activeOnboardings = mockOnboardings.filter((o) => o.status === 'in_progress');
   const completedOnboardings = mockOnboardings.filter((o) => o.status === 'completed');
 
@@ -92,6 +95,12 @@ const AdminOnboardings: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Hierarchy Filter */}
+      <HierarchyFilter 
+        value={hierarchyFilter}
+        onChange={setHierarchyFilter}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
