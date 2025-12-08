@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Clock, 
   CheckCircle2, 
@@ -13,7 +13,13 @@ import {
   Send,
   RotateCcw,
   Circle,
-  Check
+  Check,
+  Timer,
+  Square,
+  Play,
+  Pause,
+  X,
+  Edit3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -22,6 +28,14 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import { toast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
 
 // Types
 interface LinkedProcess {
@@ -45,6 +59,15 @@ interface TaskItem {
   strategicContext?: StrategicContext;
   correctionNotes?: string;
   timeSpent?: number;
+}
+
+interface ActiveTimer {
+  taskId: string;
+  taskName: string;
+  startTime: number;
+  pausedTime: number;
+  isPaused: boolean;
+  accumulatedSeconds: number;
 }
 
 // Mock data with multiple linked processes
@@ -127,20 +150,317 @@ const formatDuration = (minutes: number): string => {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 };
 
+const formatTimerDisplay = (totalSeconds: number): string => {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+// Task Action Modal Component
+interface TaskActionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  taskName: string;
+  onStartTimer: () => void;
+  onManualTime: () => void;
+  onMarkComplete: () => void;
+}
+
+const TaskActionModal: React.FC<TaskActionModalProps> = ({
+  isOpen,
+  onClose,
+  taskName,
+  onStartTimer,
+  onManualTime,
+  onMarkComplete
+}) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base">{taskName}</DialogTitle>
+          <DialogDescription>
+            ¿Cómo quieres registrar esta tarea?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 pt-2">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-3 h-12"
+            onClick={() => {
+              onStartTimer();
+              onClose();
+            }}
+          >
+            <Timer className="w-5 h-5 text-primary" />
+            <div className="text-left">
+              <p className="font-medium text-sm">Iniciar contador de tiempo</p>
+              <p className="text-xs text-muted-foreground">Mide el tiempo mientras trabajas</p>
+            </div>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-3 h-12"
+            onClick={() => {
+              onManualTime();
+              onClose();
+            }}
+          >
+            <Edit3 className="w-5 h-5 text-amber-500" />
+            <div className="text-left">
+              <p className="font-medium text-sm">Registrar tiempo manualmente</p>
+              <p className="text-xs text-muted-foreground">Ingresa los minutos trabajados</p>
+            </div>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-3 h-12"
+            onClick={() => {
+              onMarkComplete();
+              onClose();
+            }}
+          >
+            <CheckCircle2 className="w-5 h-5 text-success" />
+            <div className="text-left">
+              <p className="font-medium text-sm">Dar por completada</p>
+              <p className="text-xs text-muted-foreground">Sin registrar tiempo</p>
+            </div>
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Manual Time Entry Modal
+interface ManualTimeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  taskName: string;
+  onSave: (minutes: number, markComplete: boolean) => void;
+}
+
+const ManualTimeModal: React.FC<ManualTimeModalProps> = ({
+  isOpen,
+  onClose,
+  taskName,
+  onSave
+}) => {
+  const [minutes, setMinutes] = useState('');
+  
+  const handleSave = (markComplete: boolean) => {
+    const mins = parseInt(minutes) || 0;
+    if (mins > 0) {
+      onSave(mins, markComplete);
+      setMinutes('');
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base">Registrar tiempo</DialogTitle>
+          <DialogDescription>{taskName}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Minutos trabajados</label>
+            <Input 
+              type="number" 
+              placeholder="Ej: 30"
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              min="1"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => handleSave(false)}
+              disabled={!minutes || parseInt(minutes) <= 0}
+            >
+              Solo registrar tiempo
+            </Button>
+            <Button 
+              className="flex-1"
+              onClick={() => handleSave(true)}
+              disabled={!minutes || parseInt(minutes) <= 0}
+            >
+              Registrar y completar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Stop Timer Confirmation Modal
+interface StopTimerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  taskName: string;
+  timeSpent: number;
+  onConfirmComplete: () => void;
+  onKeepWorking: () => void;
+}
+
+const StopTimerModal: React.FC<StopTimerModalProps> = ({
+  isOpen,
+  onClose,
+  taskName,
+  timeSpent,
+  onConfirmComplete,
+  onKeepWorking
+}) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-base">¿Dar por completada?</DialogTitle>
+          <DialogDescription>
+            {taskName} - Tiempo registrado: {formatTimerDisplay(timeSpent)}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-2 pt-2">
+          <Button 
+            variant="outline" 
+            className="flex-1"
+            onClick={() => {
+              onKeepWorking();
+              onClose();
+            }}
+          >
+            Aún no
+          </Button>
+          <Button 
+            className="flex-1 bg-success hover:bg-success/90"
+            onClick={() => {
+              onConfirmComplete();
+              onClose();
+            }}
+          >
+            Sí, completar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Floating Timer Component
+interface FloatingTimerProps {
+  timer: ActiveTimer;
+  onPause: () => void;
+  onResume: () => void;
+  onStop: () => void;
+}
+
+const FloatingTimer: React.FC<FloatingTimerProps> = ({
+  timer,
+  onPause,
+  onResume,
+  onStop
+}) => {
+  const [displaySeconds, setDisplaySeconds] = useState(0);
+  
+  useEffect(() => {
+    if (timer.isPaused) {
+      setDisplaySeconds(timer.accumulatedSeconds);
+      return;
+    }
+    
+    const updateDisplay = () => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - timer.startTime) / 1000);
+      setDisplaySeconds(timer.accumulatedSeconds + elapsed);
+    };
+    
+    updateDisplay();
+    const interval = setInterval(updateDisplay, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border shadow-lg animate-slide-up">
+      <div className="max-w-lg mx-auto px-4 py-3">
+        <div className="flex items-center gap-3">
+          {/* Task name */}
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground">Registrando tiempo</p>
+            <p className="text-sm font-medium truncate">{timer.taskName}</p>
+          </div>
+          
+          {/* Timer display */}
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg">
+            <Timer className="w-4 h-4 text-primary" />
+            <span className="font-mono text-lg font-bold text-primary min-w-[60px] text-center">
+              {formatTimerDisplay(displaySeconds)}
+            </span>
+          </div>
+          
+          {/* Controls */}
+          <div className="flex items-center gap-1">
+            {timer.isPaused ? (
+              <Button 
+                size="icon" 
+                variant="ghost"
+                className="h-10 w-10 rounded-full text-primary hover:bg-primary/10"
+                onClick={onResume}
+              >
+                <Play className="w-5 h-5" />
+              </Button>
+            ) : (
+              <Button 
+                size="icon" 
+                variant="ghost"
+                className="h-10 w-10 rounded-full text-amber-500 hover:bg-amber-500/10"
+                onClick={onPause}
+              >
+                <Pause className="w-5 h-5" />
+              </Button>
+            )}
+            <Button 
+              size="icon" 
+              variant="ghost"
+              className="h-10 w-10 rounded-full text-destructive hover:bg-destructive/10"
+              onClick={onStop}
+            >
+              <Square className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface TaskCardProps {
   task: TaskItem;
   onViewProcess?: (processId: string) => void;
+  onTaskAction?: (taskId: string) => void;
   onStartTask?: (taskId: string) => void;
   onCompleteTask?: (taskId: string) => void;
   onCorrectTask?: (taskId: string) => void;
+  hasActiveTimer?: boolean;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ 
   task, 
   onViewProcess, 
+  onTaskAction,
   onStartTask, 
   onCompleteTask,
-  onCorrectTask 
+  onCorrectTask,
+  hasActiveTimer
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [showProcesses, setShowProcesses] = useState(false);
@@ -157,13 +477,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const StatusIcon = config.icon;
   const hasMultipleProcesses = task.linkedProcesses && task.linkedProcesses.length > 1;
 
-  // Handle clicking the status icon to complete task
+  // Handle clicking the status icon to show action modal
   const handleStatusClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (task.status === 'pending') {
-      onStartTask?.(task.id);
-    } else if (task.status === 'in_progress') {
-      onCompleteTask?.(task.id);
+    if (task.status === 'pending' || task.status === 'in_progress') {
+      onTaskAction?.(task.id);
     }
   };
 
@@ -173,17 +491,17 @@ const TaskCard: React.FC<TaskCardProps> = ({
         "rounded-xl border transition-all",
         config.bg,
         config.border,
-        expanded && "ring-1 ring-primary/20"
+        expanded && "ring-1 ring-primary/20",
+        hasActiveTimer && task.status === 'in_progress' && "ring-2 ring-primary"
       )}>
         <CollapsibleTrigger className="w-full">
           <div className="p-3 flex items-start gap-3">
-            {/* Clickable status icon for quick complete */}
+            {/* Clickable status icon */}
             <button
               onClick={handleStatusClick}
               className={cn(
                 "mt-0.5 flex-shrink-0 transition-all",
-                task.status === 'pending' && "hover:text-primary",
-                task.status === 'in_progress' && "hover:text-success"
+                (task.status === 'pending' || task.status === 'in_progress') && "hover:scale-110"
               )}
             >
               {task.status === 'pending' && (
@@ -191,8 +509,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               )}
               {task.status === 'in_progress' && (
                 <div className="relative">
-                  <Circle className="w-5 h-5 text-primary" />
-                  <Check className="w-3 h-3 text-primary absolute top-1 left-1 opacity-0 hover:opacity-100 transition-opacity" />
+                  <PlayCircle className="w-5 h-5 text-primary animate-pulse" />
                 </div>
               )}
               {task.status === 'completed' && (
@@ -223,6 +540,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 {task.dueTime && <span>{task.dueTime}</span>}
                 <span>•</span>
                 <span>{formatDuration(task.estimatedMinutes)}</span>
+                {task.timeSpent && task.status === 'completed' && (
+                  <>
+                    <span>•</span>
+                    <span className="text-success">✓ {task.timeSpent}m</span>
+                  </>
+                )}
                 {task.linkedProcesses && task.linkedProcesses.length > 0 && (
                   <>
                     <span>•</span>
@@ -329,7 +652,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   className="gap-1.5 h-8 text-xs"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onStartTask?.(task.id);
+                    onTaskAction?.(task.id);
                   }}
                 >
                   <PlayCircle className="w-3.5 h-3.5" />
@@ -349,29 +672,18 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   Corregir
                 </Button>
               )}
-              {task.status === 'in_progress' && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-1.5 h-8 text-xs"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <PauseCircle className="w-3.5 h-3.5" />
-                    Pausar
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="gap-1.5 h-8 text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCompleteTask?.(task.id);
-                    }}
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    Completar
-                  </Button>
-                </>
+              {task.status === 'in_progress' && !hasActiveTimer && (
+                <Button 
+                  size="sm" 
+                  className="gap-1.5 h-8 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTaskAction?.(task.id);
+                  }}
+                >
+                  <Timer className="w-3.5 h-3.5" />
+                  Registrar tiempo
+                </Button>
               )}
             </div>
           </div>
@@ -392,6 +704,14 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
 }) => {
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>(mockTasks);
+  
+  // Task action modal state
+  const [actionModalTask, setActionModalTask] = useState<TaskItem | null>(null);
+  const [manualTimeTask, setManualTimeTask] = useState<TaskItem | null>(null);
+  const [stopTimerModal, setStopTimerModal] = useState(false);
+  
+  // Active timer state
+  const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
   
   // Group tasks by status - keep completed tasks visible in main list
   const urgentTasks = tasks.filter(t => t.status === 'needs_correction' || t.status === 'rejected');
@@ -420,26 +740,151 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
     return 'Buenas noches';
   };
 
-  // Handle starting a task
-  const handleStartTask = (taskId: string) => {
+  // Handle task action click (opens modal)
+  const handleTaskAction = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      setActionModalTask(task);
+    }
+  };
+
+  // Start timer for task
+  const handleStartTimer = () => {
+    if (!actionModalTask) return;
+    
+    // Set task to in_progress
     setTasks(prev => prev.map(t => 
-      t.id === taskId ? { ...t, status: 'in_progress' as const } : t
+      t.id === actionModalTask.id ? { ...t, status: 'in_progress' as const } : t
     ));
+    
+    // Start the timer
+    setActiveTimer({
+      taskId: actionModalTask.id,
+      taskName: actionModalTask.name,
+      startTime: Date.now(),
+      pausedTime: 0,
+      isPaused: false,
+      accumulatedSeconds: 0
+    });
+    
     toast({
-      title: "Tarea iniciada",
-      description: "El cronómetro ha comenzado. ¡Buena suerte!"
+      title: "Cronómetro iniciado",
+      description: "El tiempo se está registrando"
     });
   };
 
-  // Handle completing a task
-  const handleCompleteTask = (taskId: string) => {
+  // Open manual time entry modal
+  const handleOpenManualTime = () => {
+    if (!actionModalTask) return;
+    
+    // Set task to in_progress first
     setTasks(prev => prev.map(t => 
-      t.id === taskId ? { ...t, status: 'completed' as const, timeSpent: t.estimatedMinutes } : t
+      t.id === actionModalTask.id ? { ...t, status: 'in_progress' as const } : t
     ));
+    
+    setManualTimeTask(actionModalTask);
+  };
+
+  // Save manual time entry
+  const handleSaveManualTime = (minutes: number, markComplete: boolean) => {
+    if (!manualTimeTask) return;
+    
+    setTasks(prev => prev.map(t => 
+      t.id === manualTimeTask.id 
+        ? { 
+            ...t, 
+            status: markComplete ? 'completed' as const : 'in_progress' as const,
+            timeSpent: (t.timeSpent || 0) + minutes
+          } 
+        : t
+    ));
+    
+    toast({
+      title: markComplete ? "¡Tarea completada!" : "Tiempo registrado",
+      description: `Se registraron ${minutes} minutos`
+    });
+  };
+
+  // Mark task as complete directly (no time)
+  const handleMarkComplete = () => {
+    if (!actionModalTask) return;
+    
+    setTasks(prev => prev.map(t => 
+      t.id === actionModalTask.id ? { ...t, status: 'completed' as const } : t
+    ));
+    
     toast({
       title: "¡Tarea completada!",
-      description: "Buen trabajo. La tarea ha sido marcada como completada."
+      description: "La tarea ha sido marcada como completada"
     });
+  };
+
+  // Timer controls
+  const handlePauseTimer = () => {
+    if (!activeTimer || activeTimer.isPaused) return;
+    
+    const now = Date.now();
+    const elapsed = Math.floor((now - activeTimer.startTime) / 1000);
+    
+    setActiveTimer({
+      ...activeTimer,
+      isPaused: true,
+      pausedTime: now,
+      accumulatedSeconds: activeTimer.accumulatedSeconds + elapsed
+    });
+  };
+
+  const handleResumeTimer = () => {
+    if (!activeTimer || !activeTimer.isPaused) return;
+    
+    setActiveTimer({
+      ...activeTimer,
+      isPaused: false,
+      startTime: Date.now()
+    });
+  };
+
+  const handleStopTimer = () => {
+    setStopTimerModal(true);
+  };
+
+  const getTimerElapsedSeconds = (): number => {
+    if (!activeTimer) return 0;
+    
+    if (activeTimer.isPaused) {
+      return activeTimer.accumulatedSeconds;
+    }
+    
+    const now = Date.now();
+    const elapsed = Math.floor((now - activeTimer.startTime) / 1000);
+    return activeTimer.accumulatedSeconds + elapsed;
+  };
+
+  const handleConfirmComplete = () => {
+    if (!activeTimer) return;
+    
+    const totalSeconds = getTimerElapsedSeconds();
+    const totalMinutes = Math.ceil(totalSeconds / 60);
+    
+    setTasks(prev => prev.map(t => 
+      t.id === activeTimer.taskId 
+        ? { ...t, status: 'completed' as const, timeSpent: totalMinutes } 
+        : t
+    ));
+    
+    setActiveTimer(null);
+    
+    toast({
+      title: "¡Tarea completada!",
+      description: `Tiempo registrado: ${totalMinutes} minutos`
+    });
+  };
+
+  const handleKeepWorking = () => {
+    // Just close modal, keep timer state (paused)
+    if (activeTimer && !activeTimer.isPaused) {
+      handlePauseTimer();
+    }
   };
 
   // Handle correcting a task
@@ -459,7 +904,7 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-4", className, activeTimer && "pb-20")}>
       {/* Header */}
       <div className="space-y-3">
         <div>
@@ -488,9 +933,9 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
       {urgentTasks.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-sm font-semibold text-amber-500">
-              Requiere corrección ({urgentTasks.length})
+            <AlertCircle className="w-4 h-4 text-destructive" />
+            <h2 className="text-sm font-semibold text-destructive">
+              Requieren atención ({urgentTasks.length})
             </h2>
           </div>
           <div className="space-y-2">
@@ -499,9 +944,9 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 key={task.id} 
                 task={task} 
                 onViewProcess={handleViewProcess}
-                onStartTask={handleStartTask}
-                onCompleteTask={handleCompleteTask}
+                onTaskAction={handleTaskAction}
                 onCorrectTask={handleCorrectTask}
+                hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
           </div>
@@ -526,9 +971,9 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 key={task.id} 
                 task={task} 
                 onViewProcess={handleViewProcess}
-                onStartTask={handleStartTask}
-                onCompleteTask={handleCompleteTask}
+                onTaskAction={handleTaskAction}
                 onCorrectTask={handleCorrectTask}
+                hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
           </div>
@@ -537,9 +982,47 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
 
       {/* Process Viewer Modal */}
       {selectedProcess && (
-        <ProcessViewerModal 
-          processId={selectedProcess} 
-          onClose={() => setSelectedProcess(null)} 
+        <ProcessViewerModal
+          processId={selectedProcess}
+          onClose={() => setSelectedProcess(null)}
+        />
+      )}
+
+      {/* Task Action Modal */}
+      <TaskActionModal
+        isOpen={!!actionModalTask}
+        onClose={() => setActionModalTask(null)}
+        taskName={actionModalTask?.name || ''}
+        onStartTimer={handleStartTimer}
+        onManualTime={handleOpenManualTime}
+        onMarkComplete={handleMarkComplete}
+      />
+
+      {/* Manual Time Entry Modal */}
+      <ManualTimeModal
+        isOpen={!!manualTimeTask}
+        onClose={() => setManualTimeTask(null)}
+        taskName={manualTimeTask?.name || ''}
+        onSave={handleSaveManualTime}
+      />
+
+      {/* Stop Timer Confirmation Modal */}
+      <StopTimerModal
+        isOpen={stopTimerModal}
+        onClose={() => setStopTimerModal(false)}
+        taskName={activeTimer?.taskName || ''}
+        timeSpent={getTimerElapsedSeconds()}
+        onConfirmComplete={handleConfirmComplete}
+        onKeepWorking={handleKeepWorking}
+      />
+
+      {/* Floating Timer */}
+      {activeTimer && (
+        <FloatingTimer
+          timer={activeTimer}
+          onPause={handlePauseTimer}
+          onResume={handleResumeTimer}
+          onStop={handleStopTimer}
         />
       )}
     </div>
