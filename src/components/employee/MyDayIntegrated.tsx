@@ -391,17 +391,25 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
   className 
 }) => {
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
   const [tasks, setTasks] = useState<TaskItem[]>(mockTasks);
   
-  // Group tasks by status
+  // Group tasks by status - keep completed tasks visible in main list
   const urgentTasks = tasks.filter(t => t.status === 'needs_correction' || t.status === 'rejected');
-  const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
+  // Include completed tasks in the main list, sorted by dueTime
+  const mainTasks = tasks
+    .filter(t => t.status === 'pending' || t.status === 'in_progress' || t.status === 'completed')
+    .sort((a, b) => {
+      // Sort by dueTime, completed tasks stay in their time position
+      if (a.dueTime && b.dueTime) {
+        return a.dueTime.localeCompare(b.dueTime);
+      }
+      return 0;
+    });
+  const completedCount = tasks.filter(t => t.status === 'completed').length;
+  const pendingCount = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
   
   // Calculate progress
   const totalTasks = tasks.length;
-  const completedCount = completedTasks.length;
   const progressPercentage = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
   
   // Get greeting based on time
@@ -459,7 +467,7 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
             👋 {getGreeting()}, {userName}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Tienes {pendingTasks.length + urgentTasks.length} tareas pendientes para hoy
+            Tienes {pendingCount + urgentTasks.length} tareas pendientes para hoy
           </p>
         </div>
         
@@ -500,17 +508,20 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
         </div>
       )}
 
-      {/* Pending Section */}
-      {pendingTasks.length > 0 && (
+      {/* Main Tasks Section - includes pending and completed */}
+      {mainTasks.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />
             <h2 className="text-sm font-semibold text-foreground">
-              Próximas ({pendingTasks.length})
+              Hoy ({mainTasks.length})
             </h2>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {completedCount} completadas
+            </span>
           </div>
           <div className="space-y-2">
-            {pendingTasks.map(task => (
+            {mainTasks.map(task => (
               <TaskCard 
                 key={task.id} 
                 task={task} 
@@ -521,38 +532,6 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
               />
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Completed Section */}
-      {completedTasks.length > 0 && (
-        <div className="space-y-2">
-          <button 
-            onClick={() => setShowCompleted(!showCompleted)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <CheckCircle2 className="w-4 h-4 text-success" />
-            <span className="font-medium">Completadas hoy ({completedTasks.length})</span>
-            <ChevronRight className={cn(
-              "w-4 h-4 transition-transform",
-              showCompleted && "rotate-90"
-            )} />
-          </button>
-          
-          {showCompleted && (
-            <div className="space-y-2 animate-slide-up">
-              {completedTasks.map(task => (
-                <TaskCard 
-                  key={task.id} 
-                  task={task} 
-                  onViewProcess={handleViewProcess}
-                  onStartTask={handleStartTask}
-                  onCompleteTask={handleCompleteTask}
-                  onCorrectTask={handleCorrectTask}
-                />
-              ))}
-            </div>
-          )}
         </div>
       )}
 
