@@ -44,8 +44,10 @@ interface ProcessViewerModalProps {
   onNavigateToProcess?: (processId: string) => void;
 }
 
-// Mock process data with Phase 1 & 3 features
-const mockProcess = {
+// Mock process data map - different processes for prerequisite navigation
+const mockProcesses: Record<string, typeof mockMainProcess> = {};
+
+const mockMainProcess = {
   id: '1',
   name: 'Preparación de Pedidos',
   description:
@@ -56,13 +58,11 @@ const mockProcess = {
     'Cada pedido saldrá verificado, bien empacado, y listo para entrega sin errores.',
   estimatedTime: '15 min',
   totalSteps: 8,
-  // Phase 1 fields
   owner: 'María García',
   riskLevel: 'medium' as RiskLevel,
   frequency: 'daily' as ProcessFrequency,
   requiredTools: ['Computadora', 'Escáner', 'Etiquetadora', 'Cinta de empaque'],
   successCriteria: 'Pedido empacado correctamente, etiqueta legible, sin productos dañados',
-  // Phase 3: Prerequisites
   prerequisites: [
     { id: 'p1', name: 'Inducción General', status: 'published' as const, isCompleted: true },
     { id: 'p2', name: 'Seguridad en Almacén', status: 'published' as const, isCompleted: true },
@@ -139,6 +139,197 @@ const mockProcess = {
   ],
 };
 
+// Prerequisite processes
+const prerequisiteProcesses = {
+  'p1': {
+    id: 'p1',
+    name: 'Inducción General',
+    description: 'Conoce los fundamentos de la empresa, su cultura y valores organizacionales.',
+    importance: 'La inducción asegura que todos los colaboradores compartan los mismos valores y entiendan su rol en la organización.',
+    expectedResult: 'Conocerás la misión, visión, valores y normas básicas de la empresa.',
+    estimatedTime: '30 min',
+    totalSteps: 3,
+    owner: 'Recursos Humanos',
+    riskLevel: 'low' as RiskLevel,
+    frequency: 'one_time' as ProcessFrequency,
+    requiredTools: ['Manual de empleado', 'Credencial de acceso'],
+    successCriteria: 'Comprensión completa de valores y normas de la empresa',
+    prerequisites: [],
+    steps: [
+      {
+        id: 'p1s1',
+        number: 1,
+        title: 'Historia y valores de la empresa',
+        description: 'Conoce la historia, misión, visión y valores que nos definen como organización.',
+        duration: '10 min',
+        isCritical: false,
+        checklist: [{ id: 'p1c1', text: 'Leí la misión y visión' }],
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+        troubleshooting: undefined as string | undefined,
+      },
+      {
+        id: 'p1s2',
+        number: 2,
+        title: 'Normas y políticas',
+        description: 'Aprende las reglas básicas de convivencia y políticas de la empresa.',
+        duration: '15 min',
+        isCritical: true,
+        checklist: [
+          { id: 'p1c2', text: 'Entiendo el código de vestimenta' },
+          { id: 'p1c3', text: 'Conozco los horarios' },
+        ],
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+        troubleshooting: undefined as string | undefined,
+      },
+      {
+        id: 'p1s3',
+        number: 3,
+        title: 'Beneficios y recursos',
+        description: 'Conoce los beneficios disponibles y cómo acceder a los recursos de la empresa.',
+        duration: '5 min',
+        isCritical: false,
+        checklist: [],
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+        troubleshooting: undefined as string | undefined,
+      },
+    ],
+  },
+  'p2': {
+    id: 'p2',
+    name: 'Seguridad en Almacén',
+    description: 'Aprende las normas de seguridad fundamentales para trabajar en el almacén.',
+    importance: 'Tu seguridad y la de tus compañeros depende de seguir estos protocolos.',
+    expectedResult: 'Podrás identificar riesgos y actuar correctamente en situaciones de emergencia.',
+    estimatedTime: '20 min',
+    totalSteps: 2,
+    owner: 'Seguridad Industrial',
+    riskLevel: 'high' as RiskLevel,
+    frequency: 'one_time' as ProcessFrequency,
+    requiredTools: ['EPP (Equipo de Protección Personal)', 'Manual de seguridad'],
+    successCriteria: 'Conocimiento de rutas de evacuación y uso correcto de EPP',
+    prerequisites: [
+      { id: 'p1', name: 'Inducción General', status: 'published' as const, isCompleted: true },
+    ],
+    steps: [
+      {
+        id: 'p2s1',
+        number: 1,
+        title: 'Uso de EPP',
+        description: 'Conoce y aprende a usar correctamente el equipo de protección personal.',
+        duration: '10 min',
+        isCritical: true,
+        checklist: [
+          { id: 'p2c1', text: 'Sé usar el casco correctamente' },
+          { id: 'p2c2', text: 'Conozco cuándo usar guantes' },
+          { id: 'p2c3', text: 'Entiendo la importancia del calzado de seguridad' },
+        ],
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+        troubleshooting: 'Si el EPP está dañado, solicita uno nuevo antes de continuar con el trabajo.',
+      },
+      {
+        id: 'p2s2',
+        number: 2,
+        title: 'Rutas de evacuación',
+        description: 'Identifica las rutas de evacuación y puntos de encuentro.',
+        duration: '10 min',
+        isCritical: true,
+        checklist: [
+          { id: 'p2c4', text: 'Ubico las salidas de emergencia' },
+          { id: 'p2c5', text: 'Conozco el punto de encuentro' },
+        ],
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+        troubleshooting: undefined as string | undefined,
+      },
+    ],
+  },
+  'p3': {
+    id: 'p3',
+    name: 'Manejo de Sistema',
+    description: 'Aprende a utilizar el sistema de gestión de inventarios y pedidos.',
+    importance: 'El sistema es la herramienta central para todas las operaciones del almacén.',
+    expectedResult: 'Podrás consultar inventario, registrar movimientos y gestionar pedidos.',
+    estimatedTime: '25 min',
+    totalSteps: 3,
+    owner: 'TI - Sistemas',
+    riskLevel: 'medium' as RiskLevel,
+    frequency: 'one_time' as ProcessFrequency,
+    requiredTools: ['Computadora', 'Credenciales de acceso al sistema'],
+    successCriteria: 'Dominio de las funciones básicas del sistema',
+    prerequisites: [
+      { id: 'p1', name: 'Inducción General', status: 'published' as const, isCompleted: true },
+    ],
+    steps: [
+      {
+        id: 'p3s1',
+        number: 1,
+        title: 'Acceso al sistema',
+        description: 'Aprende a iniciar sesión y navegar por el sistema.',
+        duration: '5 min',
+        isCritical: false,
+        checklist: [{ id: 'p3c1', text: 'Puedo iniciar sesión correctamente' }],
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+        troubleshooting: undefined as string | undefined,
+      },
+      {
+        id: 'p3s2',
+        number: 2,
+        title: 'Consulta de inventario',
+        description: 'Aprende a buscar productos y verificar disponibilidad.',
+        duration: '10 min',
+        isCritical: true,
+        checklist: [
+          { id: 'p3c2', text: 'Sé buscar productos por código' },
+          { id: 'p3c3', text: 'Puedo ver ubicación del producto' },
+        ],
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+        troubleshooting: undefined as string | undefined,
+      },
+      {
+        id: 'p3s3',
+        number: 3,
+        title: 'Registro de movimientos',
+        description: 'Aprende a registrar entradas, salidas y ajustes de inventario.',
+        duration: '10 min',
+        isCritical: true,
+        checklist: [
+          { id: 'p3c4', text: 'Puedo registrar una entrada' },
+          { id: 'p3c5', text: 'Sé hacer un ajuste de inventario' },
+        ],
+        troubleshooting: 'Si el sistema no responde, contacta a soporte técnico antes de continuar.',
+        extendedContent: [] as any[],
+        videoUrl: undefined as string | undefined,
+        imageUrl: undefined as string | undefined,
+      },
+    ],
+  },
+};
+
+// Helper function to get process by ID
+const getProcessById = (id: string) => {
+  if (id === '1') {
+    return mockMainProcess;
+  }
+  const prereq = prerequisiteProcesses[id as keyof typeof prerequisiteProcesses];
+  if (prereq) {
+    return prereq;
+  }
+  return mockMainProcess;
+};
+
 // Extended content viewer component
 const ExtendedContentViewer: React.FC<{ items: ExtendedContentItem[] }> = ({ items }) => {
   if (items.length === 0) return null;
@@ -209,8 +400,8 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   const [processHistory, setProcessHistory] = useState<string[]>([]);
   const [currentProcessId, setCurrentProcessId] = useState(processId);
 
-  // Get process data based on currentProcessId (would be real data from Supabase)
-  const process = mockProcess;
+  // Get process data based on currentProcessId
+  const process = getProcessById(currentProcessId);
   const step = process.steps[currentStep];
   const riskConfig = riskLevelConfig[process.riskLevel];
   const freqConfig = frequencyConfig[process.frequency];
