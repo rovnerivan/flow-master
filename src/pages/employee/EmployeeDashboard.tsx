@@ -77,7 +77,7 @@ const mockUser = {
 };
 
 // Home Page
-const EmployeeHome: React.FC<{ onProcessClick: (id: string) => void }> = ({ onProcessClick }) => {
+const EmployeeHome: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Greeting with name and cargo */}
@@ -106,31 +106,6 @@ const EmployeeHome: React.FC<{ onProcessClick: (id: string) => void }> = ({ onPr
           duration="45 seg"
           category="Servicio"
         />
-      </div>
-
-      {/* Continue Learning Section */}
-      <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            Continúa aprendiendo
-          </h2>
-          <Button variant="ghost" size="sm" className="text-primary">
-            Ver todos
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          {mockProcesses.map((process, index) => (
-            <div
-              key={process.id}
-              className="animate-slide-up cursor-pointer"
-              style={{ animationDelay: `${0.4 + index * 0.1}s` }}
-              onClick={() => onProcessClick(process.id)}
-            >
-              <ProcessCard {...process} />
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -534,7 +509,7 @@ const EmployeeDashboard: React.FC = () => {
       {/* Content */}
       <main className="px-4 py-6 max-w-lg mx-auto">
         <Routes>
-          <Route path="/" element={<EmployeeHome onProcessClick={handleProcessClick} />} />
+          <Route path="/" element={<EmployeeHome />} />
           <Route path="/processes" element={<EmployeeProcesses onProcessClick={handleProcessClick} />} />
           <Route path="/team" element={<EmployeeTeam />} />
           <Route path="/profile" element={<EmployeeProfile />} />
