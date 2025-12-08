@@ -1286,6 +1286,11 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
     estimatedTime: '15',
     dueDate: '',
     needsReview: false,
+    // Expected metrics
+    targetQuality: '95', // % expected quality
+    maxTimeMinutes: '', // Maximum time expected (optional stricter than estimated)
+    errorTolerance: '0', // Number of acceptable errors
+    qualityDescription: '', // What defines quality for this task
   });
   const [assignmentType, setAssignmentType] = useState<'individual' | 'shared'>('individual');
   const [assignments, setAssignments] = useState<{ userId: string; userName: string; instanceLabel: string }[]>([]);
@@ -1353,7 +1358,18 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', frequency: 'daily', estimatedTime: '15', dueDate: '', needsReview: false });
+    setFormData({ 
+      title: '', 
+      description: '', 
+      frequency: 'daily', 
+      estimatedTime: '15', 
+      dueDate: '', 
+      needsReview: false,
+      targetQuality: '95',
+      maxTimeMinutes: '',
+      errorTolerance: '0',
+      qualityDescription: '',
+    });
     setAssignmentType('individual');
     setAssignments([]);
     setSharedAssignees([]);
@@ -1424,6 +1440,62 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
                   type="date"
                   value={formData.dueDate}
                   onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Expected Metrics Section */}
+            <div className="p-4 rounded-lg border border-border bg-secondary/20 space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <BarChart3 className="w-4 h-4" />
+                <span className="text-sm font-semibold">Métricas Esperadas</span>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Calidad objetivo (%)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.targetQuality}
+                    onChange={(e) => setFormData({ ...formData, targetQuality: e.target.value })}
+                    placeholder="95"
+                  />
+                  <p className="text-xs text-muted-foreground">% mínimo aceptable</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tiempo máximo (min)</label>
+                  <Input
+                    type="number"
+                    value={formData.maxTimeMinutes}
+                    onChange={(e) => setFormData({ ...formData, maxTimeMinutes: e.target.value })}
+                    placeholder={formData.estimatedTime || "—"}
+                  />
+                  <p className="text-xs text-muted-foreground">Límite estricto</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tolerancia errores</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.errorTolerance}
+                    onChange={(e) => setFormData({ ...formData, errorTolerance: e.target.value })}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground"># errores OK</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">¿Qué define calidad en esta tarea?</label>
+                <Textarea
+                  value={formData.qualityDescription}
+                  onChange={(e) => setFormData({ ...formData, qualityDescription: e.target.value })}
+                  placeholder="Ej: El conteo debe coincidir con el sistema, sin diferencias mayores a $10..."
+                  rows={2}
                 />
               </div>
             </div>
@@ -1634,6 +1706,11 @@ const EditTaskModal: React.FC<{ open: boolean; task: Task; onClose: () => void }
     assignedTo: task.assignments.map(a => a.userName).join(', '),
     dueDate: task.dueDate || '',
     needsReview: task.needsReview || false,
+    // Expected metrics
+    targetQuality: '95',
+    maxTimeMinutes: '',
+    errorTolerance: '0',
+    qualityDescription: '',
   });
 
   if (!open) return null;
@@ -1717,6 +1794,57 @@ const EditTaskModal: React.FC<{ open: boolean; task: Task; onClose: () => void }
               value={formData.dueDate}
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
             />
+          </div>
+
+          {/* Expected Metrics Section */}
+          <div className="p-4 rounded-lg border border-border bg-secondary/20 space-y-4">
+            <div className="flex items-center gap-2 text-primary">
+              <BarChart3 className="w-4 h-4" />
+              <span className="text-sm font-semibold">Métricas Esperadas</span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Calidad (%)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.targetQuality}
+                  onChange={(e) => setFormData({ ...formData, targetQuality: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tiempo máx (min)</label>
+                <Input
+                  type="number"
+                  value={formData.maxTimeMinutes}
+                  onChange={(e) => setFormData({ ...formData, maxTimeMinutes: e.target.value })}
+                  placeholder={formData.estimatedTime}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tolerancia err.</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.errorTolerance}
+                  onChange={(e) => setFormData({ ...formData, errorTolerance: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Criterios de calidad</label>
+              <Textarea
+                value={formData.qualityDescription}
+                onChange={(e) => setFormData({ ...formData, qualityDescription: e.target.value })}
+                placeholder="¿Qué define éxito en esta tarea?"
+                rows={2}
+              />
+            </div>
           </div>
 
           {/* Needs Review Toggle */}

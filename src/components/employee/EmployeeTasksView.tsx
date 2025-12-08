@@ -573,7 +573,8 @@ const EmployeeTasksView: React.FC = () => {
     );
   };
 
-  const [showMetrics, setShowMetrics] = useState(false);
+  // Show metrics by default for better visibility
+  const [showMetrics, setShowMetrics] = useState(true);
 
   // Convert to shared task format for metrics
   const convertToSharedTask = (task: EmployeeTask): SharedTask => ({
@@ -585,6 +586,11 @@ const EmployeeTasksView: React.FC = () => {
     frequency: task.frequency as any,
     assignmentType: task.assignmentType as any,
   });
+
+  // Calculate quick stats
+  const totalTimeToday = myTasks
+    .filter(t => getMyAssignment(t)?.status === 'completed')
+    .reduce((sum, t) => sum + (getMyAssignment(t)?.timeSpentMinutes || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -600,16 +606,36 @@ const EmployeeTasksView: React.FC = () => {
           className="gap-1"
         >
           <BarChart3 className="w-4 h-4" />
-          <span className="hidden sm:inline">Mi progreso</span>
+          <span className="hidden sm:inline">{showMetrics ? 'Ocultar' : 'Ver'} métricas</span>
         </Button>
       </div>
 
-      {/* Personal metrics */}
+      {/* Quick stats bar - always visible */}
+      <div className="grid grid-cols-4 gap-2">
+        <div className="mobile-card p-3 text-center">
+          <p className="text-2xl font-bold text-success">{completedTasks.length}</p>
+          <p className="text-xs text-muted-foreground">Completadas</p>
+        </div>
+        <div className="mobile-card p-3 text-center">
+          <p className="text-2xl font-bold text-primary">{activeTasks.length + correctionTasks.length}</p>
+          <p className="text-xs text-muted-foreground">Pendientes</p>
+        </div>
+        <div className="mobile-card p-3 text-center">
+          <p className="text-2xl font-bold text-warning">{pendingReviewTasks.length}</p>
+          <p className="text-xs text-muted-foreground">En revisión</p>
+        </div>
+        <div className="mobile-card p-3 text-center">
+          <p className="text-2xl font-bold text-foreground">{formatTime(totalTimeToday)}</p>
+          <p className="text-xs text-muted-foreground">Tiempo</p>
+        </div>
+      </div>
+
+      {/* Detailed personal metrics */}
       {showMetrics && (
         <EmployeeTaskMetrics 
           tasks={myTasks.map(convertToSharedTask)} 
           userId={currentUserId}
-          lessonsCount={2} // Mock - would come from EmployeeErrorsView
+          lessonsCount={correctionTasks.filter(t => getMyAssignment(t)?.correctionCount).length}
         />
       )}
 
