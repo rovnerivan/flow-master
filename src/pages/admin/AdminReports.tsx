@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Download, Calendar, Filter, Plus, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
+import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 
 interface Report {

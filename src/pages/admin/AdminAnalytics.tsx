@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Clock, AlertTriangle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
+import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import {
   BarChart,
   Bar,

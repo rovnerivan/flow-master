@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
 import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
-import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
+import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +25,10 @@ interface Process {
   status: 'published' | 'draft';
   lastUpdated: string;
   tags: string[];
+  // Hierarchy info
+  verticalId?: string;
+  managementId?: string;
+  departmentId?: string;
 }
 
 const initialProcesses: Process[] = [
@@ -37,6 +41,9 @@ const initialProcesses: Process[] = [
     status: 'published',
     lastUpdated: '2024-01-15',
     tags: ['operaciones', 'almacen'],
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd1',
   },
   {
     id: '2',
@@ -47,6 +54,9 @@ const initialProcesses: Process[] = [
     status: 'published',
     lastUpdated: '2024-01-10',
     tags: ['atencion', 'ventas'],
+    verticalId: 'v2',
+    managementId: 'm3',
+    departmentId: 'd4',
   },
   {
     id: '3',
@@ -57,6 +67,9 @@ const initialProcesses: Process[] = [
     status: 'published',
     lastUpdated: '2024-01-08',
     tags: ['finanzas', 'operaciones'],
+    verticalId: 'v3',
+    managementId: 'm5',
+    departmentId: 'd6',
   },
   {
     id: '4',
@@ -67,6 +80,22 @@ const initialProcesses: Process[] = [
     status: 'draft',
     lastUpdated: '2024-01-05',
     tags: ['almacen', 'calidad'],
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd2',
+  },
+  {
+    id: '5',
+    name: 'Gestión de Marketing Digital',
+    description: 'Proceso de campañas y contenido digital',
+    steps: 7,
+    compliance: 88,
+    status: 'published',
+    lastUpdated: '2024-01-12',
+    tags: ['marketing'],
+    verticalId: 'v2',
+    managementId: 'm4',
+    departmentId: 'd5',
   },
 ];
 
@@ -149,7 +178,14 @@ const AdminProcesses: React.FC = () => {
     // Status filter
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
 
-    return matchesSearch && matchesTags && matchesStatus;
+    // Hierarchy filter
+    const matchesHierarchy = matchesHierarchyFilter(hierarchyFilter, {
+      verticalId: p.verticalId,
+      managementId: p.managementId,
+      departmentId: p.departmentId,
+    });
+
+    return matchesSearch && matchesTags && matchesStatus && matchesHierarchy;
   });
 
   const getTagInfo = (tagId: string) => {

@@ -2,9 +2,25 @@ import React, { useState } from 'react';
 import { UserPlus, Clock, CheckCircle, TrendingUp, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
+import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 
-const mockOnboardings = [
+interface Onboarding {
+  id: string;
+  name: string;
+  email: string;
+  startDate: string;
+  progress: number;
+  completedProcesses: number;
+  totalProcesses: number;
+  avgTimePerProcess: string;
+  status: 'in_progress' | 'completed';
+  // Hierarchy info
+  verticalId?: string;
+  managementId?: string;
+  departmentId?: string;
+}
+
+const mockOnboardings: Onboarding[] = [
   {
     id: '1',
     name: 'Pedro Sánchez',
@@ -15,6 +31,9 @@ const mockOnboardings = [
     totalProcesses: 6,
     avgTimePerProcess: '18 min',
     status: 'in_progress',
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd2',
   },
   {
     id: '2',
@@ -26,6 +45,9 @@ const mockOnboardings = [
     totalProcesses: 6,
     avgTimePerProcess: '22 min',
     status: 'in_progress',
+    verticalId: 'v2',
+    managementId: 'm3',
+    departmentId: 'd4',
   },
   {
     id: '3',
@@ -37,6 +59,9 @@ const mockOnboardings = [
     totalProcesses: 6,
     avgTimePerProcess: '25 min',
     status: 'in_progress',
+    verticalId: 'v2',
+    managementId: 'm4',
+    departmentId: 'd5',
   },
   {
     id: '4',
@@ -48,6 +73,9 @@ const mockOnboardings = [
     totalProcesses: 6,
     avgTimePerProcess: '15 min',
     status: 'completed',
+    verticalId: 'v1',
+    managementId: 'm2',
+    departmentId: 'd3',
   },
   {
     id: '5',
@@ -59,14 +87,25 @@ const mockOnboardings = [
     totalProcesses: 6,
     avgTimePerProcess: '12 min',
     status: 'completed',
+    verticalId: 'v3',
+    managementId: 'm5',
+    departmentId: 'd6',
   },
 ];
 
 const AdminOnboardings: React.FC = () => {
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
   
-  const activeOnboardings = mockOnboardings.filter((o) => o.status === 'in_progress');
-  const completedOnboardings = mockOnboardings.filter((o) => o.status === 'completed');
+  const filteredOnboardings = mockOnboardings.filter((o) => 
+    matchesHierarchyFilter(hierarchyFilter, {
+      verticalId: o.verticalId,
+      managementId: o.managementId,
+      departmentId: o.departmentId,
+    })
+  );
+  
+  const activeOnboardings = filteredOnboardings.filter((o) => o.status === 'in_progress');
+  const completedOnboardings = filteredOnboardings.filter((o) => o.status === 'completed');
 
   const getInitials = (name: string) => {
     return name

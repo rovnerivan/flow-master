@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
+import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 
 interface TaskAssignment {
@@ -31,6 +31,10 @@ interface Task {
   linkedProcesses?: { id: string; name: string }[];
   estimatedTime: number;
   dueDate?: string;
+  // Hierarchy info
+  verticalId?: string;
+  managementId?: string;
+  departmentId?: string;
 }
 
 const mockTasks: Task[] = [
@@ -49,6 +53,9 @@ const mockTasks: Task[] = [
       { id: 'p2', name: 'Apertura de Tienda' },
     ],
     estimatedTime: 10,
+    verticalId: 'v3',
+    managementId: 'm5',
+    departmentId: 'd6',
   },
   {
     id: '2',
@@ -61,6 +68,9 @@ const mockTasks: Task[] = [
     ],
     linkedProcesses: [{ id: 'p3', name: 'Inventario Semanal' }],
     estimatedTime: 15,
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd1',
   },
   {
     id: '3',
@@ -74,6 +84,9 @@ const mockTasks: Task[] = [
       { userId: 'u3', userName: 'María García', status: 'in_progress' },
     ],
     estimatedTime: 30,
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd1',
   },
   {
     id: '4',
@@ -86,6 +99,9 @@ const mockTasks: Task[] = [
     ],
     estimatedTime: 30,
     dueDate: '2024-01-19',
+    verticalId: 'v2',
+    managementId: 'm3',
+    departmentId: 'd4',
   },
   {
     id: '5',
@@ -99,6 +115,9 @@ const mockTasks: Task[] = [
     ],
     estimatedTime: 120,
     dueDate: '2024-01-31',
+    verticalId: 'v1',
+    managementId: 'm2',
+    departmentId: 'd3',
   },
   {
     id: '6',
@@ -111,18 +130,23 @@ const mockTasks: Task[] = [
     ],
     estimatedTime: 240,
     dueDate: '2024-06-15',
+    verticalId: 'v1',
+    managementId: 'm1',
   },
   {
     id: '7',
-    title: 'Preparar evento especial',
-    description: 'Organizar promoción de fin de año',
+    title: 'Campaña de marketing digital',
+    description: 'Preparar campaña de redes sociales',
     frequency: 'occasional',
     assignmentType: 'individual',
     assignments: [
-      { userId: 'u1', userName: 'Carlos López', status: 'pending' },
+      { userId: 'u8', userName: 'Sofia Ruiz', status: 'pending' },
     ],
     estimatedTime: 60,
     dueDate: '2024-12-20',
+    verticalId: 'v2',
+    managementId: 'm4',
+    departmentId: 'd5',
   },
 ];
 
@@ -167,9 +191,13 @@ const AdminTasks: React.FC = () => {
 
   const filterTasks = (frequency: string) => {
     let filtered = mockTasks;
+    
+    // Frequency filter
     if (frequency !== 'all') {
       filtered = filtered.filter((t) => t.frequency === frequency);
     }
+    
+    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (t) =>
@@ -177,6 +205,16 @@ const AdminTasks: React.FC = () => {
           t.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+    
+    // Hierarchy filter
+    filtered = filtered.filter((t) => 
+      matchesHierarchyFilter(hierarchyFilter, {
+        verticalId: t.verticalId,
+        managementId: t.managementId,
+        departmentId: t.departmentId,
+      })
+    );
+    
     return filtered;
   };
 

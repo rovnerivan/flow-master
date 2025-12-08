@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
+import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 
 interface ErrorItem {
@@ -23,6 +23,11 @@ interface ErrorItem {
   employeeNotes: string;
   adminNotes: string;
   status: 'pending' | 'reviewed' | 'resolved' | 'unsolvable';
+  // Hierarchy info
+  verticalId?: string;
+  managementId?: string;
+  departmentId?: string;
+  employeeId?: string;
 }
 
 const initialMockErrors: ErrorItem[] = [
@@ -37,6 +42,10 @@ const initialMockErrors: ErrorItem[] = [
     employeeNotes: 'El sistema estaba lento y me saltee el paso',
     adminNotes: 'Revisar capacitación del proceso',
     status: 'reviewed',
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd1',
+    employeeId: 'e1',
   },
   {
     id: '2',
@@ -49,6 +58,10 @@ const initialMockErrors: ErrorItem[] = [
     employeeNotes: '',
     adminNotes: '',
     status: 'pending',
+    verticalId: 'v3',
+    managementId: 'm5',
+    departmentId: 'd6',
+    employeeId: 'e9',
   },
   {
     id: '3',
@@ -61,6 +74,10 @@ const initialMockErrors: ErrorItem[] = [
     employeeNotes: 'No tenía acceso al sistema de tickets',
     adminNotes: 'Verificar permisos de acceso',
     status: 'resolved',
+    verticalId: 'v2',
+    managementId: 'm3',
+    departmentId: 'd4',
+    employeeId: 'e6',
   },
   {
     id: '4',
@@ -73,6 +90,26 @@ const initialMockErrors: ErrorItem[] = [
     employeeNotes: '',
     adminNotes: '',
     status: 'pending',
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd2',
+    employeeId: 'e3',
+  },
+  {
+    id: '5',
+    date: '2024-01-11',
+    type: 'Error técnico',
+    process: 'Gestión de Marketing Digital',
+    task: 'Publicación de contenido',
+    employee: 'Sofia Ruiz',
+    description: 'Publicación programada no se ejecutó',
+    employeeNotes: 'El sistema mostró error de conexión',
+    adminNotes: '',
+    status: 'pending',
+    verticalId: 'v2',
+    managementId: 'm4',
+    departmentId: 'd5',
+    employeeId: 'e8',
   },
 ];
 
@@ -107,7 +144,13 @@ const AdminErrors: React.FC = () => {
       error.employee.toLowerCase().includes(searchQuery.toLowerCase()) ||
       error.process.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === 'Todos los tipos' || error.type === selectedType;
-    return matchesSearch && matchesType;
+    const matchesHierarchy = matchesHierarchyFilter(hierarchyFilter, {
+      verticalId: error.verticalId,
+      managementId: error.managementId,
+      departmentId: error.departmentId,
+      employeeId: error.employeeId,
+    });
+    return matchesSearch && matchesType && matchesHierarchy;
   });
 
   // Stats
