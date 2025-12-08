@@ -10,7 +10,9 @@ import {
   Circle,
   AlertTriangle,
   Calendar as CalendarIcon,
-  ArrowLeft
+  ArrowLeft,
+  Lock,
+  UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,6 +40,8 @@ interface AssignedTask {
   estimatedDurationMin: number;
   status: 'pending' | 'in_progress' | 'completed';
   linkedProcess?: { id: string; name: string };
+  isFixedBySupervisor?: boolean;
+  scheduledBy?: 'employee' | 'supervisor';
 }
 
 interface IndividualCalendarViewProps {
@@ -89,6 +93,8 @@ const generateMockTasksForMember = (memberId: string, month: Date): AssignedTask
         
         const isPast = new Date(dateStr) < new Date();
         
+        const isScheduledByEmployee = Math.random() > 0.7;
+        
         tasks.push({
           id: `task-${memberId}-${dateStr}-${i}`,
           name: taskNames[taskIdx].name,
@@ -101,6 +107,8 @@ const generateMockTasksForMember = (memberId: string, month: Date): AssignedTask
             ? ['completed', 'completed', 'completed', 'in_progress'][Math.floor(Math.random() * 4)] as 'completed' | 'in_progress'
             : 'pending',
           linkedProcess: Math.random() > 0.5 ? { id: 'p1', name: 'Proceso Operativo' } : undefined,
+          isFixedBySupervisor: !isScheduledByEmployee,
+          scheduledBy: isScheduledByEmployee ? 'employee' : 'supervisor',
         });
       }
     }
@@ -372,7 +380,7 @@ const IndividualCalendarView: React.FC<IndividualCalendarViewProps> = ({
                             {task.description && (
                               <p className="text-xs text-muted-foreground mt-0.5">{task.description}</p>
                             )}
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
                               {task.dueTime && (
                                 <Badge variant="outline" className="text-xs">
                                   {task.dueTime}
@@ -385,6 +393,18 @@ const IndividualCalendarView: React.FC<IndividualCalendarViewProps> = ({
                               {task.linkedProcess && (
                                 <Badge variant="secondary" className="text-xs">
                                   {task.linkedProcess.name}
+                                </Badge>
+                              )}
+                              {/* Scheduled by indicator */}
+                              {task.scheduledBy === 'employee' ? (
+                                <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
+                                  <UserCircle className="h-3 w-3 mr-1" />
+                                  Programada por empleado
+                                </Badge>
+                              ) : task.isFixedBySupervisor && (
+                                <Badge variant="outline" className="text-xs bg-muted">
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  Fijada
                                 </Badge>
                               )}
                             </div>

@@ -1082,10 +1082,12 @@ export type Database = {
           due_time: string | null
           id: string
           instance_label: string | null
+          is_fixed_by_supervisor: boolean | null
           is_from_template: boolean | null
           is_shared: boolean | null
           notes: string | null
           recurrence_rule_id: string | null
+          scheduled_by: string | null
           scheduled_date: string | null
           status: string | null
           task_id: string
@@ -1100,10 +1102,12 @@ export type Database = {
           due_time?: string | null
           id?: string
           instance_label?: string | null
+          is_fixed_by_supervisor?: boolean | null
           is_from_template?: boolean | null
           is_shared?: boolean | null
           notes?: string | null
           recurrence_rule_id?: string | null
+          scheduled_by?: string | null
           scheduled_date?: string | null
           status?: string | null
           task_id: string
@@ -1118,10 +1122,12 @@ export type Database = {
           due_time?: string | null
           id?: string
           instance_label?: string | null
+          is_fixed_by_supervisor?: boolean | null
           is_from_template?: boolean | null
           is_shared?: boolean | null
           notes?: string | null
           recurrence_rule_id?: string | null
+          scheduled_by?: string | null
           scheduled_date?: string | null
           status?: string | null
           task_id?: string
@@ -1133,6 +1139,13 @@ export type Database = {
             columns: ["recurrence_rule_id"]
             isOneToOne: false
             referencedRelation: "task_recurrence_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_assignments_scheduled_by_fkey"
+            columns: ["scheduled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

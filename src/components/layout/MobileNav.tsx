@@ -1,13 +1,13 @@
 import React from 'react';
-import { Home, BookOpen, Users, User, ClipboardList } from 'lucide-react';
+import { Home, BookOpen, Users, User, ClipboardList, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const navItems = [
   { icon: Home, label: 'Inicio', path: '/employee' },
   { icon: ClipboardList, label: 'Tareas', path: '/employee/tasks' },
+  { icon: CalendarDays, label: 'Calendario', path: '/employee/calendar' },
   { icon: BookOpen, label: 'Procesos', path: '/employee/processes' },
-  { icon: Users, label: 'Equipo', path: '/employee/team' },
   { icon: User, label: 'Perfil', path: '/employee/profile' },
 ];
 
