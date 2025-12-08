@@ -17,6 +17,8 @@ import TaskViewToggle from '@/components/tasks/TaskViewToggle';
 import TaskCalendarView from '@/components/tasks/TaskCalendarView';
 import TaskKanbanView from '@/components/tasks/TaskKanbanView';
 import TaskMetricsDashboard from '@/components/tasks/TaskMetricsDashboard';
+import MetricConfigEditor from '@/components/metrics/MetricConfigEditor';
+import { TaskMetric } from '@/lib/metricTypes';
 import { ViewMode, Task as SharedTask } from '@/lib/taskTypes';
 
 // Review history entry for tracking corrections and rejections
@@ -1296,6 +1298,7 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
   const [assignments, setAssignments] = useState<{ userId: string; userName: string; instanceLabel: string }[]>([]);
   const [sharedAssignees, setSharedAssignees] = useState<{ userId: string; userName: string }[]>([]);
   const [showAssigneeSelector, setShowAssigneeSelector] = useState(false);
+  const [taskMetrics, setTaskMetrics] = useState<Partial<TaskMetric>[]>([]);
 
   // Mock team members - in real implementation, fetch from Supabase
   const teamMembers = [
@@ -1373,6 +1376,7 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
     setAssignmentType('individual');
     setAssignments([]);
     setSharedAssignees([]);
+    setTaskMetrics([]);
   };
 
   return (
@@ -1685,6 +1689,14 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
               )}
             </div>
           )}
+
+          {/* Metrics Section */}
+          <div className="pt-4 border-t border-border">
+            <MetricConfigEditor 
+              metrics={taskMetrics}
+              onChange={setTaskMetrics}
+            />
+          </div>
         </div>
 
         <div className="p-6 border-t border-border flex gap-3">
