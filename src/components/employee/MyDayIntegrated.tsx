@@ -21,8 +21,11 @@ import {
   Pause,
   X,
   Edit3,
-  History
+  History,
+  BarChart3
 } from 'lucide-react';
+import { TaskMetric, MetricResult } from '@/lib/metricTypes';
+import { QuickMetricModal, MetricIndicator, MetricResultsView } from './QuickMetricModal';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +60,17 @@ interface TimeEntry {
   createdAt: Date;
 }
 
+interface TaskItemMetric {
+  id: string;
+  name: string;
+  unit: string;
+  targetValue: number;
+  metricType: string;
+  allowDecimal?: boolean;
+  minimumAcceptable?: number;
+  excellenceThreshold?: number;
+}
+
 interface TaskItem {
   id: string;
   name: string;
@@ -69,6 +83,8 @@ interface TaskItem {
   correctionNotes?: string;
   timeSpent?: number;
   timeEntries?: TimeEntry[];
+  metrics?: TaskItemMetric[];
+  metricResults?: Record<string, number>; // metricId -> value
 }
 
 interface ActiveTimer {
@@ -80,7 +96,7 @@ interface ActiveTimer {
   accumulatedSeconds: number;
 }
 
-// Mock data with multiple linked processes
+// Mock data with multiple linked processes and metrics
 const mockTasks: TaskItem[] = [
   {
     id: '1',
@@ -97,7 +113,11 @@ const mockTasks: TaskItem[] = [
     strategicContext: { 
       objectiveName: 'Reducir diferencias de inventario en 30%',
       contribution: 'Cada auditoría correcta reduce discrepancias'
-    }
+    },
+    metrics: [
+      { id: 'm1', name: 'Productos revisados', unit: 'Unidades', targetValue: 50, metricType: 'quantity' },
+      { id: 'm2', name: 'Errores encontrados', unit: 'Unidades', targetValue: 0, metricType: 'quantity', minimumAcceptable: 5 }
+    ]
   },
   {
     id: '2',
@@ -110,7 +130,10 @@ const mockTasks: TaskItem[] = [
     strategicContext: { 
       objectiveName: 'Reducir diferencias de caja en 50%',
       contribution: 'Tu precisión impacta directamente este objetivo'
-    }
+    },
+    metrics: [
+      { id: 'm3', name: 'Diferencia en caja', unit: '$', targetValue: 0, metricType: 'monetary', minimumAcceptable: 10 }
+    ]
   },
   {
     id: '3',
@@ -631,6 +654,8 @@ interface TaskCardProps {
   onCorrectTask?: (taskId: string) => void;
   onViewTimeLog?: (taskId: string) => void;
   onReopenTask?: (taskId: string) => void;
+  onRegisterMetrics?: (taskId: string) => void;
+  onViewMetrics?: (taskId: string) => void;
   hasActiveTimer?: boolean;
 }
 
@@ -643,10 +668,29 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onCorrectTask,
   onViewTimeLog,
   onReopenTask,
+  onRegisterMetrics,
+  onViewMetrics,
   hasActiveTimer
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [showProcesses, setShowProcesses] = useState(false);
+
+  // Calculate metrics efficiency
+  const hasMetrics = task.metrics && task.metrics.length > 0;
+  const hasMetricResults = hasMetrics && task.metricResults && Object.keys(task.metricResults).length > 0;
+  const metricsEfficiency = hasMetricResults && task.metrics ? (() => {
+    const metrics = task.metrics!;
+    const results = task.metricResults!;
+    let totalEff = 0;
+    let count = 0;
+    metrics.forEach(m => {
+      if (results[m.id] !== undefined) {
+        totalEff += m.targetValue > 0 ? (results[m.id] / m.targetValue) * 100 : 100;
+        count++;
+      }
+    });
+    return count > 0 ? totalEff / count : 0;
+  })() : undefined;
   
   const statusConfig = {
     pending: { bg: 'bg-muted', border: 'border-border', icon: Circle, iconColor: 'text-muted-foreground' },
@@ -719,7 +763,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   expanded && "rotate-180"
                 )} />
               </div>
-              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                 {task.dueTime && <span>{task.dueTime}</span>}
                 <span>•</span>
                 <span>{formatDuration(task.estimatedMinutes)}</span>
@@ -739,6 +783,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
                       }
                     </span>
                   </>
+                )}
+                {/* Metric indicator */}
+                {hasMetrics && (
+                  <MetricIndicator
+                    metricsCount={task.metrics!.length}
+                    hasResults={!!hasMetricResults}
+                    efficiency={metricsEfficiency}
+                    onClick={() => hasMetricResults ? onViewMetrics?.(task.id) : onRegisterMetrics?.(task.id)}
+                  />
                 )}
               </div>
               {task.status === 'needs_correction' && task.correctionNotes && (
@@ -898,6 +951,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   {task.timeSpent}m
                 </Button>
               )}
+              {/* Metrics button - show if task has metrics */}
+              {hasMetrics && (
+                <Button 
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 h-8 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    hasMetricResults ? onViewMetrics?.(task.id) : onRegisterMetrics?.(task.id);
+                  }}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  {hasMetricResults ? `${metricsEfficiency?.toFixed(0)}%` : 'Registrar'}
+                </Button>
+              )}
             </div>
           </div>
         </CollapsibleContent>
@@ -923,6 +991,11 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
   const [manualTimeTask, setManualTimeTask] = useState<TaskItem | null>(null);
   const [stopTimerModal, setStopTimerModal] = useState(false);
   const [timeLogTask, setTimeLogTask] = useState<TaskItem | null>(null);
+  
+  // Metrics modal state
+  const [metricsTask, setMetricsTask] = useState<TaskItem | null>(null);
+  const [viewMetricsTask, setViewMetricsTask] = useState<TaskItem | null>(null);
+  const [completionMetricsTask, setCompletionMetricsTask] = useState<TaskItem | null>(null);
   
   // Active timer state
   const [activeTimer, setActiveTimer] = useState<ActiveTimer | null>(null);
@@ -1222,6 +1295,80 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
     }
   };
 
+  // Handle opening metrics registration modal
+  const handleRegisterMetrics = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.metrics) {
+      setMetricsTask(task);
+    }
+  };
+
+  // Handle viewing registered metrics
+  const handleViewMetrics = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.metrics) {
+      setViewMetricsTask(task);
+    }
+  };
+
+  // Handle saving metric results
+  const handleSaveMetrics = (results: { metricId: string; value: number }[]) => {
+    const task = metricsTask || completionMetricsTask;
+    if (!task) return;
+    
+    const newResults: Record<string, number> = { ...task.metricResults };
+    results.forEach(r => {
+      newResults[r.metricId] = r.value;
+    });
+    
+    setTasks(prev => prev.map(t => 
+      t.id === task.id ? { ...t, metricResults: newResults } : t
+    ));
+    
+    // If this is completion flow, complete the task
+    if (completionMetricsTask) {
+      setTasks(prev => prev.map(t => 
+        t.id === task.id ? { ...t, status: 'completed' as const, metricResults: newResults } : t
+      ));
+      toast({
+        title: "¡Tarea completada!",
+        description: "Resultados registrados correctamente"
+      });
+    } else {
+      toast({
+        title: "Resultados guardados",
+        description: "Puedes editarlos en cualquier momento"
+      });
+    }
+    
+    setMetricsTask(null);
+    setCompletionMetricsTask(null);
+  };
+
+  // Skip metrics during completion
+  const handleSkipMetrics = () => {
+    if (completionMetricsTask) {
+      setTasks(prev => prev.map(t => 
+        t.id === completionMetricsTask.id ? { ...t, status: 'completed' as const } : t
+      ));
+      toast({
+        title: "¡Tarea completada!",
+        description: "Puedes registrar resultados después si lo deseas"
+      });
+    }
+    setMetricsTask(null);
+    setCompletionMetricsTask(null);
+  };
+
+  // Helper to get metrics with results for modal
+  const getMetricsWithResults = (task: TaskItem) => {
+    if (!task.metrics) return [];
+    return task.metrics.map(m => ({
+      metric: m as any, // Cast to TaskMetric type from metricTypes
+      result: task.metricResults?.[m.id]
+    }));
+  };
+
   return (
     <div className={cn("space-y-4", className, activeTimer && "pb-20")}>
       {/* Header */}
@@ -1267,6 +1414,8 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 onCorrectTask={handleCorrectTask}
                 onViewTimeLog={handleViewTimeLog}
                 onReopenTask={handleReopenTask}
+                onRegisterMetrics={handleRegisterMetrics}
+                onViewMetrics={handleViewMetrics}
                 hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
@@ -1296,6 +1445,8 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 onCorrectTask={handleCorrectTask}
                 onViewTimeLog={handleViewTimeLog}
                 onReopenTask={handleReopenTask}
+                onRegisterMetrics={handleRegisterMetrics}
+                onViewMetrics={handleViewMetrics}
                 hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
@@ -1359,6 +1510,42 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
         onUpdateEntry={handleUpdateTimeEntry}
         onDeleteEntry={handleDeleteTimeEntry}
       />
+
+      {/* Quick Metric Registration Modal */}
+      {metricsTask && (
+        <QuickMetricModal
+          isOpen={!!metricsTask}
+          onClose={() => setMetricsTask(null)}
+          taskName={metricsTask.name}
+          metrics={getMetricsWithResults(metricsTask)}
+          onSave={handleSaveMetrics}
+          onSkip={() => setMetricsTask(null)}
+          isCompletionFlow={false}
+        />
+      )}
+
+      {/* Completion Metrics Modal */}
+      {completionMetricsTask && (
+        <QuickMetricModal
+          isOpen={!!completionMetricsTask}
+          onClose={() => setCompletionMetricsTask(null)}
+          taskName={completionMetricsTask.name}
+          metrics={getMetricsWithResults(completionMetricsTask)}
+          onSave={handleSaveMetrics}
+          onSkip={handleSkipMetrics}
+          isCompletionFlow={true}
+        />
+      )}
+
+      {/* View Metrics Modal */}
+      {viewMetricsTask && (
+        <MetricResultsView
+          isOpen={!!viewMetricsTask}
+          onClose={() => setViewMetricsTask(null)}
+          taskName={viewMetricsTask.name}
+          metrics={getMetricsWithResults(viewMetricsTask)}
+        />
+      )}
     </div>
   );
 };
