@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { defaultTags, TagInfo } from '@/lib/processTags';
 import { ExtendedContentEditor, ExtendedContentItem } from './ExtendedContentEditor';
+import { MediaUploader } from './MediaUploader';
 
 interface ProcessCreatorModalProps {
   open: boolean;
@@ -22,6 +23,10 @@ interface Step {
   title: string;
   description: string;
   duration: string;
+  videoUrl?: string;
+  audioUrl?: string;
+  imageUrl?: string;
+  documentUrl?: string;
   extendedContent?: ExtendedContentItem[];
 }
 
@@ -55,7 +60,7 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [steps, setSteps] = useState<Step[]>([
-    { id: '1', title: '', description: '', duration: '2', extendedContent: [] },
+    { id: '1', title: '', description: '', duration: '2', videoUrl: '', audioUrl: '', imageUrl: '', documentUrl: '', extendedContent: [] },
   ]);
 
   // Audio-guided form hooks - must be before conditional return
@@ -76,7 +81,7 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   const resetState = () => {
     setMethod('select');
     setFormData({ name: '', description: '', importance: '', expectedResult: '', estimatedTime: '15' });
-    setSteps([{ id: '1', title: '', description: '', duration: '2', extendedContent: [] }]);
+    setSteps([{ id: '1', title: '', description: '', duration: '2', videoUrl: '', audioUrl: '', imageUrl: '', documentUrl: '', extendedContent: [] }]);
     setSelectedTags([]);
     setAudioBlob(null);
     setUploadedFile(null);
@@ -105,6 +110,10 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
       title: '', 
       description: '', 
       duration: '2',
+      videoUrl: '',
+      audioUrl: '',
+      imageUrl: '',
+      documentUrl: '',
       extendedContent: []
     }]);
   };
@@ -480,6 +489,35 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
                 placeholder="Descripción detallada del paso..."
                 rows={2}
               />
+
+              {/* Media content for step */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <MediaUploader
+                  type="video"
+                  value={step.videoUrl || ''}
+                  onChange={(url) => updateStep(step.id, 'videoUrl', url)}
+                  label="Video del paso"
+                />
+                <MediaUploader
+                  type="audio"
+                  value={step.audioUrl || ''}
+                  onChange={(url) => updateStep(step.id, 'audioUrl', url)}
+                  label="Audio"
+                />
+                <MediaUploader
+                  type="image"
+                  value={step.imageUrl || ''}
+                  onChange={(url) => updateStep(step.id, 'imageUrl', url)}
+                  label="Imagen"
+                />
+                <MediaUploader
+                  type="document"
+                  value={step.documentUrl || ''}
+                  onChange={(url) => updateStep(step.id, 'documentUrl', url)}
+                  label="Documento"
+                />
+              </div>
+
               {/* Extended version - optional with rich content */}
               <details className="group">
                 <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
@@ -488,7 +526,7 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
                 </summary>
                 <div className="mt-3 pt-3 border-t border-border/50">
                   <p className="text-xs text-muted-foreground mb-3">
-                    Añade videos, audios, imágenes, documentos, textos o enlaces para profundizar en este paso.
+                    Añade videos, audios, imágenes, documentos, textos o enlaces adicionales.
                   </p>
                   <ExtendedContentEditor
                     items={step.extendedContent || []}

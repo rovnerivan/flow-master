@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { Plus, X, Video, FileAudio, Image, FileText, Link, File, Upload, Trash2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, X, Video, FileAudio, Image, FileText, Link, File, Upload, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { uploadMediaFile, getMediaAcceptTypes, MediaType } from '@/lib/uploadMedia';
+import { toast } from 'sonner';
 
 export interface ExtendedContentItem {
   id: string;
@@ -20,12 +22,12 @@ interface ExtendedContentEditorProps {
 }
 
 const contentTypes = [
-  { type: 'video' as const, label: 'Video', icon: Video, placeholder: 'URL del video (YouTube, Vimeo, etc.)' },
-  { type: 'audio' as const, label: 'Audio', icon: FileAudio, placeholder: 'URL del archivo de audio' },
-  { type: 'image' as const, label: 'Imagen', icon: Image, placeholder: 'URL de la imagen' },
-  { type: 'document' as const, label: 'Documento', icon: File, placeholder: 'URL del documento (PDF, DOCX, etc.)' },
-  { type: 'text' as const, label: 'Texto', icon: FileText, placeholder: 'Contenido de texto...' },
-  { type: 'link' as const, label: 'Enlace', icon: Link, placeholder: 'https://...' },
+  { type: 'video' as const, label: 'Video', icon: Video, placeholder: 'URL del video', mediaType: 'video' as MediaType },
+  { type: 'audio' as const, label: 'Audio', icon: FileAudio, placeholder: 'URL del audio', mediaType: 'audio' as MediaType },
+  { type: 'image' as const, label: 'Imagen', icon: Image, placeholder: 'URL de la imagen', mediaType: 'image' as MediaType },
+  { type: 'document' as const, label: 'Documento', icon: File, placeholder: 'URL del documento', mediaType: 'document' as MediaType },
+  { type: 'text' as const, label: 'Texto', icon: FileText, placeholder: 'Contenido de texto...', mediaType: null },
+  { type: 'link' as const, label: 'Enlace', icon: Link, placeholder: 'https://...', mediaType: null },
 ];
 
 export const ExtendedContentEditor: React.FC<ExtendedContentEditorProps> = ({
@@ -34,6 +36,8 @@ export const ExtendedContentEditor: React.FC<ExtendedContentEditorProps> = ({
   className,
 }) => {
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
+  const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   const addItem = (type: ExtendedContentItem['type']) => {
     const newItem: ExtendedContentItem = {
@@ -54,8 +58,35 @@ export const ExtendedContentEditor: React.FC<ExtendedContentEditorProps> = ({
     onChange(items.filter(item => item.id !== id));
   };
 
+  const handleFileUpload = async (itemId: string, type: ExtendedContentItem['type'], e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const mediaType = contentTypes.find(t => t.type === type)?.mediaType;
+    if (!mediaType) return;
+
+    setUploadingItemId(itemId);
+    try {
+      const { url, error } = await uploadMediaFile(file, mediaType);
+      if (error) {
+        toast.error(error);
+      } else {
+        updateItem(itemId, 'content', url);
+        toast.success('Archivo subido correctamente');
+      }
+    } catch {
+      toast.error('Error al subir el archivo');
+    } finally {
+      setUploadingItemId(null);
+    }
+  };
+
   const getTypeInfo = (type: ExtendedContentItem['type']) => {
     return contentTypes.find(t => t.type === type)!;
+  };
+
+  const canUpload = (type: ExtendedContentItem['type']) => {
+    return ['video', 'audio', 'image', 'document'].includes(type);
   };
 
   return (
@@ -63,6 +94,7 @@ export const ExtendedContentEditor: React.FC<ExtendedContentEditorProps> = ({
       {items.map((item) => {
         const typeInfo = getTypeInfo(item.type);
         const Icon = typeInfo.icon;
+        const isUploading = uploadingItemId === item.id;
         
         return (
           <div key={item.id} className="p-3 rounded-lg border border-border bg-card space-y-2">
@@ -96,6 +128,59 @@ export const ExtendedContentEditor: React.FC<ExtendedContentEditorProps> = ({
                 onChange={(e) => updateItem(item.id, 'content', e.target.value)}
                 rows={4}
               />
+            ) : canUpload(item.type) ? (
+              <div className="space-y-2">
+                {/* Hidden file input */}
+                <input
+                  ref={(el) => { fileInputRefs.current[item.id] = el; }}
+                  type="file"
+                  accept={getMediaAcceptTypes(typeInfo.mediaType!)}
+                  onChange={(e) => handleFileUpload(item.id, item.type, e)}
+                  className="hidden"
+                />
+                
+                {/* URL input or upload buttons */}
+                {item.content ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 rounded bg-secondary/50 text-sm">
+                      <span className="truncate flex-1 text-muted-foreground">{item.content}</span>
+                      <button
+                        type="button"
+                        onClick={() => updateItem(item.id, 'content', '')}
+                        className="p-1 rounded hover:bg-destructive/10 text-destructive"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    {/* Preview */}
+                    {item.type === 'image' && (
+                      <img src={item.content} alt="Preview" className="w-full max-h-32 object-cover rounded" />
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder={typeInfo.placeholder}
+                      value={item.content}
+                      onChange={(e) => updateItem(item.id, 'content', e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => fileInputRefs.current[item.id]?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Input
                 placeholder={typeInfo.placeholder}
