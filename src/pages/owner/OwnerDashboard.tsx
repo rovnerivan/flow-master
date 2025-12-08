@@ -28,6 +28,7 @@ import AdminErrors from '../admin/AdminErrors';
 import AdminOnboardings from '../admin/AdminOnboardings';
 import AdminTasks from '../admin/AdminTasks';
 import AdminHierarchy from '../admin/AdminHierarchy';
+import VisionLeadership from '../admin/VisionLeadership';
 
 const mockProcessHealth = [
   {
@@ -231,6 +232,7 @@ const OwnerDashboard: React.FC = () => {
           <Route path="/tasks" element={<AdminTasks />} />
           <Route path="/team/*" element={<AdminTeam />} />
           <Route path="/hierarchy" element={<AdminHierarchy />} />
+          <Route path="/vision" element={<VisionLeadership />} />
           <Route path="/analytics" element={<AdminAnalytics />} />
           <Route path="/reports" element={<AdminReports />} />
           <Route path="/settings" element={<AdminSettings />} />

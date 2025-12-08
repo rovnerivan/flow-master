@@ -25,6 +25,7 @@ import {
   Eye,
   Trash2,
   FileText,
+  Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -1336,6 +1337,21 @@ const ProcessesPage: React.FC = () => {
   );
 };
 
+// Vision Leadership Page (reuses admin component)
+const VisionLeadershipPage: React.FC = () => {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Visión y Liderazgo</h1>
+        <p className="text-muted-foreground">Crea contenido inspiracional para tu equipo</p>
+      </div>
+      <div className="text-center py-12 text-muted-foreground">
+        Usa esta sección para compartir mensajes de liderazgo con tu equipo.
+      </div>
+    </div>
+  );
+};
+
 // Sidebar
 const SupervisorSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
   const navigate = useNavigate();
@@ -1345,6 +1361,7 @@ const SupervisorSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> 
     { icon: FileText, label: 'Procesos', path: '/supervisor/processes' },
     { icon: Calendar, label: 'Tareas del Equipo', path: '/supervisor/team-tasks' },
     { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
+    { icon: Heart, label: 'Visión y Liderazgo', path: '/supervisor/vision' },
     { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
     { icon: Briefcase, label: 'Mi Cargo', path: '/supervisor/my-cargo' },
   ];
@@ -1461,6 +1478,7 @@ const SupervisorDashboard: React.FC = () => {
             <Route path="processes" element={<ProcessesPage />} />
             <Route path="team-tasks" element={<TeamTasksPage />} />
             <Route path="team" element={<SupervisorTeamPage />} />
+            <Route path="vision" element={<VisionLeadershipPage />} />
             <Route path="performance" element={<PerformancePage />} />
             <Route path="my-cargo" element={<MyCargoPage />} />
             <Route path="*" element={<SupervisorHome />} />

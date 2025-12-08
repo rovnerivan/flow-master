@@ -15,6 +15,7 @@ import {
   ListTodo,
   Crown,
   Network,
+  Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -33,6 +34,7 @@ const ownerNavItems = [
   { icon: ListTodo, label: 'Tareas', path: '/owner/tasks' },
   { icon: Users, label: 'Equipo', path: '/owner/team' },
   { icon: Network, label: 'Jerarquía', path: '/owner/hierarchy' },
+  { icon: Heart, label: 'Visión y Liderazgo', path: '/owner/vision' },
   { icon: UserPlus, label: 'Onboardings', path: '/owner/onboardings' },
   { icon: AlertTriangle, label: 'Errores', path: '/owner/errors' },
   { icon: BarChart3, label: 'Analytics', path: '/owner/analytics' },

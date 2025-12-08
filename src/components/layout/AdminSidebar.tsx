@@ -15,6 +15,7 @@ import {
   ListTodo,
   Shield,
   Network,
+  Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -34,6 +35,7 @@ const adminNavItems = [
   { icon: ListTodo, label: 'Tareas', path: '/admin/tasks' },
   { icon: Users, label: 'Equipo', path: '/admin/team' },
   { icon: Network, label: 'Jerarquía', path: '/admin/hierarchy' },
+  { icon: Heart, label: 'Visión y Liderazgo', path: '/admin/vision' },
   { icon: UserPlus, label: 'Onboardings', path: '/admin/onboardings' },
   { icon: AlertTriangle, label: 'Errores', path: '/admin/errors' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
@@ -44,6 +46,7 @@ const supervisorNavItems = [
   { icon: LayoutDashboard, label: 'Mi Dashboard', path: '/supervisor' },
   { icon: ListTodo, label: 'Mis Tareas', path: '/supervisor/my-tasks' },
   { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
+  { icon: Heart, label: 'Visión y Liderazgo', path: '/supervisor/vision' },
   { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
 ];
 
