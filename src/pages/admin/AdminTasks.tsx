@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw, Eye, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ interface TaskAssignment {
   userId: string;
   userName: string;
   instanceLabel?: string;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: 'pending' | 'in_progress' | 'pending_review' | 'completed';
   timeSpentMinutes?: number; // Individual time contribution
 }
 
@@ -32,6 +32,8 @@ interface Task {
   linkedProcesses?: { id: string; name: string }[];
   estimatedTime: number;
   dueDate?: string;
+  // Review workflow
+  needsReview?: boolean; // Supervisor marks task as requiring review before completion
   // For shared tasks: who closed/completed the task
   completedByUserId?: string;
   completedByUserName?: string;
@@ -114,6 +116,7 @@ const initialMockTasks: Task[] = [
     description: 'Revisar cumplimiento de procesos operativos',
     frequency: 'monthly',
     assignmentType: 'shared',
+    needsReview: true,
     assignments: [
       { userId: 'sup1', userName: 'Supervisor', status: 'pending' },
       { userId: 'u1', userName: 'Carlos López', status: 'pending' },
@@ -123,6 +126,21 @@ const initialMockTasks: Task[] = [
     verticalId: 'v1',
     managementId: 'm2',
     departmentId: 'd3',
+  },
+  {
+    id: '8',
+    title: 'Cierre de caja nocturno',
+    description: 'Conteo final y cuadre de caja del turno noche',
+    frequency: 'daily',
+    assignmentType: 'individual',
+    needsReview: true,
+    assignments: [
+      { userId: 'u2', userName: 'Ana Martínez', status: 'pending_review', timeSpentMinutes: 25 },
+    ],
+    estimatedTime: 20,
+    verticalId: 'v3',
+    managementId: 'm5',
+    departmentId: 'd6',
   },
   {
     id: '6',
@@ -166,6 +184,7 @@ const frequencyLabels: Record<string, { label: string; color: string }> = {
 const statusLabels: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pendiente', color: 'bg-secondary text-muted-foreground' },
   in_progress: { label: 'En progreso', color: 'bg-primary/20 text-primary' },
+  pending_review: { label: 'Lista para revisar', color: 'bg-warning/20 text-warning' },
   completed: { label: 'Completada', color: 'bg-success/20 text-success' },
 };
 
@@ -221,7 +240,7 @@ const AdminTasks: React.FC = () => {
     return filtered;
   };
 
-  const updateTaskStatus = (taskId: string, newStatus: 'pending' | 'in_progress' | 'completed', assignmentUserId?: string) => {
+  const updateTaskStatus = (taskId: string, newStatus: 'pending' | 'in_progress' | 'pending_review' | 'completed', assignmentUserId?: string) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
         return {
@@ -240,9 +259,31 @@ const AdminTasks: React.FC = () => {
     }));
   };
 
+  // Complete task - respects needsReview flag
   const completeTask = (taskId: string, assignmentUserId?: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // If task needs review, go to pending_review instead of completed
+    if (task.needsReview) {
+      updateTaskStatus(taskId, 'pending_review', assignmentUserId);
+      toast.info('Tarea lista para revisión del supervisor');
+    } else {
+      updateTaskStatus(taskId, 'completed', assignmentUserId);
+      toast.success('Tarea marcada como completada');
+    }
+  };
+
+  // Supervisor approves task after review
+  const approveTask = (taskId: string, assignmentUserId?: string) => {
     updateTaskStatus(taskId, 'completed', assignmentUserId);
-    toast.success('Tarea marcada como completada');
+    toast.success('Tarea aprobada y completada');
+  };
+
+  // Supervisor rejects task - sends back to in_progress
+  const rejectTask = (taskId: string, assignmentUserId?: string) => {
+    updateTaskStatus(taskId, 'in_progress', assignmentUserId);
+    toast.info('Tarea devuelta para correcciones');
   };
 
   const setTaskPending = (taskId: string, assignmentUserId?: string) => {
@@ -357,9 +398,11 @@ const AdminTasks: React.FC = () => {
     // Calculate overall task status based on assignments
     const completedCount = task.assignments.filter(a => a.status === 'completed').length;
     const inProgressCount = task.assignments.filter(a => a.status === 'in_progress').length;
+    const pendingReviewCount = task.assignments.filter(a => a.status === 'pending_review').length;
     const totalAssignments = task.assignments.length;
     
     const overallStatus = completedCount === totalAssignments ? 'completed' 
+                        : pendingReviewCount > 0 ? 'pending_review'
                         : inProgressCount > 0 || completedCount > 0 ? 'in_progress' 
                         : 'pending';
 
@@ -379,6 +422,13 @@ const AdminTasks: React.FC = () => {
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusLabels[overallStatus].color}`}>
                 {statusLabels[overallStatus].label}
               </span>
+              {/* Needs review badge */}
+              {task.needsReview && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-400 flex items-center gap-1">
+                  <Eye className="w-3 h-3" />
+                  Requiere revisión
+                </span>
+              )}
               {/* Assignment type badge */}
               {task.assignmentType === 'shared' ? (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 flex items-center gap-1">
@@ -404,6 +454,7 @@ const AdminTasks: React.FC = () => {
                     <div className={cn(
                       "w-2 h-2 rounded-full",
                       assignment.status === 'completed' ? 'bg-success' 
+                        : assignment.status === 'pending_review' ? 'bg-warning'
                         : assignment.status === 'in_progress' ? 'bg-primary' 
                         : 'bg-muted-foreground'
                     )} />
@@ -415,6 +466,7 @@ const AdminTasks: React.FC = () => {
                     <span className={cn(
                       "text-xs",
                       assignment.status === 'completed' ? 'text-success' 
+                        : assignment.status === 'pending_review' ? 'text-warning'
                         : assignment.status === 'in_progress' ? 'text-primary' 
                         : 'text-muted-foreground'
                     )}>
@@ -525,37 +577,73 @@ const AdminTasks: React.FC = () => {
                   Registrar tiempo
                 </DropdownMenuItem>
                 <div className="h-px bg-border my-1" />
+                
+                {/* Approve/Reject actions for pending_review status */}
+                {overallStatus === 'pending_review' && (
+                  <>
+                    <DropdownMenuItem 
+                      onClick={() => approveTask(task.id)}
+                      className="text-success focus:text-success"
+                    >
+                      <ThumbsUp className="w-4 h-4 mr-2" />
+                      Aprobar tarea
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => rejectTask(task.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <ThumbsDown className="w-4 h-4 mr-2" />
+                      Devolver para corrección
+                    </DropdownMenuItem>
+                    <div className="h-px bg-border my-1" />
+                  </>
+                )}
+                
                 {overallStatus !== 'pending' && (
                   <DropdownMenuItem onClick={() => setTaskPending(task.id)}>
                     <RotateCcw className="w-4 h-4 mr-2" />
                     Volver a pendiente
                   </DropdownMenuItem>
                 )}
-                {overallStatus !== 'in_progress' && (
+                {overallStatus !== 'in_progress' && overallStatus !== 'pending_review' && (
                   <DropdownMenuItem onClick={() => setTaskInProgress(task.id)}>
                     <Clock className="w-4 h-4 mr-2" />
                     Marcar en progreso
                   </DropdownMenuItem>
                 )}
-                {overallStatus !== 'completed' && (
+                {overallStatus !== 'completed' && overallStatus !== 'pending_review' && (
                   <DropdownMenuItem onClick={() => handleCompleteAction(task)}>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Marcar completada
+                    {task.needsReview ? 'Enviar a revisión' : 'Marcar completada'}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Quick action button */}
+            {/* Quick action button - context-aware */}
             <Button 
               variant="ghost" 
               size="icon" 
               className="h-8 w-8" 
-              onClick={() => overallStatus === 'completed' ? setTaskPending(task.id) : handleCompleteAction(task)}
-              title={overallStatus === 'completed' ? 'Volver a pendiente' : 'Marcar completada'}
+              onClick={() => {
+                if (overallStatus === 'completed') {
+                  setTaskPending(task.id);
+                } else if (overallStatus === 'pending_review') {
+                  approveTask(task.id);
+                } else {
+                  handleCompleteAction(task);
+                }
+              }}
+              title={
+                overallStatus === 'completed' ? 'Volver a pendiente' 
+                : overallStatus === 'pending_review' ? 'Aprobar tarea'
+                : task.needsReview ? 'Enviar a revisión' : 'Marcar completada'
+              }
             >
               {overallStatus === 'completed' ? (
                 <RotateCcw className="w-4 h-4 text-muted-foreground" />
+              ) : overallStatus === 'pending_review' ? (
+                <ThumbsUp className="w-4 h-4 text-warning" />
               ) : (
                 <CheckCircle className="w-4 h-4 text-primary" />
               )}
@@ -689,6 +777,7 @@ const AdminTasks: React.FC = () => {
                   <div className={cn(
                     "w-3 h-3 rounded-full",
                     assignment.status === 'completed' ? 'bg-success' 
+                      : assignment.status === 'pending_review' ? 'bg-warning'
                       : assignment.status === 'in_progress' ? 'bg-primary' 
                       : 'bg-muted-foreground'
                   )} />
@@ -702,6 +791,7 @@ const AdminTasks: React.FC = () => {
                     <span className={cn(
                       "text-xs",
                       assignment.status === 'completed' ? 'text-success' 
+                        : assignment.status === 'pending_review' ? 'text-warning'
                         : assignment.status === 'in_progress' ? 'text-primary' 
                         : 'text-muted-foreground'
                     )}>
@@ -804,6 +894,7 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
     frequency: 'daily',
     estimatedTime: '15',
     dueDate: '',
+    needsReview: false,
   });
   const [assignmentType, setAssignmentType] = useState<'individual' | 'shared'>('individual');
   const [assignments, setAssignments] = useState<{ userId: string; userName: string; instanceLabel: string }[]>([]);
@@ -871,7 +962,7 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', frequency: 'daily', estimatedTime: '15', dueDate: '' });
+    setFormData({ title: '', description: '', frequency: 'daily', estimatedTime: '15', dueDate: '', needsReview: false });
     setAssignmentType('individual');
     setAssignments([]);
     setSharedAssignees([]);
@@ -944,6 +1035,32 @@ const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, 
                   onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                 />
               </div>
+            </div>
+
+            {/* Needs Review Toggle */}
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/30">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-orange-400" />
+                  <span className="text-sm font-medium">Requiere revisión del supervisor</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cuando el empleado complete la tarea, quedará "lista para revisar" hasta que el supervisor la apruebe
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, needsReview: !formData.needsReview })}
+                className={cn(
+                  "relative w-11 h-6 rounded-full transition-colors",
+                  formData.needsReview ? "bg-orange-500" : "bg-muted"
+                )}
+              >
+                <div className={cn(
+                  "absolute top-1 w-4 h-4 bg-white rounded-full transition-transform",
+                  formData.needsReview ? "translate-x-6" : "translate-x-1"
+                )} />
+              </button>
             </div>
           </div>
 
@@ -1125,6 +1242,7 @@ const EditTaskModal: React.FC<{ open: boolean; task: Task; onClose: () => void }
     estimatedTime: task.estimatedTime.toString(),
     assignedTo: task.assignments.map(a => a.userName).join(', '),
     dueDate: task.dueDate || '',
+    needsReview: task.needsReview || false,
   });
 
   if (!open) return null;
@@ -1208,6 +1326,32 @@ const EditTaskModal: React.FC<{ open: boolean; task: Task; onClose: () => void }
               value={formData.dueDate}
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
             />
+          </div>
+
+          {/* Needs Review Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/30">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-orange-400" />
+                <span className="text-sm font-medium">Requiere revisión</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                El empleado enviará la tarea a revisión antes de completarla
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, needsReview: !formData.needsReview })}
+              className={cn(
+                "relative w-11 h-6 rounded-full transition-colors",
+                formData.needsReview ? "bg-orange-500" : "bg-muted"
+              )}
+            >
+              <div className={cn(
+                "absolute top-1 w-4 h-4 bg-white rounded-full transition-transform",
+                formData.needsReview ? "translate-x-6" : "translate-x-1"
+              )} />
+            </button>
           </div>
         </div>
 
