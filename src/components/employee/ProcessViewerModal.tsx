@@ -13,7 +13,6 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ProgressRing } from '@/components/dashboard/ProgressRing';
 
 interface ProcessViewerModalProps {
   processId: string;
@@ -141,16 +140,18 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   const renderOverview = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Cover/Diagram Placeholder */}
-      <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-        <div className="text-center">
+      <div className="relative bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center" style={{ minHeight: '200px', maxHeight: '40vh' }}>
+        <div className="text-center py-8">
           <FileText className="w-16 h-16 text-primary/50 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Diagrama del proceso</p>
         </div>
-        
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
+      </div>
+      
+      {/* Scroll Indicator - Centered and more visible */}
+      <div className="flex justify-center py-3 bg-background border-b border-border">
+        <div className="flex flex-col items-center animate-bounce">
           <ChevronsDown className="w-6 h-6 text-primary" />
-          <span className="text-xs text-muted-foreground mt-1">Desliza para ver más</span>
+          <span className="text-xs text-muted-foreground">Desliza para ver más</span>
         </div>
       </div>
 
@@ -208,17 +209,17 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
                 key={s.id}
                 className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/30 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary shrink-0">
                   {index + 1}
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground text-sm">{s.title}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-sm truncate">{s.title}</p>
                   <p className="text-xs text-muted-foreground">{s.duration}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-1 text-xs text-primary"
+                  className="gap-1 text-xs text-primary shrink-0"
                   onClick={() => goToStep(index)}
                 >
                   Ir al paso
@@ -244,9 +245,9 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   );
 
   const renderLearning = () => (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col overflow-hidden">
       {/* Progress indicator with diagram */}
-      <div className="p-4 bg-secondary/30">
+      <div className="p-4 bg-secondary/30 shrink-0">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-muted-foreground">
             Paso {currentStep + 1} de {process.steps.length}
@@ -276,12 +277,12 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
         </div>
       </div>
 
-      {/* Step Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Step Video/Content Placeholder */}
-        <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center mb-6">
+      {/* Step Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* Step Video/Content Placeholder - Smaller and better contained */}
+        <div className="w-full bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center mb-4" style={{ aspectRatio: '16/9', maxHeight: '35vh' }}>
           <div className="text-center">
-            <Play className="w-16 h-16 text-primary/50 mx-auto mb-2" />
+            <Play className="w-12 h-12 text-primary/50 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Video del paso</p>
           </div>
         </div>
@@ -308,32 +309,34 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="p-4 border-t border-border flex items-center justify-between gap-4">
-        {currentStep > 0 ? (
-          <Button
-            variant="outline"
-            onClick={handlePrev}
-            className="gap-2"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Paso anterior
-          </Button>
-        ) : (
-          <div />
-        )}
+      {/* Navigation - Fixed at bottom */}
+      <div className="p-4 border-t border-border shrink-0 bg-background">
+        <div className="flex items-center justify-between gap-4">
+          {currentStep > 0 ? (
+            <Button
+              variant="outline"
+              onClick={handlePrev}
+              className="gap-2"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Paso anterior
+            </Button>
+          ) : (
+            <div />
+          )}
 
-        {currentStep === process.steps.length - 1 ? (
-          <Button variant="hero" onClick={onClose} className="gap-2">
-            <CheckCircle className="w-4 h-4" />
-            Completar
-          </Button>
-        ) : (
-          <Button variant="hero" onClick={handleNext} className="gap-2">
-            Siguiente
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        )}
+          {currentStep === process.steps.length - 1 ? (
+            <Button variant="hero" onClick={onClose} className="gap-2">
+              <CheckCircle className="w-4 h-4" />
+              Completar
+            </Button>
+          ) : (
+            <Button variant="hero" onClick={handleNext} className="gap-2">
+              Siguiente
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -341,7 +344,7 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-border">
+      <header className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <button
           onClick={view === 'learning' ? () => setView('overview') : onClose}
           className="p-2 rounded-lg hover:bg-secondary transition-colors"

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  ListTodo, 
   Users, 
   BarChart3,
   Clock,
@@ -14,6 +13,12 @@ import {
   Settings,
   LogOut,
   Shield,
+  Play,
+  Pause,
+  MoreVertical,
+  Edit,
+  Briefcase,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -21,13 +26,26 @@ import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Mock data
-const mockMyTasks = [
-  { id: '1', title: 'Revisar reportes del equipo', status: 'in_progress', dueTime: '10:00' },
-  { id: '2', title: 'Aprobar solicitudes pendientes', status: 'pending', dueTime: '12:00' },
-  { id: '3', title: 'Reunión de seguimiento', status: 'pending', dueTime: '15:00' },
-  { id: '4', title: 'Verificar cumplimiento diario', status: 'completed', dueTime: '09:00' },
+const mockSupervisor = {
+  name: 'María García',
+  cargo: 'Supervisora de Operaciones',
+  team: 'Equipo Ventas Norte',
+};
+
+const mockTeamTasks = [
+  { id: '1', title: 'Verificar inventario de caja', assignedTo: 'Carlos López', status: 'completed', dueTime: '10:00' },
+  { id: '2', title: 'Revisar stock de productos', assignedTo: 'Ana Martínez', status: 'in_progress', dueTime: '11:00' },
+  { id: '3', title: 'Limpieza área de ventas', assignedTo: 'Pedro Sánchez', status: 'pending', dueTime: '12:00' },
+  { id: '4', title: 'Atender cliente especial', assignedTo: 'Luis Ramírez', status: 'pending', dueTime: '14:00' },
+  { id: '5', title: 'Reporte de incidencias', assignedTo: 'Carlos López', status: 'in_progress', dueTime: '16:00' },
 ];
 
 const mockTeamStats = {
@@ -38,10 +56,10 @@ const mockTeamStats = {
 };
 
 const mockTeamMembers = [
-  { id: '1', name: 'Carlos López', tasksToday: 5, completed: 4, compliance: 92 },
-  { id: '2', name: 'Ana Martínez', tasksToday: 4, completed: 3, compliance: 85 },
-  { id: '3', name: 'Pedro Sánchez', tasksToday: 3, completed: 3, compliance: 100 },
-  { id: '4', name: 'Luis Ramírez', tasksToday: 6, completed: 4, compliance: 78 },
+  { id: '1', name: 'Carlos López', cargo: 'Operador de Caja', tasksToday: 5, completed: 4, compliance: 92 },
+  { id: '2', name: 'Ana Martínez', cargo: 'Vendedora', tasksToday: 4, completed: 3, compliance: 85 },
+  { id: '3', name: 'Pedro Sánchez', cargo: 'Almacenista', tasksToday: 3, completed: 3, compliance: 100 },
+  { id: '4', name: 'Luis Ramírez', cargo: 'Vendedor', tasksToday: 6, completed: 4, compliance: 78 },
 ];
 
 // Supervisor Dashboard Home
@@ -50,9 +68,11 @@ const SupervisorHome: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Mi Panel de Supervisor</h1>
-        <p className="text-muted-foreground">Vista general de tu equipo y tareas</p>
+        <h1 className="text-2xl font-bold text-foreground">¡Hola, {mockSupervisor.name}!</h1>
+        <p className="text-primary font-medium">{mockSupervisor.cargo}</p>
+        <p className="text-muted-foreground text-sm mt-1">Vista general de tu equipo</p>
       </div>
 
       {/* Quick Stats */}
@@ -92,27 +112,27 @@ const SupervisorHome: React.FC = () => {
         </div>
         <div className="kpi-card">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Clock className="w-5 h-5 text-primary" />
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">4</p>
-              <p className="text-sm text-muted-foreground">Mis tareas hoy</p>
+              <p className="text-2xl font-bold text-foreground">2</p>
+              <p className="text-sm text-muted-foreground">Alertas</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* My Tasks Today */}
+      {/* Team Tasks Today */}
       <div className="kpi-card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-foreground">Mis Tareas de Hoy</h3>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/supervisor/my-tasks')}>
+          <h3 className="font-semibold text-foreground">Tareas del Equipo Hoy</h3>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/supervisor/team-tasks')}>
             Ver todas
           </Button>
         </div>
         <div className="space-y-2">
-          {mockMyTasks.map((task) => (
+          {mockTeamTasks.slice(0, 5).map((task) => (
             <div key={task.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
               <div className="flex items-center gap-3">
                 <div className={cn(
@@ -120,7 +140,10 @@ const SupervisorHome: React.FC = () => {
                   task.status === 'completed' ? 'bg-success' :
                   task.status === 'in_progress' ? 'bg-primary' : 'bg-muted'
                 )} />
-                <span className="text-foreground">{task.title}</span>
+                <div>
+                  <span className="text-foreground">{task.title}</span>
+                  <p className="text-xs text-muted-foreground">{task.assignedTo}</p>
+                </div>
               </div>
               <span className="text-sm text-muted-foreground">{task.dueTime}</span>
             </div>
@@ -131,7 +154,7 @@ const SupervisorHome: React.FC = () => {
       {/* Team Overview */}
       <div className="kpi-card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-foreground">Estado del Equipo Hoy</h3>
+          <h3 className="font-semibold text-foreground">Estado del Equipo</h3>
           <Button variant="ghost" size="sm" onClick={() => navigate('/supervisor/team')}>
             Ver equipo
           </Button>
@@ -141,6 +164,7 @@ const SupervisorHome: React.FC = () => {
             <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
               <div>
                 <p className="font-medium text-foreground">{member.name}</p>
+                <p className="text-xs text-muted-foreground">{member.cargo}</p>
                 <p className="text-sm text-muted-foreground">
                   {member.completed}/{member.tasksToday} tareas
                 </p>
@@ -161,7 +185,7 @@ const SupervisorHome: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4">
-        <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/employee')}>
+        <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate('/employee', { state: { fromSupervisor: true } })}>
           <LayoutDashboard className="w-5 h-5" />
           <span>Mi Vista Colaborador</span>
         </Button>
@@ -174,33 +198,88 @@ const SupervisorHome: React.FC = () => {
   );
 };
 
-// My Tasks Page
-const MyTasksPage: React.FC = () => {
+// Team Tasks Page - Gestión de tareas del equipo
+const TeamTasksPage: React.FC = () => {
+  const [activeTimers, setActiveTimers] = useState<Record<string, boolean>>({});
+
+  const toggleTimer = (taskId: string) => {
+    setActiveTimers(prev => ({ ...prev, [taskId]: !prev[taskId] }));
+    toast.success(activeTimers[taskId] ? 'Temporizador pausado' : 'Temporizador iniciado');
+  };
+
+  const markComplete = (taskId: string) => {
+    toast.success('Tarea marcada como completada');
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Mis Tareas</h1>
-        <p className="text-muted-foreground">Gestiona tus tareas personales</p>
+        <h1 className="text-2xl font-bold text-foreground">Tareas del Equipo</h1>
+        <p className="text-muted-foreground">Gestiona y supervisa las tareas de tu equipo</p>
       </div>
 
       <div className="space-y-4">
-        {mockMyTasks.map((task) => (
+        {mockTeamTasks.map((task) => (
           <div key={task.id} className="kpi-card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  'w-3 h-3 rounded-full',
-                  task.status === 'completed' ? 'bg-success' :
-                  task.status === 'in_progress' ? 'bg-primary' : 'bg-muted'
-                )} />
-                <div>
-                  <p className="font-medium text-foreground">{task.title}</p>
-                  <p className="text-sm text-muted-foreground">Vence a las {task.dueTime}</p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={cn(
+                    'px-2 py-0.5 rounded-full text-xs font-medium',
+                    task.status === 'completed' ? 'bg-success/20 text-success' :
+                    task.status === 'in_progress' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                  )}>
+                    {task.status === 'completed' ? 'Completada' : task.status === 'in_progress' ? 'En progreso' : 'Pendiente'}
+                  </span>
                 </div>
+                <h4 className="font-medium text-foreground">{task.title}</h4>
+                <p className="text-sm text-muted-foreground mt-1">Asignado a: {task.assignedTo}</p>
+                <p className="text-sm text-muted-foreground">Vence: {task.dueTime}</p>
               </div>
-              <Button variant="outline" size="sm">
-                {task.status === 'completed' ? 'Completada' : 'Marcar lista'}
-              </Button>
+              
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => toggleTimer(task.id)}
+                  className="h-8 w-8"
+                >
+                  {activeTimers[task.id] ? (
+                    <Pause className="w-4 h-4 text-warning" />
+                  ) : (
+                    <Play className="w-4 h-4 text-success" />
+                  )}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => markComplete(task.id)}
+                  className="h-8 w-8"
+                >
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-card border border-border">
+                    <DropdownMenuItem>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Editar tarea
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Ver historial
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <User className="w-4 h-4 mr-2" />
+                      Reasignar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
         ))}
@@ -211,11 +290,19 @@ const MyTasksPage: React.FC = () => {
 
 // Team Page
 const SupervisorTeamPage: React.FC = () => {
+  const [showCargoModal, setShowCargoModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<typeof mockTeamMembers[0] | null>(null);
+
+  const openCargoModal = (member: typeof mockTeamMembers[0]) => {
+    setSelectedMember(member);
+    setShowCargoModal(true);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Mi Equipo</h1>
-        <p className="text-muted-foreground">Supervisa las tareas de tu equipo</p>
+        <p className="text-muted-foreground">Supervisa y gestiona a tu equipo</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -224,6 +311,7 @@ const SupervisorTeamPage: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="font-semibold text-foreground">{member.name}</p>
+                <p className="text-sm text-primary">{member.cargo}</p>
                 <p className="text-sm text-muted-foreground">
                   {member.completed}/{member.tasksToday} tareas completadas
                 </p>
@@ -245,10 +333,49 @@ const SupervisorTeamPage: React.FC = () => {
             <div className="mt-4 flex gap-2">
               <Button variant="outline" size="sm" className="flex-1">Ver tareas</Button>
               <Button variant="outline" size="sm" className="flex-1">Historial</Button>
+              <Button variant="outline" size="sm" onClick={() => openCargoModal(member)}>
+                <Briefcase className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Cargo Modal */}
+      {showCargoModal && selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowCargoModal(false)} />
+          <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl p-6">
+            <h2 className="text-xl font-semibold mb-4">Editar Cargo</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Empleado</label>
+                <p className="text-foreground">{selectedMember.name}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Cargo actual</label>
+                <input 
+                  type="text" 
+                  defaultValue={selectedMember.cargo}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Descripción del cargo</label>
+                <textarea 
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+                  rows={3}
+                  placeholder="Describe las responsabilidades..."
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowCargoModal(false)} className="flex-1">Cancelar</Button>
+              <Button variant="hero" onClick={() => { toast.success('Cargo actualizado'); setShowCargoModal(false); }} className="flex-1">Guardar</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -295,11 +422,82 @@ const PerformancePage: React.FC = () => {
                 )}>
                   {index + 1}
                 </span>
-                <span className="font-medium text-foreground">{member.name}</span>
+                <div>
+                  <span className="font-medium text-foreground">{member.name}</span>
+                  <p className="text-xs text-muted-foreground">{member.cargo}</p>
+                </div>
               </div>
               <span className="font-semibold text-primary">{member.compliance}%</span>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Mi Cargo Page
+const MyCargoPage: React.FC = () => {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Mi Cargo</h1>
+        <p className="text-muted-foreground">Información sobre tu rol y responsabilidades</p>
+      </div>
+
+      <div className="kpi-card">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <Briefcase className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">{mockSupervisor.cargo}</h2>
+            <p className="text-muted-foreground">{mockSupervisor.team}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="kpi-card">
+        <h3 className="font-semibold text-foreground mb-3">Descripción del Cargo</h3>
+        <p className="text-muted-foreground">
+          Responsable de supervisar y coordinar las actividades del equipo de ventas, 
+          asegurando el cumplimiento de los procesos operativos y metas establecidas.
+        </p>
+      </div>
+
+      <div className="kpi-card">
+        <h3 className="font-semibold text-foreground mb-3">Responsabilidades Principales</h3>
+        <ul className="space-y-2">
+          <li className="flex items-center gap-2 text-muted-foreground">
+            <CheckCircle className="w-4 h-4 text-success" />
+            Supervisar tareas diarias del equipo
+          </li>
+          <li className="flex items-center gap-2 text-muted-foreground">
+            <CheckCircle className="w-4 h-4 text-success" />
+            Revisar y aprobar reportes
+          </li>
+          <li className="flex items-center gap-2 text-muted-foreground">
+            <CheckCircle className="w-4 h-4 text-success" />
+            Capacitar nuevos empleados
+          </li>
+          <li className="flex items-center gap-2 text-muted-foreground">
+            <CheckCircle className="w-4 h-4 text-success" />
+            Gestionar incidencias
+          </li>
+        </ul>
+      </div>
+
+      <div className="kpi-card">
+        <h3 className="font-semibold text-foreground mb-3">Organigrama</h3>
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground">Reporto a:</p>
+            <p className="font-medium text-foreground">Director de Operaciones</p>
+          </div>
+          <div className="p-3 rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground">Equipo a mi cargo:</p>
+            <p className="font-medium text-foreground">{mockTeamStats.totalMembers} colaboradores</p>
+          </div>
         </div>
       </div>
     </div>
@@ -312,9 +510,10 @@ const SupervisorSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> 
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/supervisor' },
-    { icon: ListTodo, label: 'Mis Tareas', path: '/supervisor/my-tasks' },
+    { icon: Users, label: 'Tareas del Equipo', path: '/supervisor/team-tasks' },
     { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
     { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
+    { icon: Briefcase, label: 'Mi Cargo', path: '/supervisor/my-cargo' },
   ];
 
   const handleLogout = async () => {
@@ -365,7 +564,7 @@ const SupervisorSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> 
           <div className="mt-6 pt-4 border-t border-sidebar-border">
             <p className="text-xs text-sidebar-foreground/50 px-3 mb-2">Vista Colaborador</p>
             <button
-              onClick={() => navigate('/employee')}
+              onClick={() => navigate('/employee', { state: { fromSupervisor: true } })}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent"
             >
               <LayoutDashboard className="w-5 h-5 shrink-0" />
@@ -417,16 +616,19 @@ const SupervisorDashboard: React.FC = () => {
         sidebarCollapsed ? 'ml-[72px]' : 'ml-64'
       )}>
         <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-card sticky top-0 z-30">
-          <h2 className="font-semibold text-foreground">Panel de Supervisor</h2>
+          <div>
+            <h2 className="font-semibold text-foreground">Panel de Supervisor</h2>
+          </div>
           <NotificationBell />
         </header>
 
         <main className="p-6">
           <Routes>
             <Route index element={<SupervisorHome />} />
-            <Route path="my-tasks" element={<MyTasksPage />} />
+            <Route path="team-tasks" element={<TeamTasksPage />} />
             <Route path="team" element={<SupervisorTeamPage />} />
             <Route path="performance" element={<PerformancePage />} />
+            <Route path="my-cargo" element={<MyCargoPage />} />
             <Route path="*" element={<SupervisorHome />} />
           </Routes>
         </main>
