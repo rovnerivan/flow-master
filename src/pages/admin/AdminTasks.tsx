@@ -13,16 +13,22 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
+interface TaskAssignment {
+  userId: string;
+  userName: string;
+  instanceLabel?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
 interface Task {
   id: string;
   title: string;
   description: string;
   frequency: 'daily' | 'weekly' | 'monthly' | 'annual' | 'occasional';
-  assignedTo: string[];
+  assignmentType: 'individual' | 'shared';
+  assignments: TaskAssignment[];
   linkedProcesses?: { id: string; name: string }[];
   estimatedTime: number;
-  trackedTime?: number;
-  status: 'pending' | 'in_progress' | 'completed';
   dueDate?: string;
 }
 
@@ -32,64 +38,89 @@ const mockTasks: Task[] = [
     title: 'Verificar inventario de caja',
     description: 'Contar y registrar el efectivo inicial',
     frequency: 'daily',
-    assignedTo: ['Carlos López', 'Ana Martínez'],
+    assignmentType: 'individual',
+    assignments: [
+      { userId: 'u1', userName: 'Carlos López', instanceLabel: 'Caja 1', status: 'completed' },
+      { userId: 'u2', userName: 'Ana Martínez', instanceLabel: 'Caja 2', status: 'in_progress' },
+    ],
     linkedProcesses: [
       { id: 'p1', name: 'Cierre de Caja' },
       { id: 'p2', name: 'Apertura de Tienda' },
     ],
     estimatedTime: 10,
-    trackedTime: 8,
-    status: 'completed',
   },
   {
     id: '2',
     title: 'Revisar stock de productos',
     description: 'Verificar niveles de inventario',
     frequency: 'daily',
-    assignedTo: ['María García'],
+    assignmentType: 'individual',
+    assignments: [
+      { userId: 'u3', userName: 'María García', status: 'pending' },
+    ],
     linkedProcesses: [{ id: 'p3', name: 'Inventario Semanal' }],
     estimatedTime: 15,
-    status: 'pending',
   },
   {
     id: '3',
-    title: 'Reporte de ventas semanal',
-    description: 'Generar y enviar reporte de ventas',
-    frequency: 'weekly',
-    assignedTo: ['María García'],
+    title: 'Limpieza general de tienda',
+    description: 'Limpieza profunda de todas las áreas',
+    frequency: 'daily',
+    assignmentType: 'shared',
+    assignments: [
+      { userId: 'u1', userName: 'Carlos López', status: 'in_progress' },
+      { userId: 'u2', userName: 'Ana Martínez', status: 'in_progress' },
+      { userId: 'u3', userName: 'María García', status: 'in_progress' },
+    ],
     estimatedTime: 30,
-    trackedTime: 25,
-    status: 'in_progress',
-    dueDate: '2024-01-19',
   },
   {
     id: '4',
-    title: 'Auditoría de procesos',
-    description: 'Revisar cumplimiento de procesos operativos',
-    frequency: 'monthly',
-    assignedTo: ['Supervisor'],
-    estimatedTime: 120,
-    status: 'pending',
-    dueDate: '2024-01-31',
+    title: 'Reporte de ventas semanal',
+    description: 'Generar y enviar reporte de ventas',
+    frequency: 'weekly',
+    assignmentType: 'individual',
+    assignments: [
+      { userId: 'u3', userName: 'María García', status: 'in_progress' },
+    ],
+    estimatedTime: 30,
+    dueDate: '2024-01-19',
   },
   {
     id: '5',
-    title: 'Capacitación anual de seguridad',
-    description: 'Renovación de certificación de seguridad',
-    frequency: 'annual',
-    assignedTo: ['Todos'],
-    estimatedTime: 240,
-    status: 'pending',
-    dueDate: '2024-06-15',
+    title: 'Auditoría de procesos',
+    description: 'Revisar cumplimiento de procesos operativos',
+    frequency: 'monthly',
+    assignmentType: 'shared',
+    assignments: [
+      { userId: 'sup1', userName: 'Supervisor', status: 'pending' },
+      { userId: 'u1', userName: 'Carlos López', status: 'pending' },
+    ],
+    estimatedTime: 120,
+    dueDate: '2024-01-31',
   },
   {
     id: '6',
+    title: 'Capacitación anual de seguridad',
+    description: 'Renovación de certificación de seguridad',
+    frequency: 'annual',
+    assignmentType: 'shared',
+    assignments: [
+      { userId: 'all', userName: 'Todos', status: 'pending' },
+    ],
+    estimatedTime: 240,
+    dueDate: '2024-06-15',
+  },
+  {
+    id: '7',
     title: 'Preparar evento especial',
     description: 'Organizar promoción de fin de año',
     frequency: 'occasional',
-    assignedTo: ['Carlos López'],
+    assignmentType: 'individual',
+    assignments: [
+      { userId: 'u1', userName: 'Carlos López', status: 'pending' },
+    ],
     estimatedTime: 60,
-    status: 'pending',
     dueDate: '2024-12-20',
   },
 ];
@@ -208,6 +239,20 @@ const AdminTasks: React.FC = () => {
     const timer = activeTimers[task.id];
     const isRunning = timer?.running;
     
+    // Calculate overall task status based on assignments
+    const completedCount = task.assignments.filter(a => a.status === 'completed').length;
+    const inProgressCount = task.assignments.filter(a => a.status === 'in_progress').length;
+    const totalAssignments = task.assignments.length;
+    
+    const overallStatus = completedCount === totalAssignments ? 'completed' 
+                        : inProgressCount > 0 || completedCount > 0 ? 'in_progress' 
+                        : 'pending';
+
+    // Group individual assignments for display (X2, X3)
+    const displayLabel = task.assignmentType === 'individual' && totalAssignments > 1
+      ? `x${totalAssignments}`
+      : null;
+    
     return (
       <div className="kpi-card hover:border-primary/30 transition-colors">
         <div className="flex items-start justify-between gap-4">
@@ -216,26 +261,67 @@ const AdminTasks: React.FC = () => {
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${frequencyLabels[task.frequency].color}`}>
                 {frequencyLabels[task.frequency].label}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusLabels[task.status].color}`}>
-                {statusLabels[task.status].label}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusLabels[overallStatus].color}`}>
+                {statusLabels[overallStatus].label}
               </span>
+              {/* Assignment type badge */}
+              {task.assignmentType === 'shared' ? (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  <User className="w-3 h-3 -ml-2" />
+                  Compartida
+                </span>
+              ) : displayLabel && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400">
+                  {displayLabel} asignaciones
+                </span>
+              )}
             </div>
             <h4 className="font-medium text-foreground mb-1">{task.title}</h4>
             <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
 
+            {/* Assignments detail */}
+            <div className="mb-3 space-y-1.5">
+              {task.assignmentType === 'individual' ? (
+                // Individual: show each assignment with its status
+                task.assignments.map((assignment, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      assignment.status === 'completed' ? 'bg-success' 
+                        : assignment.status === 'in_progress' ? 'bg-primary' 
+                        : 'bg-muted-foreground'
+                    )} />
+                    <User className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-foreground">{assignment.userName}</span>
+                    {assignment.instanceLabel && (
+                      <span className="text-muted-foreground">({assignment.instanceLabel})</span>
+                    )}
+                    <span className={cn(
+                      "text-xs",
+                      assignment.status === 'completed' ? 'text-success' 
+                        : assignment.status === 'in_progress' ? 'text-primary' 
+                        : 'text-muted-foreground'
+                    )}>
+                      • {statusLabels[assignment.status].label}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                // Shared: show all assignees together
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    {task.assignments.map(a => a.userName).join(', ')}
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-wrap gap-4 text-sm">
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <User className="w-3 h-3" />
-                {task.assignedTo.join(', ')}
-              </span>
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Clock className="w-3 h-3" />
                 Est: {formatTime(task.estimatedTime)}
-                {task.trackedTime !== undefined && (
-                  <span className="text-primary ml-1">
-                    (Real: {formatTime(task.trackedTime)})
-                  </span>
-                )}
               </span>
               {task.dueDate && (
                 <span className="flex items-center gap-1 text-muted-foreground">
@@ -759,7 +845,7 @@ const EditTaskModal: React.FC<{ open: boolean; task: Task; onClose: () => void }
     description: task.description,
     frequency: task.frequency as string,
     estimatedTime: task.estimatedTime.toString(),
-    assignedTo: task.assignedTo.join(', '),
+    assignedTo: task.assignments.map(a => a.userName).join(', '),
     dueDate: task.dueDate || '',
   });
 

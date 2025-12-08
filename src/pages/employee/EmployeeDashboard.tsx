@@ -12,6 +12,10 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  Filter,
+  ChevronDown,
+  X,
+  Tag,
 } from 'lucide-react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -22,10 +26,15 @@ import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import { TeamMemberModal } from '@/components/employee/TeamMemberModal';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { defaultTags } from '@/lib/processTags';
+
+// Tags available for filtering
+const availableTags = defaultTags;
 
 const mockProcesses = [
   {
@@ -36,6 +45,10 @@ const mockProcesses = [
     totalSteps: 8,
     completedSteps: 6,
     estimatedTime: '15 min',
+    tags: [
+      { id: 'finanzas', name: 'Finanzas', color: 'bg-yellow-500/20 text-yellow-400' },
+      { id: 'operaciones', name: 'Operaciones', color: 'bg-blue-500/20 text-blue-400' },
+    ],
   },
   {
     id: '2',
@@ -45,6 +58,10 @@ const mockProcesses = [
     totalSteps: 10,
     completedSteps: 3,
     estimatedTime: '25 min',
+    tags: [
+      { id: 'atencion', name: 'Atención al Cliente', color: 'bg-purple-500/20 text-purple-400' },
+      { id: 'ventas', name: 'Ventas', color: 'bg-green-500/20 text-green-400' },
+    ],
   },
   {
     id: '3',
@@ -55,6 +72,10 @@ const mockProcesses = [
     completedSteps: 6,
     estimatedTime: '12 min',
     isCompleted: true,
+    tags: [
+      { id: 'almacen', name: 'Almacén', color: 'bg-orange-500/20 text-orange-400' },
+      { id: 'calidad', name: 'Calidad', color: 'bg-teal-500/20 text-teal-400' },
+    ],
   },
 ];
 
@@ -120,23 +141,195 @@ const EmployeeHome: React.FC = () => {
 
 // Processes Page
 const EmployeeProcesses: React.FC<{ onProcessClick: (id: string) => void }> = ({ onProcessClick }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'in_progress' | 'completed'>('all');
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setStatusFilter('all');
+    setSearchQuery('');
+  };
+
+  const filteredProcesses = mockProcesses.filter(p => {
+    // Search filter
+    const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          p.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Tags filter
+    const matchesTags = selectedTags.length === 0 || 
+                        selectedTags.some(tag => p.tags?.some(t => t.id === tag));
+    
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || 
+                          (statusFilter === 'completed' && p.isCompleted) ||
+                          (statusFilter === 'in_progress' && !p.isCompleted);
+
+    return matchesSearch && matchesTags && matchesStatus;
+  });
+
+  const activeFiltersCount = selectedTags.length + (statusFilter !== 'all' ? 1 : 0);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Mis Procesos</h1>
         <p className="text-muted-foreground">Capacitaciones asignadas a ti</p>
       </div>
 
-      <div className="space-y-3">
-        {mockProcesses.map((process) => (
-          <div
-            key={process.id}
-            className="cursor-pointer"
-            onClick={() => onProcessClick(process.id)}
-          >
-            <ProcessCard {...process} />
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar procesos..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 pr-12"
+        />
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={cn(
+            "absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors",
+            showFilters || activeFiltersCount > 0 ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+          )}
+        >
+          <Filter className="w-4 h-4" />
+          {activeFiltersCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 text-[10px] rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+              {activeFiltersCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="mobile-card space-y-4 animate-slide-up">
+          {/* Status */}
+          <div>
+            <p className="text-sm font-medium text-foreground mb-2">Estado</p>
+            <div className="flex gap-2">
+              {[
+                { value: 'all', label: 'Todos' },
+                { value: 'in_progress', label: 'En progreso' },
+                { value: 'completed', label: 'Completados' },
+              ].map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setStatusFilter(option.value as typeof statusFilter)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                    statusFilter === option.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-        ))}
+
+          {/* Tags */}
+          <div>
+            <p className="text-sm font-medium text-foreground mb-2">Etiquetas</p>
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => toggleTag(tag.id)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+                    selectedTags.includes(tag.id)
+                      ? tag.color + " ring-2 ring-offset-2 ring-offset-card ring-primary"
+                      : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {activeFiltersCount > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full text-muted-foreground"
+              onClick={clearFilters}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Active Filters Display */}
+      {activeFiltersCount > 0 && !showFilters && (
+        <div className="flex flex-wrap items-center gap-2">
+          {statusFilter !== 'all' && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-secondary text-foreground flex items-center gap-1">
+              {statusFilter === 'completed' ? 'Completados' : 'En progreso'}
+              <button onClick={() => setStatusFilter('all')} className="hover:text-destructive">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {selectedTags.map(tagId => {
+            const tag = availableTags.find(t => t.id === tagId);
+            if (!tag) return null;
+            return (
+              <span 
+                key={tagId} 
+                className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1", tag.color)}
+              >
+                {tag.name}
+                <button onClick={() => toggleTag(tagId)} className="hover:opacity-70">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+          <button 
+            onClick={clearFilters}
+            className="text-xs text-primary hover:underline"
+          >
+            Limpiar
+          </button>
+        </div>
+      )}
+
+      {/* Processes List */}
+      <div className="space-y-3">
+        {filteredProcesses.length > 0 ? (
+          filteredProcesses.map((process) => (
+            <div
+              key={process.id}
+              className="cursor-pointer"
+              onClick={() => onProcessClick(process.id)}
+            >
+              <ProcessCard {...process} />
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <Tag className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No se encontraron procesos</p>
+            {activeFiltersCount > 0 && (
+              <button onClick={clearFilters} className="text-primary hover:underline mt-2 text-sm">
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

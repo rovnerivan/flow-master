@@ -3,6 +3,12 @@ import { Play, ChevronRight, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProgressRing } from '@/components/dashboard/ProgressRing';
 
+interface TagInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface ProcessCardProps {
   title: string;
   description: string;
@@ -11,6 +17,7 @@ interface ProcessCardProps {
   completedSteps: number;
   estimatedTime: string;
   isCompleted?: boolean;
+  tags?: TagInfo[];
   onClick?: () => void;
 }
 
@@ -22,6 +29,7 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
   completedSteps,
   estimatedTime,
   isCompleted = false,
+  tags = [],
   onClick,
 }) => {
   return (
@@ -48,6 +56,20 @@ export const ProcessCard: React.FC<ProcessCardProps> = ({
             <h4 className="font-semibold text-foreground line-clamp-1">{title}</h4>
             <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
           </div>
+
+          {/* Tags */}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {tags.map(tag => (
+                <span 
+                  key={tag.id} 
+                  className={cn("px-1.5 py-0.5 rounded-full text-[10px] font-medium", tag.color)}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
 
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
             {description}
