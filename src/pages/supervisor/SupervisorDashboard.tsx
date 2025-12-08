@@ -254,6 +254,9 @@ const TeamTasksPage: React.FC = () => {
   const [timerSeconds, setTimerSeconds] = useState<Record<string, number>>({});
   const [tasks, setTasks] = useState(mockTeamTasks);
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [showTaskHistoryModal, setShowTaskHistoryModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<typeof mockTeamTasks[0] | null>(null);
   const [showProcessViewer, setShowProcessViewer] = useState(false);
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
   const [expandedProcesses, setExpandedProcesses] = useState<Record<string, boolean>>({});
@@ -408,15 +411,24 @@ const TeamTasksPage: React.FC = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-card border border-border">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedTask(task);
+                      setShowEditTaskModal(true);
+                    }}>
                       <Edit className="w-4 h-4 mr-2" />
                       Editar tarea
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedTask(task);
+                      setShowTaskHistoryModal(true);
+                    }}>
                       <Calendar className="w-4 h-4 mr-2" />
                       Ver historial
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedTask(task);
+                      toast.info('Función de reasignación próximamente');
+                    }}>
                       <User className="w-4 h-4 mr-2" />
                       Reasignar
                     </DropdownMenuItem>
@@ -448,6 +460,38 @@ const TeamTasksPage: React.FC = () => {
           onClose={() => {
             setShowProcessViewer(false);
             setSelectedProcessId(null);
+          }}
+        />
+      )}
+
+      {/* Edit Task Modal */}
+      {showEditTaskModal && selectedTask && (
+        <EditTeamTaskModal
+          open={showEditTaskModal}
+          task={selectedTask}
+          teamMembers={mockTeamMembers}
+          availableProcesses={availableProcesses}
+          onClose={() => {
+            setShowEditTaskModal(false);
+            setSelectedTask(null);
+          }}
+          onSave={(updatedTask) => {
+            setTasks(prev => prev.map(t => t.id === updatedTask.id ? { ...t, ...updatedTask } : t));
+            setShowEditTaskModal(false);
+            setSelectedTask(null);
+            toast.success('Tarea actualizada exitosamente');
+          }}
+        />
+      )}
+
+      {/* Task History Modal */}
+      {showTaskHistoryModal && selectedTask && (
+        <TaskHistoryModal
+          open={showTaskHistoryModal}
+          task={selectedTask}
+          onClose={() => {
+            setShowTaskHistoryModal(false);
+            setSelectedTask(null);
           }}
         />
       )}
@@ -586,6 +630,167 @@ const NewTeamTaskModal: React.FC<NewTeamTaskModalProps> = ({ open, onClose, team
         <div className="flex gap-3 mt-6">
           <Button variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>
           <Button variant="hero" onClick={handleSubmit} className="flex-1">Crear Tarea</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Edit Team Task Modal
+interface EditTeamTaskModalProps {
+  open: boolean;
+  task: typeof mockTeamTasks[0];
+  teamMembers: typeof mockTeamMembers;
+  availableProcesses: typeof mockProcesses;
+  onClose: () => void;
+  onSave: (task: { id: string; title: string; assignedTo: string; dueTime: string }) => void;
+}
+
+const EditTeamTaskModal: React.FC<EditTeamTaskModalProps> = ({ open, task, teamMembers, availableProcesses, onClose, onSave }) => {
+  const [title, setTitle] = useState(task.title);
+  const [assignedTo, setAssignedTo] = useState(task.assignedTo);
+  const [dueTime, setDueTime] = useState(task.dueTime);
+  const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
+
+  const handleSubmit = () => {
+    if (!title || !assignedTo || !dueTime) {
+      toast.error('Complete los campos obligatorios');
+      return;
+    }
+    onSave({ id: task.id, title, assignedTo, dueTime });
+  };
+
+  const toggleProcess = (processId: string) => {
+    setSelectedProcesses(prev => 
+      prev.includes(processId) 
+        ? prev.filter(p => p !== processId)
+        : [...prev, processId]
+    );
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold mb-4">Editar Tarea</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Título de la tarea *</label>
+            <input 
+              type="text" 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Asignar a *</label>
+            <select 
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+            >
+              <option value="">Seleccionar colaborador</option>
+              {teamMembers.map(member => (
+                <option key={member.id} value={member.name}>{member.name} - {member.cargo}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Hora de vencimiento *</label>
+            <input 
+              type="time" 
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+            />
+          </div>
+
+          {/* Associated Processes */}
+          <div>
+            <label className="text-sm font-medium">Procesos Asociados</label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border border-border rounded-lg p-2 mt-1">
+              {availableProcesses.map(process => (
+                <label key={process.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    checked={selectedProcesses.includes(process.id)}
+                    onChange={() => toggleProcess(process.id)}
+                    className="rounded border-border"
+                  />
+                  <span className="text-sm">{process.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button variant="hero" onClick={handleSubmit} className="flex-1">Guardar Cambios</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Task History Modal
+interface TaskHistoryModalProps {
+  open: boolean;
+  task: typeof mockTeamTasks[0];
+  onClose: () => void;
+}
+
+const TaskHistoryModal: React.FC<TaskHistoryModalProps> = ({ open, task, onClose }) => {
+  // Mock history data
+  const taskHistory = [
+    { date: '2024-01-15', status: 'completed', completedBy: task.assignedTo, duration: '12 min' },
+    { date: '2024-01-14', status: 'completed', completedBy: task.assignedTo, duration: '15 min' },
+    { date: '2024-01-13', status: 'completed', completedBy: task.assignedTo, duration: '10 min' },
+    { date: '2024-01-12', status: 'missed', completedBy: '-', duration: '-' },
+    { date: '2024-01-11', status: 'completed', completedBy: task.assignedTo, duration: '14 min' },
+  ];
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold mb-2">Historial de Tarea</h2>
+        <p className="text-muted-foreground mb-4">{task.title}</p>
+        
+        <div className="space-y-3">
+          {taskHistory.map((entry, index) => (
+            <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-border">
+              <div>
+                <p className="font-medium text-foreground">{entry.date}</p>
+                <p className="text-sm text-muted-foreground">
+                  {entry.status === 'completed' ? `Completado por ${entry.completedBy}` : 'No completada'}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className={cn(
+                  'px-2 py-1 rounded-full text-xs font-medium',
+                  entry.status === 'completed' ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'
+                )}>
+                  {entry.status === 'completed' ? 'Completada' : 'Omitida'}
+                </span>
+                {entry.duration !== '-' && (
+                  <p className="text-xs text-muted-foreground mt-1">{entry.duration}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cerrar</Button>
         </div>
       </div>
     </div>
