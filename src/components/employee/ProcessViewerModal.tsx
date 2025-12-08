@@ -667,7 +667,16 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
         <h1 className="font-semibold text-foreground">
           {view === 'overview' ? 'Detalle del Proceso' : process.name}
         </h1>
-        <div className="w-9" /> {/* Spacer for centering */}
+        {view === 'learning' ? (
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          >
+            <X className="w-5 h-5 text-muted-foreground" />
+          </button>
+        ) : (
+          <div className="w-9" /> 
+        )}
       </header>
 
       {view === 'overview' ? renderOverview() : renderLearning()}
