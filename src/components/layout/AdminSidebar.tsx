@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Layers,
@@ -9,11 +10,15 @@ import {
   ChevronRight,
   BarChart3,
   FileText,
+  AlertTriangle,
+  UserPlus,
+  ListTodo,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
-import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AdminSidebarProps {
   collapsed: boolean;
@@ -23,7 +28,10 @@ interface AdminSidebarProps {
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Layers, label: 'Procesos', path: '/admin/processes' },
+  { icon: ListTodo, label: 'Tareas', path: '/admin/tasks' },
   { icon: Users, label: 'Equipo', path: '/admin/team' },
+  { icon: UserPlus, label: 'Onboardings', path: '/admin/onboardings' },
+  { icon: AlertTriangle, label: 'Errores', path: '/admin/errors' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: FileText, label: 'Reportes', path: '/admin/reports' },
 ];
@@ -32,6 +40,27 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   collapsed,
   onToggle,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success('Sesión cerrada');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error al cerrar sesión');
+    }
+  };
+
+  const isActive = (path: string) => {
+    if (path === '/admin') {
+      return location.pathname === '/admin';
+    }
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <aside
       className={cn(
@@ -60,38 +89,38 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <nav className="flex-1 py-4 px-3 overflow-y-auto">
         <div className="space-y-1">
           {navItems.map(({ icon: Icon, label, path }) => (
-            <NavLink
+            <button
               key={path}
-              to={path}
-              end={path === '/admin'}
+              onClick={() => navigate(path)}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200',
-                collapsed && 'justify-center'
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200',
+                collapsed && 'justify-center',
+                isActive(path) && 'bg-sidebar-accent text-sidebar-primary font-medium'
               )}
-              activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
             >
               <Icon className="w-5 h-5 shrink-0" />
               {!collapsed && <span className="text-sm">{label}</span>}
-            </NavLink>
+            </button>
           ))}
         </div>
       </nav>
 
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
-        <NavLink
-          to="/admin/settings"
+        <button
+          onClick={() => navigate('/admin/settings')}
           className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200',
-            collapsed && 'justify-center'
+            'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200',
+            collapsed && 'justify-center',
+            isActive('/admin/settings') && 'bg-sidebar-accent text-sidebar-primary font-medium'
           )}
-          activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
         >
           <Settings className="w-5 h-5 shrink-0" />
           {!collapsed && <span className="text-sm">Configuración</span>}
-        </NavLink>
+        </button>
 
         <button
+          onClick={handleLogout}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-lg text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full',
             collapsed && 'justify-center'

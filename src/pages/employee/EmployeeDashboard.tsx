@@ -1,14 +1,17 @@
-import React from 'react';
-import { Bell, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, Search, MessageCircle } from 'lucide-react';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { DailyChecklist } from '@/components/mobile/DailyChecklist';
 import { MicroLearningCard } from '@/components/mobile/MicroLearningCard';
 import { ProcessCard } from '@/components/mobile/ProcessCard';
+import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const mockProcesses = [
   {
+    id: '1',
     title: 'Cierre de Caja',
     description: 'Aprende el proceso completo de cierre diario de caja registradora.',
     progress: 75,
@@ -17,6 +20,7 @@ const mockProcesses = [
     estimatedTime: '15 min',
   },
   {
+    id: '2',
     title: 'Atención al Cliente',
     description: 'Protocolo estándar para resolver quejas y consultas de clientes.',
     progress: 30,
@@ -25,6 +29,7 @@ const mockProcesses = [
     estimatedTime: '25 min',
   },
   {
+    id: '3',
     title: 'Manejo de Inventario',
     description: 'Sistema de control y registro de inventario en almacén.',
     progress: 100,
@@ -36,6 +41,16 @@ const mockProcesses = [
 ];
 
 const EmployeeDashboard: React.FC = () => {
+  const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
+
+  const handleSupport = () => {
+    toast.info('Función de soporte próximamente disponible');
+  };
+
+  const handleProcessClick = (processId: string) => {
+    setSelectedProcess(processId);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -59,7 +74,7 @@ const EmployeeDashboard: React.FC = () => {
         {/* Greeting */}
         <div className="animate-slide-up">
           <h1 className="text-2xl font-bold text-foreground">
-            ¡Hola, Carlos! 👋
+            ¡Hola! 👋
           </h1>
           <p className="text-muted-foreground">
             Tienes 3 tareas pendientes para hoy
@@ -94,9 +109,10 @@ const EmployeeDashboard: React.FC = () => {
           <div className="space-y-3">
             {mockProcesses.map((process, index) => (
               <div
-                key={process.title}
-                className="animate-slide-up"
+                key={process.id}
+                className="animate-slide-up cursor-pointer"
                 style={{ animationDelay: `${0.4 + index * 0.1}s` }}
+                onClick={() => handleProcessClick(process.id)}
               >
                 <ProcessCard {...process} />
               </div>
@@ -107,6 +123,22 @@ const EmployeeDashboard: React.FC = () => {
 
       {/* Bottom Navigation */}
       <MobileNav />
+
+      {/* Floating Support Button */}
+      <button
+        onClick={handleSupport}
+        className="fixed bottom-24 right-4 p-4 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 z-40"
+      >
+        <MessageCircle className="w-6 h-6" />
+      </button>
+
+      {/* Process Viewer Modal */}
+      {selectedProcess && (
+        <ProcessViewerModal
+          processId={selectedProcess}
+          onClose={() => setSelectedProcess(null)}
+        />
+      )}
     </div>
   );
 };
