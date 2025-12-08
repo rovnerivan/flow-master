@@ -19,6 +19,12 @@ import {
   Edit,
   Briefcase,
   User,
+  Plus,
+  Search,
+  Filter,
+  Eye,
+  Trash2,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -26,6 +32,10 @@ import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
+import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
+import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +70,46 @@ const mockTeamMembers = [
   { id: '2', name: 'Ana Martínez', cargo: 'Vendedora', tasksToday: 4, completed: 3, compliance: 85 },
   { id: '3', name: 'Pedro Sánchez', cargo: 'Almacenista', tasksToday: 3, completed: 3, compliance: 100 },
   { id: '4', name: 'Luis Ramírez', cargo: 'Vendedor', tasksToday: 6, completed: 4, compliance: 78 },
+];
+
+// Mock processes
+const mockProcesses = [
+  {
+    id: '1',
+    name: 'Preparación de Pedidos',
+    description: 'Proceso completo para preparar y empacar pedidos',
+    steps: 8,
+    compliance: 92,
+    status: 'published' as const,
+    lastUpdated: '2024-01-15',
+  },
+  {
+    id: '2',
+    name: 'Atención al Cliente',
+    description: 'Protocolo de atención y resolución de consultas',
+    steps: 5,
+    compliance: 78,
+    status: 'published' as const,
+    lastUpdated: '2024-01-10',
+  },
+  {
+    id: '3',
+    name: 'Cierre de Caja',
+    description: 'Procedimiento para el cierre diario de caja',
+    steps: 6,
+    compliance: 95,
+    status: 'published' as const,
+    lastUpdated: '2024-01-08',
+  },
+  {
+    id: '4',
+    name: 'Inventario Semanal',
+    description: 'Control y registro de inventario',
+    steps: 10,
+    compliance: 65,
+    status: 'draft' as const,
+    lastUpdated: '2024-01-05',
+  },
 ];
 
 // Supervisor Dashboard Home
@@ -504,13 +554,204 @@ const MyCargoPage: React.FC = () => {
   );
 };
 
+// Processes Page
+const ProcessesPage: React.FC = () => {
+  const [showCreator, setShowCreator] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProcess, setSelectedProcess] = useState<typeof mockProcesses[0] | null>(null);
+  const [showViewer, setShowViewer] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+
+  const filteredProcesses = mockProcesses.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleViewProcess = (process: typeof mockProcesses[0]) => {
+    setSelectedProcess(process);
+    setShowViewer(true);
+  };
+
+  const handleEditProcess = (process: typeof mockProcesses[0]) => {
+    setSelectedProcess(process);
+    setShowEditor(true);
+  };
+
+  const handleDeleteProcess = (process: typeof mockProcesses[0]) => {
+    toast.success(`Proceso "${process.name}" eliminado`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Procesos</h1>
+          <p className="text-muted-foreground">
+            Gestiona y crea nuevos procesos de capacitación
+          </p>
+        </div>
+        <Button variant="hero" className="gap-2" onClick={() => setShowCreator(true)}>
+          <Plus className="w-4 h-4" />
+          Nuevo Proceso
+        </Button>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar procesos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button variant="outline" className="gap-2">
+          <Filter className="w-4 h-4" />
+          Filtrar
+        </Button>
+      </div>
+
+      {/* Processes Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredProcesses.map((process) => (
+          <div
+            key={process.id}
+            className="kpi-card hover:border-primary/30 transition-colors"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-foreground">{process.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {process.description}
+                </p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1 rounded hover:bg-secondary">
+                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-card border border-border">
+                  <DropdownMenuItem onClick={() => handleViewProcess(process)}>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Ver proceso
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleEditProcess(process)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="text-destructive"
+                    onClick={() => handleDeleteProcess(process)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Eliminar
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">
+                {process.steps} pasos
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  process.status === 'published'
+                    ? 'bg-success/20 text-success'
+                    : 'bg-warning/20 text-warning'
+                }`}
+              >
+                {process.status === 'published' ? 'Publicado' : 'Borrador'}
+              </span>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Cumplimiento</span>
+                <span className="font-semibold text-foreground">
+                  {process.compliance}%
+                </span>
+              </div>
+              <div className="mt-2 h-2 rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${process.compliance}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mt-4 flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 gap-1"
+                onClick={() => handleViewProcess(process)}
+              >
+                <Eye className="w-3 h-3" />
+                Ver
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 gap-1"
+                onClick={() => handleEditProcess(process)}
+              >
+                <Edit className="w-3 h-3" />
+                Editar
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Process Creator Modal */}
+      <ProcessCreatorModal
+        open={showCreator}
+        onClose={() => setShowCreator(false)}
+      />
+
+      {/* Process Viewer Modal */}
+      {showViewer && selectedProcess && (
+        <ProcessViewerModal 
+          processId={selectedProcess.id}
+          onClose={() => {
+            setShowViewer(false);
+            setSelectedProcess(null);
+          }}
+        />
+      )}
+
+      {/* Process Editor Modal */}
+      {showEditor && selectedProcess && (
+        <ProcessEditorModal
+          process={selectedProcess}
+          onClose={() => {
+            setShowEditor(false);
+            setSelectedProcess(null);
+          }}
+          onSave={(updatedProcess) => {
+            toast.success(`Proceso "${updatedProcess.name}" actualizado`);
+            setShowEditor(false);
+            setSelectedProcess(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
 // Sidebar
 const SupervisorSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
   const navigate = useNavigate();
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/supervisor' },
-    { icon: Users, label: 'Tareas del Equipo', path: '/supervisor/team-tasks' },
+    { icon: FileText, label: 'Procesos', path: '/supervisor/processes' },
+    { icon: Calendar, label: 'Tareas del Equipo', path: '/supervisor/team-tasks' },
     { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
     { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
     { icon: Briefcase, label: 'Mi Cargo', path: '/supervisor/my-cargo' },
@@ -625,6 +866,7 @@ const SupervisorDashboard: React.FC = () => {
         <main className="p-6">
           <Routes>
             <Route index element={<SupervisorHome />} />
+            <Route path="processes" element={<ProcessesPage />} />
             <Route path="team-tasks" element={<TeamTasksPage />} />
             <Route path="team" element={<SupervisorTeamPage />} />
             <Route path="performance" element={<PerformancePage />} />
