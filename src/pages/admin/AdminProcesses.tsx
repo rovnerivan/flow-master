@@ -743,8 +743,15 @@ const AdminProcesses: React.FC = () => {
             setShowViewer(false);
             setSelectedProcess(null);
           }}
-          onShowEmployeePreview={() => {
+          onShowEmployeePreview={(targetProcessId?: string) => {
             setShowViewer(false);
+            if (targetProcessId) {
+              // Navigate to a different process (prerequisite)
+              const targetProcess = processes.find(p => p.id === targetProcessId);
+              if (targetProcess) {
+                setSelectedProcess(targetProcess);
+              }
+            }
             setShowEmployeePreview(true);
           }}
         />
@@ -841,6 +848,13 @@ const AdminProcesses: React.FC = () => {
             setSelectedProcess(null);
           }}
           isSimulation={true}
+          onNavigateToProcess={(targetId) => {
+            // Update selected process for navigation
+            const targetProcess = processes.find(p => p.id === targetId);
+            if (targetProcess) {
+              setSelectedProcess(targetProcess);
+            }
+          }}
         />
       )}
     </div>
@@ -851,7 +865,7 @@ const AdminProcesses: React.FC = () => {
 const ProcessViewerModal: React.FC<{ 
   process: Process; 
   onClose: () => void;
-  onShowEmployeePreview?: () => void;
+  onShowEmployeePreview?: (targetProcessId?: string) => void;
 }> = ({
   process,
   onClose,
@@ -970,7 +984,6 @@ const ProcessViewerModal: React.FC<{
               variant="hero" 
               className="flex-1 gap-2"
               onClick={() => {
-                onClose();
                 onShowEmployeePreview?.();
               }}
             >
