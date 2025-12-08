@@ -33,7 +33,7 @@ import AdminReports from './AdminReports';
 import AdminSettings from './AdminSettings';
 import AdminErrors from './AdminErrors';
 import AdminOnboardings from './AdminOnboardings';
-import AdminTasks from './AdminTasks';
+import AdminTasksRefactored from '@/components/tasks/AdminTasksRefactored';
 import AdminHierarchy from './AdminHierarchy';
 import VisionLeadership from './VisionLeadership';
 import AdminPlanning from './AdminPlanning';
@@ -242,7 +242,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/" element={<DashboardHome />} />
         <Route path="/planning" element={<AdminPlanning />} />
         <Route path="/processes/*" element={<AdminProcesses />} />
-        <Route path="/tasks" element={<AdminTasks />} />
+        <Route path="/tasks" element={<AdminTasksRefactored />} />
         <Route path="/team/*" element={<AdminTeam />} />
         <Route path="/hierarchy" element={<AdminHierarchy />} />
         <Route path="/vision" element={<VisionLeadership />} />
