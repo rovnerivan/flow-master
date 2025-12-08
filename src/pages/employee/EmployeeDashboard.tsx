@@ -16,7 +16,7 @@ import {
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { DailyChecklist } from '@/components/mobile/DailyChecklist';
-import { MicroLearningCard } from '@/components/mobile/MicroLearningCard';
+import { CultureCard } from '@/components/culture/CultureCard';
 import { ProcessCard } from '@/components/mobile/ProcessCard';
 import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import { TeamMemberModal } from '@/components/employee/TeamMemberModal';
@@ -99,12 +99,19 @@ const EmployeeHome: React.FC = () => {
         <DailyChecklist />
       </div>
 
-      {/* Micro-Learning Card */}
+      {/* Culture Card */}
       <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        <MicroLearningCard
-          title="Tip del día: Cómo manejar devoluciones rápidamente"
-          duration="45 seg"
-          category="Servicio"
+        <CultureCard
+          content={{
+            id: '1',
+            title: 'Nuestra visión para este trimestre',
+            type: 'text',
+            content: '',
+            author: { name: 'María González', role: 'owner' },
+            category: 'Visión',
+            createdAt: '2024-01-15',
+            isNew: true,
+          }}
         />
       </div>
     </div>
