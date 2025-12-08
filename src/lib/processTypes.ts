@@ -46,6 +46,8 @@ export interface ProcessData {
   frequency?: ProcessFrequency;
   requiredTools?: string[];
   successCriteria?: string;
+  // Phase 3 additions
+  prerequisites?: string[]; // IDs of prerequisite processes
   // Existing fields
   steps: ProcessStep[];
   tags?: string[];
@@ -54,6 +56,38 @@ export interface ProcessData {
   totalSteps?: number;
   compliance?: number;
   lastUpdated?: string;
+}
+
+// Phase 3: Analytics types
+export interface StepAnalytics {
+  stepId: string;
+  stepTitle: string;
+  averageTime: number; // in seconds
+  estimatedTime: number; // in seconds
+  confusionRate: number; // percentage
+  completionCount: number;
+  confusionCount: number;
+}
+
+export interface ProcessAnalytics {
+  processId: string;
+  processName: string;
+  totalCompletions: number;
+  averageTotalTime: number;
+  estimatedTotalTime: number;
+  timeEfficiency: number; // percentage (estimated/actual * 100)
+  overallConfusionRate: number;
+  stepAnalytics: StepAnalytics[];
+  completionsByEmployee: EmployeeProcessStats[];
+}
+
+export interface EmployeeProcessStats {
+  employeeId: string;
+  employeeName: string;
+  completions: number;
+  averageTime: number;
+  confusionRate: number;
+  lastCompleted?: string;
 }
 
 // Risk level display configuration

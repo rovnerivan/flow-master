@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown, History, AlertTriangle, Archive, CheckCircle, Clock, Compass, Target, Rocket, CheckSquare as CheckSquareIcon } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown, History, AlertTriangle, Archive, CheckCircle, Clock, Compass, Target, Rocket, CheckSquare as CheckSquareIcon, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,6 +14,7 @@ import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
 import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import { ProcessStatusModal, ProcessStatus, StatusChangeDetails, statusConfig } from '@/components/admin/ProcessStatusModal';
 import { ProcessVersionHistory, ProcessVersion } from '@/components/admin/ProcessVersionHistory';
+import { ProcessAnalyticsModal } from '@/components/analytics/ProcessAnalyticsModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -157,6 +158,7 @@ const AdminProcesses: React.FC = () => {
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const toggleTagFilter = (tagId: string) => {
     setSelectedTagFilters(prev => 
@@ -562,6 +564,13 @@ const AdminProcesses: React.FC = () => {
                     <History className="w-4 h-4 mr-2" />
                     Ver historial
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {
+                    setSelectedProcess(process);
+                    setShowAnalytics(true);
+                  }}>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Ver analytics
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     className="text-destructive"
@@ -800,6 +809,18 @@ const AdminProcesses: React.FC = () => {
           onRestoreVersion={(version) => {
             toast.success(`Restaurando a versión ${version.versionNumber}`);
             setShowVersionHistory(false);
+            setSelectedProcess(null);
+          }}
+        />
+      )}
+
+      {/* Process Analytics Modal */}
+      {showAnalytics && selectedProcess && (
+        <ProcessAnalyticsModal
+          processId={selectedProcess.id}
+          processName={selectedProcess.name}
+          onClose={() => {
+            setShowAnalytics(false);
             setSelectedProcess(null);
           }}
         />
