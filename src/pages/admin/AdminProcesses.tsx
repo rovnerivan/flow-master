@@ -13,6 +13,12 @@ import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+interface TagInfo {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface Process {
   id: string;
   name: string;
@@ -24,8 +30,8 @@ interface Process {
   tags: string[];
 }
 
-// Available tags for the system
-const availableTags = [
+// Default system tags
+const defaultTags: TagInfo[] = [
   { id: 'operaciones', name: 'Operaciones', color: 'bg-blue-500/20 text-blue-400' },
   { id: 'ventas', name: 'Ventas', color: 'bg-green-500/20 text-green-400' },
   { id: 'atencion', name: 'Atención al Cliente', color: 'bg-purple-500/20 text-purple-400' },
@@ -36,7 +42,19 @@ const availableTags = [
   { id: 'rrhh', name: 'RRHH', color: 'bg-pink-500/20 text-pink-400' },
 ];
 
-const mockProcesses: Process[] = [
+// Custom tag colors to cycle through
+const customTagColors = [
+  'bg-cyan-500/20 text-cyan-400',
+  'bg-lime-500/20 text-lime-400',
+  'bg-amber-500/20 text-amber-400',
+  'bg-rose-500/20 text-rose-400',
+  'bg-violet-500/20 text-violet-400',
+  'bg-emerald-500/20 text-emerald-400',
+  'bg-sky-500/20 text-sky-400',
+  'bg-fuchsia-500/20 text-fuchsia-400',
+];
+
+const initialProcesses: Process[] = [
   {
     id: '1',
     name: 'Preparación de Pedidos',
@@ -86,11 +104,15 @@ const AdminProcesses: React.FC = () => {
   const [showViewer, setShowViewer] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [processes, setProcesses] = useState<Process[]>(initialProcesses);
+  const [availableTags, setAvailableTags] = useState<TagInfo[]>(defaultTags);
+  const [newTagName, setNewTagName] = useState('');
+  const [showTagCreator, setShowTagCreator] = useState(false);
 
   const toggleTagFilter = (tagId: string) => {
-    setSelectedTags(prev => 
+    setSelectedTagFilters(prev => 
       prev.includes(tagId) 
         ? prev.filter(t => t !== tagId) 
         : [...prev, tagId]
@@ -98,19 +120,57 @@ const AdminProcesses: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setSelectedTags([]);
+    setSelectedTagFilters([]);
     setStatusFilter('all');
     setSearchQuery('');
   };
 
-  const filteredProcesses = mockProcesses.filter((p) => {
+  const createCustomTag = () => {
+    if (!newTagName.trim()) {
+      toast.error('Ingresa un nombre para la etiqueta');
+      return;
+    }
+    const tagId = newTagName.toLowerCase().replace(/\s+/g, '-');
+    if (availableTags.some(t => t.id === tagId)) {
+      toast.error('Esta etiqueta ya existe');
+      return;
+    }
+    const colorIndex = (availableTags.length - defaultTags.length) % customTagColors.length;
+    const newTag: TagInfo = {
+      id: tagId,
+      name: newTagName.trim(),
+      color: customTagColors[colorIndex],
+    };
+    setAvailableTags(prev => [...prev, newTag]);
+    setNewTagName('');
+    setShowTagCreator(false);
+    toast.success(`Etiqueta "${newTag.name}" creada`);
+  };
+
+  const deleteCustomTag = (tagId: string) => {
+    // Only allow deleting custom tags (not default ones)
+    if (defaultTags.some(t => t.id === tagId)) {
+      toast.error('No se pueden eliminar etiquetas del sistema');
+      return;
+    }
+    setAvailableTags(prev => prev.filter(t => t.id !== tagId));
+    setSelectedTagFilters(prev => prev.filter(t => t !== tagId));
+    // Remove tag from all processes
+    setProcesses(prev => prev.map(p => ({
+      ...p,
+      tags: p.tags.filter(t => t !== tagId)
+    })));
+    toast.success('Etiqueta eliminada');
+  };
+
+  const filteredProcesses = processes.filter((p) => {
     // Search filter
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Tags filter
-    const matchesTags = selectedTags.length === 0 || 
-                        selectedTags.some(tag => p.tags.includes(tag));
+    const matchesTags = selectedTagFilters.length === 0 || 
+                        selectedTagFilters.some(tag => p.tags.includes(tag));
     
     // Status filter
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
@@ -133,10 +193,11 @@ const AdminProcesses: React.FC = () => {
   };
 
   const handleDeleteProcess = (process: Process) => {
+    setProcesses(prev => prev.filter(p => p.id !== process.id));
     toast.success(`Proceso "${process.name}" eliminado`);
   };
 
-  const activeFiltersCount = selectedTags.length + (statusFilter !== 'all' ? 1 : 0);
+  const activeFiltersCount = selectedTagFilters.length + (statusFilter !== 'all' ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -211,22 +272,63 @@ const AdminProcesses: React.FC = () => {
 
               {/* Tags Filter */}
               <div>
-                <p className="text-sm font-medium text-foreground mb-2">Etiquetas</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-foreground">Etiquetas</p>
+                  <button
+                    onClick={() => setShowTagCreator(!showTagCreator)}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Nueva
+                  </button>
+                </div>
+
+                {/* Tag Creator */}
+                {showTagCreator && (
+                  <div className="flex gap-2 mb-3">
+                    <Input
+                      placeholder="Nombre de etiqueta..."
+                      value={newTagName}
+                      onChange={(e) => setNewTagName(e.target.value)}
+                      className="h-8 text-xs"
+                      onKeyDown={(e) => e.key === 'Enter' && createCustomTag()}
+                    />
+                    <Button size="sm" className="h-8 px-2" onClick={createCustomTag}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
-                  {availableTags.map(tag => (
-                    <button
-                      key={tag.id}
-                      onClick={() => toggleTagFilter(tag.id)}
-                      className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
-                        selectedTags.includes(tag.id)
-                          ? tag.color + " ring-2 ring-offset-2 ring-offset-card ring-primary"
-                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                      )}
-                    >
-                      {tag.name}
-                    </button>
-                  ))}
+                  {availableTags.map(tag => {
+                    const isCustom = !defaultTags.some(t => t.id === tag.id);
+                    return (
+                      <div key={tag.id} className="relative group">
+                        <button
+                          onClick={() => toggleTagFilter(tag.id)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+                            selectedTagFilters.includes(tag.id)
+                              ? tag.color + " ring-2 ring-offset-2 ring-offset-card ring-primary"
+                              : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                          )}
+                        >
+                          {tag.name}
+                        </button>
+                        {isCustom && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteCustomTag(tag.id);
+                            }}
+                            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -248,7 +350,7 @@ const AdminProcesses: React.FC = () => {
       </div>
 
       {/* Active Filters Display */}
-      {(selectedTags.length > 0 || statusFilter !== 'all') && (
+      {(selectedTagFilters.length > 0 || statusFilter !== 'all') && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Filtros activos:</span>
           {statusFilter !== 'all' && (
@@ -259,7 +361,7 @@ const AdminProcesses: React.FC = () => {
               </button>
             </span>
           )}
-          {selectedTags.map(tagId => {
+          {selectedTagFilters.map(tagId => {
             const tag = getTagInfo(tagId);
             return (
               <span 
@@ -400,11 +502,11 @@ const AdminProcesses: React.FC = () => {
           <Tag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">No se encontraron procesos</h3>
           <p className="text-muted-foreground mb-4">
-            {searchQuery || selectedTags.length > 0 || statusFilter !== 'all'
+            {searchQuery || selectedTagFilters.length > 0 || statusFilter !== 'all'
               ? 'Prueba ajustando los filtros de búsqueda'
               : 'Crea tu primer proceso para comenzar'}
           </p>
-          {(searchQuery || selectedTags.length > 0 || statusFilter !== 'all') && (
+          {(searchQuery || selectedTagFilters.length > 0 || statusFilter !== 'all') && (
             <Button variant="outline" onClick={clearFilters}>
               Limpiar filtros
             </Button>
@@ -461,8 +563,8 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
   process,
   onClose,
 }) => {
-  const getTagInfo = (tagId: string) => {
-    return availableTags.find(t => t.id === tagId) || { id: tagId, name: tagId, color: 'bg-muted text-muted-foreground' };
+  const getTagInfoLocal = (tagId: string) => {
+    return defaultTags.find(t => t.id === tagId) || { id: tagId, name: tagId, color: 'bg-muted text-muted-foreground' };
   };
 
   return (
@@ -481,7 +583,7 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
           {process.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {process.tags.map(tagId => {
-                const tag = getTagInfo(tagId);
+                const tag = getTagInfoLocal(tagId);
                 return (
                   <span 
                     key={tagId} 
@@ -538,4 +640,4 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
 
 export default AdminProcesses;
 
-export { availableTags };
+export { defaultTags };
