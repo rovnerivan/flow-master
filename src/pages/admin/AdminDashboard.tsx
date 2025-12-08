@@ -27,6 +27,7 @@ import AdminSettings from './AdminSettings';
 import AdminErrors from './AdminErrors';
 import AdminOnboardings from './AdminOnboardings';
 import AdminTasks from './AdminTasks';
+import AdminHierarchy from './AdminHierarchy';
 
 const mockProcessHealth = [
   {
@@ -229,6 +230,7 @@ const AdminDashboard: React.FC = () => {
           <Route path="/processes/*" element={<AdminProcesses />} />
           <Route path="/tasks" element={<AdminTasks />} />
           <Route path="/team/*" element={<AdminTeam />} />
+          <Route path="/hierarchy" element={<AdminHierarchy />} />
           <Route path="/analytics" element={<AdminAnalytics />} />
           <Route path="/reports" element={<AdminReports />} />
           <Route path="/settings" element={<AdminSettings />} />
