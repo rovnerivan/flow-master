@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 
 interface TaskAssignment {
@@ -161,6 +162,7 @@ const AdminTasks: React.FC = () => {
   const [activeTimers, setActiveTimers] = useState<Record<string, { running: boolean; seconds: number }>>({});
   const [expandedProcess, setExpandedProcess] = useState<string | null>(null);
   const [showProcessViewer, setShowProcessViewer] = useState<{ taskId: string; processId: string; allProcesses: { id: string; name: string }[] } | null>(null);
+  const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
   const timerRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
   const filterTasks = (frequency: string) => {
@@ -440,6 +442,12 @@ const AdminTasks: React.FC = () => {
           Nueva Tarea
         </Button>
       </div>
+
+      {/* Hierarchy Filter */}
+      <HierarchyFilter 
+        value={hierarchyFilter}
+        onChange={setHierarchyFilter}
+      />
 
       {/* Search */}
       <div className="relative">

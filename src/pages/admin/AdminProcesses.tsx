@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
 import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
+import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -82,6 +83,7 @@ const AdminProcesses: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<TagInfo[]>(defaultTags);
   const [newTagName, setNewTagName] = useState('');
   const [showTagCreator, setShowTagCreator] = useState(false);
+  const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
 
   const toggleTagFilter = (tagId: string) => {
     setSelectedTagFilters(prev => 
@@ -186,6 +188,12 @@ const AdminProcesses: React.FC = () => {
           Nuevo Proceso
         </Button>
       </div>
+
+      {/* Hierarchy Filter */}
+      <HierarchyFilter 
+        value={hierarchyFilter}
+        onChange={setHierarchyFilter}
+      />
 
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
