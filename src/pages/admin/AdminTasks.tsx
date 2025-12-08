@@ -66,7 +66,44 @@ interface Task {
   verticalId?: string;
   managementId?: string;
   departmentId?: string;
+  // Planning hierarchy links
+  linkedPlanningItemId?: string;
+  linkedPlanningLevel?: 'strategy' | 'objective' | 'initiative' | 'action';
+  linkedPlanningName?: string;
 }
+
+// Strategic items for bird's eye view grouping
+interface StrategicItem {
+  id: string;
+  name: string;
+  level: 'strategy' | 'objective' | 'initiative' | 'action';
+  parentId?: string;
+  ownerId?: string;
+  ownerName?: string;
+}
+
+// Mock strategic items hierarchy
+const mockStrategicItems: StrategicItem[] = [
+  // Strategies
+  { id: 'str1', name: 'Expansión de Mercado 2024', level: 'strategy', ownerName: 'Director General' },
+  { id: 'str2', name: 'Excelencia Operacional', level: 'strategy', ownerName: 'Director de Operaciones' },
+  { id: 'str3', name: 'Transformación Digital', level: 'strategy', ownerName: 'Director de Tecnología' },
+  // Objectives
+  { id: 'obj1', name: 'Aumentar ventas 20%', level: 'objective', parentId: 'str1', ownerName: 'Gerente Comercial' },
+  { id: 'obj2', name: 'Reducir costos operativos', level: 'objective', parentId: 'str2', ownerName: 'Gerente de Operaciones' },
+  { id: 'obj3', name: 'Mejorar experiencia cliente', level: 'objective', parentId: 'str1', ownerName: 'Gerente de Servicio' },
+  { id: 'obj4', name: 'Digitalizar procesos core', level: 'objective', parentId: 'str3', ownerName: 'Líder de Proyectos' },
+  // Initiatives
+  { id: 'ini1', name: 'Campaña de fidelización', level: 'initiative', parentId: 'obj1', ownerName: 'Coord. Marketing' },
+  { id: 'ini2', name: 'Optimización de inventarios', level: 'initiative', parentId: 'obj2', ownerName: 'Supervisor Almacén' },
+  { id: 'ini3', name: 'Capacitación en servicio', level: 'initiative', parentId: 'obj3', ownerName: 'Coord. Capacitación' },
+  { id: 'ini4', name: 'Automatización de reportes', level: 'initiative', parentId: 'obj4', ownerName: 'Analista TI' },
+  // Actions
+  { id: 'act1', name: 'Lanzar programa puntos', level: 'action', parentId: 'ini1', ownerName: 'Analista Marketing' },
+  { id: 'act2', name: 'Auditar procesos caja', level: 'action', parentId: 'ini2', ownerName: 'Supervisor Caja' },
+  { id: 'act3', name: 'Taller atención cliente', level: 'action', parentId: 'ini3', ownerName: 'Capacitador' },
+  { id: 'act4', name: 'Dashboard ventas', level: 'action', parentId: 'ini4', ownerName: 'Desarrollador' },
+];
 
 const initialMockTasks: Task[] = [
   {
@@ -76,8 +113,8 @@ const initialMockTasks: Task[] = [
     frequency: 'daily',
     assignmentType: 'individual',
     assignments: [
-      { userId: 'u1', userName: 'Carlos López', instanceLabel: 'Caja 1', status: 'completed' },
-      { userId: 'u2', userName: 'Ana Martínez', instanceLabel: 'Caja 2', status: 'in_progress' },
+      { userId: 'u1', userName: 'Carlos López', instanceLabel: 'Caja 1', status: 'completed', timeSpentMinutes: 12 },
+      { userId: 'u2', userName: 'Ana Martínez', instanceLabel: 'Caja 2', status: 'in_progress', timeSpentMinutes: 5 },
     ],
     linkedProcesses: [
       { id: 'p1', name: 'Cierre de Caja' },
@@ -87,6 +124,9 @@ const initialMockTasks: Task[] = [
     verticalId: 'v3',
     managementId: 'm5',
     departmentId: 'd6',
+    linkedPlanningItemId: 'act2',
+    linkedPlanningLevel: 'action',
+    linkedPlanningName: 'Auditar procesos caja',
   },
   {
     id: '2',
@@ -102,6 +142,9 @@ const initialMockTasks: Task[] = [
     verticalId: 'v1',
     managementId: 'm1',
     departmentId: 'd1',
+    linkedPlanningItemId: 'ini2',
+    linkedPlanningLevel: 'initiative',
+    linkedPlanningName: 'Optimización de inventarios',
   },
   {
     id: '3',
@@ -126,13 +169,16 @@ const initialMockTasks: Task[] = [
     frequency: 'weekly',
     assignmentType: 'individual',
     assignments: [
-      { userId: 'u3', userName: 'María García', status: 'in_progress' },
+      { userId: 'u3', userName: 'María García', status: 'in_progress', timeSpentMinutes: 45 },
     ],
     estimatedTime: 30,
     dueDate: '2024-01-19',
     verticalId: 'v2',
     managementId: 'm3',
     departmentId: 'd4',
+    linkedPlanningItemId: 'act4',
+    linkedPlanningLevel: 'action',
+    linkedPlanningName: 'Dashboard ventas',
   },
   {
     id: '5',
@@ -165,6 +211,9 @@ const initialMockTasks: Task[] = [
     verticalId: 'v3',
     managementId: 'm5',
     departmentId: 'd6',
+    linkedPlanningItemId: 'act2',
+    linkedPlanningLevel: 'action',
+    linkedPlanningName: 'Auditar procesos caja',
   },
   {
     id: '6',
@@ -194,6 +243,59 @@ const initialMockTasks: Task[] = [
     verticalId: 'v2',
     managementId: 'm4',
     departmentId: 'd5',
+    linkedPlanningItemId: 'act1',
+    linkedPlanningLevel: 'action',
+    linkedPlanningName: 'Lanzar programa puntos',
+  },
+  {
+    id: '9',
+    title: 'Taller de atención al cliente',
+    description: 'Sesión de capacitación en servicio al cliente',
+    frequency: 'monthly',
+    assignmentType: 'shared',
+    assignments: [
+      { userId: 'u1', userName: 'Carlos López', status: 'completed', timeSpentMinutes: 60 },
+      { userId: 'u2', userName: 'Ana Martínez', status: 'completed', timeSpentMinutes: 60 },
+      { userId: 'u3', userName: 'María García', status: 'in_progress', timeSpentMinutes: 30 },
+    ],
+    estimatedTime: 60,
+    verticalId: 'v1',
+    managementId: 'm1',
+    linkedPlanningItemId: 'act3',
+    linkedPlanningLevel: 'action',
+    linkedPlanningName: 'Taller atención cliente',
+  },
+  {
+    id: '10',
+    title: 'Análisis de competencia',
+    description: 'Investigar estrategias de competidores',
+    frequency: 'monthly',
+    assignmentType: 'individual',
+    assignments: [
+      { userId: 'u4', userName: 'Roberto Díaz', status: 'in_progress', timeSpentMinutes: 120 },
+    ],
+    estimatedTime: 180,
+    verticalId: 'v2',
+    managementId: 'm3',
+    linkedPlanningItemId: 'obj1',
+    linkedPlanningLevel: 'objective',
+    linkedPlanningName: 'Aumentar ventas 20%',
+  },
+  {
+    id: '11',
+    title: 'Planificación estratégica Q1',
+    description: 'Definir metas y KPIs del trimestre',
+    frequency: 'annual',
+    assignmentType: 'shared',
+    assignments: [
+      { userId: 'u5', userName: 'Director Comercial', status: 'completed', timeSpentMinutes: 180 },
+      { userId: 'u6', userName: 'Director Operaciones', status: 'completed', timeSpentMinutes: 180 },
+    ],
+    estimatedTime: 240,
+    verticalId: 'v1',
+    linkedPlanningItemId: 'str1',
+    linkedPlanningLevel: 'strategy',
+    linkedPlanningName: 'Expansión de Mercado 2024',
   },
 ];
 
@@ -956,6 +1058,7 @@ const AdminTasks: React.FC = () => {
       {viewMode === 'birdeye' ? (
         <TasksBirdEyeView
           tasks={filterTasks('all')}
+          strategicItems={mockStrategicItems}
           onDrillDown={(filter) => {
             if (filter.type === 'frequency') {
               setSelectedFrequency(filter.value);
