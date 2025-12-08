@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -9,9 +9,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
+import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
 import { toast } from 'sonner';
 
-const mockProcesses = [
+interface Process {
+  id: string;
+  name: string;
+  description: string;
+  steps: number;
+  compliance: number;
+  status: 'published' | 'draft';
+  lastUpdated: string;
+}
+
+const mockProcesses: Process[] = [
   {
     id: '1',
     name: 'Preparación de Pedidos',
@@ -53,10 +64,27 @@ const mockProcesses = [
 const AdminProcesses: React.FC = () => {
   const [showCreator, setShowCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
+  const [showViewer, setShowViewer] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
 
   const filteredProcesses = mockProcesses.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleViewProcess = (process: Process) => {
+    setSelectedProcess(process);
+    setShowViewer(true);
+  };
+
+  const handleEditProcess = (process: Process) => {
+    setSelectedProcess(process);
+    setShowEditor(true);
+  };
+
+  const handleDeleteProcess = (process: Process) => {
+    toast.success(`Proceso "${process.name}" eliminado`);
+  };
 
   return (
     <div className="space-y-6">
@@ -96,7 +124,7 @@ const AdminProcesses: React.FC = () => {
         {filteredProcesses.map((process) => (
           <div
             key={process.id}
-            className="kpi-card hover:border-primary/30 transition-colors cursor-pointer"
+            className="kpi-card hover:border-primary/30 transition-colors"
           >
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -112,15 +140,18 @@ const AdminProcesses: React.FC = () => {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
-                    <Play className="w-4 h-4 mr-2" />
+                  <DropdownMenuItem onClick={() => handleViewProcess(process)}>
+                    <Eye className="w-4 h-4 mr-2" />
                     Ver proceso
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleEditProcess(process)}>
                     <Edit className="w-4 h-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem 
+                    className="text-destructive"
+                    onClick={() => handleDeleteProcess(process)}
+                  >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Eliminar
                   </DropdownMenuItem>
@@ -157,6 +188,28 @@ const AdminProcesses: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Quick Actions */}
+            <div className="mt-4 flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 gap-1"
+                onClick={() => handleViewProcess(process)}
+              >
+                <Eye className="w-3 h-3" />
+                Ver
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 gap-1"
+                onClick={() => handleEditProcess(process)}
+              >
+                <Edit className="w-3 h-3" />
+                Editar
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -166,6 +219,92 @@ const AdminProcesses: React.FC = () => {
         open={showCreator}
         onClose={() => setShowCreator(false)}
       />
+
+      {/* Process Viewer Modal */}
+      {showViewer && selectedProcess && (
+        <ProcessViewerModal 
+          process={selectedProcess}
+          onClose={() => {
+            setShowViewer(false);
+            setSelectedProcess(null);
+          }}
+        />
+      )}
+
+      {/* Process Editor Modal */}
+      {showEditor && selectedProcess && (
+        <ProcessEditorModal
+          process={selectedProcess}
+          onClose={() => {
+            setShowEditor(false);
+            setSelectedProcess(null);
+          }}
+          onSave={(updatedProcess) => {
+            toast.success(`Proceso "${updatedProcess.name}" actualizado`);
+            setShowEditor(false);
+            setSelectedProcess(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Process Viewer Modal for Admin
+const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = ({
+  process,
+  onClose,
+}) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-2xl mx-4 bg-card border border-border rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 flex items-center justify-between p-6 border-b border-border bg-card">
+          <h2 className="text-xl font-semibold text-foreground">{process.name}</h2>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <Plus className="w-5 h-5 rotate-45" />
+          </Button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">Descripción</h3>
+            <p className="text-foreground">{process.description}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg bg-secondary/50">
+              <p className="text-sm text-muted-foreground">Pasos</p>
+              <p className="text-2xl font-bold text-foreground">{process.steps}</p>
+            </div>
+            <div className="p-4 rounded-lg bg-secondary/50">
+              <p className="text-sm text-muted-foreground">Cumplimiento</p>
+              <p className="text-2xl font-bold text-foreground">{process.compliance}%</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-lg bg-secondary/50">
+            <p className="text-sm text-muted-foreground mb-1">Estado</p>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              process.status === 'published'
+                ? 'bg-success/20 text-success'
+                : 'bg-warning/20 text-warning'
+            }`}>
+              {process.status === 'published' ? 'Publicado' : 'Borrador'}
+            </span>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={onClose} className="flex-1">
+              Cerrar
+            </Button>
+            <Button variant="hero" className="flex-1 gap-2">
+              <Play className="w-4 h-4" />
+              Vista previa
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

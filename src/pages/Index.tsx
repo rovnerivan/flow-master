@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Play, Sparkles, Users, BarChart3, Zap } from 'lucide-react';
+import { ArrowRight, Play, Sparkles, Users, BarChart3, Zap, Upload, Settings, TrendingUp, ChevronDown } from 'lucide-react';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 
@@ -24,6 +24,33 @@ const features = [
     icon: Users,
     title: 'Desarrollo Grupal',
     description: 'Tu equipo aprende mejor cuando comparte logros y conocimiento.',
+  },
+];
+
+const processSteps = [
+  {
+    number: 1,
+    icon: Upload,
+    title: 'Sube tu contenido',
+    description: 'Carga PDFs, documentos de texto, o graba directamente tu voz explicando el proceso.',
+  },
+  {
+    number: 2,
+    icon: Settings,
+    title: 'La IA estructura todo',
+    description: 'Nuestro motor de IA convierte tu contenido en pasos claros y micro-videos optimizados.',
+  },
+  {
+    number: 3,
+    icon: Play,
+    title: 'Tu equipo aprende',
+    description: 'Los empleados acceden desde su móvil, completan checklists y certifican su conocimiento.',
+  },
+  {
+    number: 4,
+    icon: TrendingUp,
+    title: 'Mide el impacto',
+    description: 'Dashboard en tiempo real con métricas de ROI, compliance y tiempo ahorrado.',
   },
 ];
 
@@ -51,7 +78,7 @@ const Index: React.FC = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section with Pain Points */}
       <section className="relative z-10 px-6 lg:px-12 py-16 lg:py-24">
         <div className="max-w-5xl mx-auto text-center">
           {/* Badge */}
@@ -62,16 +89,29 @@ const Index: React.FC = () => {
             </span>
           </div>
 
+          {/* Pain Point Storytelling */}
+          <div className="mb-8 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-4 italic">
+              ¿Cansado de repetir lo mismo una y otra vez a tu equipo?
+            </p>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              ¿De estar detrás de ellos para ver si hicieron X o Y? ¿De que se olviden de lo importante 
+              y no hagan bien las cosas?
+            </p>
+          </div>
+
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
             Entrena a tu equipo{' '}
             <span className="gradient-text">sin perder tiempo</span>
           </h1>
 
-          {/* Subheadline */}
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            ProcessFlow convierte tus procesos en micro-videos que tu equipo realmente
-            completa. Menos errores, más consistencia, resultados medibles.
+          {/* Solution */}
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <span className="text-primary font-semibold">ProcessFlow</span> te ayuda a que eso no pase más.
+          </p>
+          <p className="text-lg text-foreground max-w-2xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+            Mejora la productividad y libera tu tiempo para lo verdaderamente importante.
           </p>
 
           {/* CTA Buttons */}
@@ -89,6 +129,54 @@ const Index: React.FC = () => {
               <Play className="w-5 h-5" />
               Ver demo (2 min)
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Process Steps Section - "De proceso a video en minutos" */}
+      <section className="relative z-10 px-6 lg:px-12 py-16 lg:py-24 bg-secondary/30">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+              De proceso a video{' '}
+              <span className="gradient-text">en minutos</span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Cuatro simples pasos para transformar la manera en que entrenas a tu equipo.
+            </p>
+          </div>
+
+          {/* Steps Timeline */}
+          <div className="relative">
+            {/* Vertical Line */}
+            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border hidden md:block" />
+
+            <div className="space-y-8">
+              {processSteps.map(({ number, icon: Icon, title, description }, index) => (
+                <div
+                  key={number}
+                  className="relative flex items-start gap-6 animate-slide-up"
+                  style={{ animationDelay: `${0.1 * index}s` }}
+                >
+                  {/* Icon Circle */}
+                  <div className="relative z-10 flex-shrink-0">
+                    <div className="w-16 h-16 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                      <Icon className="w-7 h-7 text-primary-foreground" />
+                    </div>
+                    {/* Number Badge */}
+                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-primary-foreground text-primary text-sm font-bold flex items-center justify-center border-2 border-primary">
+                      {number}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="pt-2">
+                    <h3 className="text-xl font-bold text-foreground mb-2">{title}</h3>
+                    <p className="text-muted-foreground">{description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -130,7 +218,7 @@ const Index: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <div className="kpi-card text-center py-12 px-8">
             <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
-              ¿Listo para transformar tu entrenamiento?
+              ¿Listo para dejar de repetir las mismas instrucciones?
             </h2>
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
               Comienza hoy y ve resultados reales en tu operación.
