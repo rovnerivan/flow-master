@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw, Eye, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw, Eye, AlertCircle, ThumbsUp, ThumbsDown, MessageSquare, Ban, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 
+// Review history entry for tracking corrections and rejections
+interface ReviewHistoryEntry {
+  type: 'correction' | 'rejection' | 'approval';
+  reviewerUserId: string;
+  reviewerName: string;
+  notes: string;
+  timestamp: string;
+  // For corrections that were later approved = resolved error
+  wasResolved?: boolean;
+}
+
 interface TaskAssignment {
   userId: string;
   userName: string;
   instanceLabel?: string;
-  status: 'pending' | 'in_progress' | 'pending_review' | 'completed';
+  status: 'pending' | 'in_progress' | 'pending_review' | 'completed' | 'rejected';
   timeSpentMinutes?: number; // Individual time contribution
+  // Review workflow tracking
+  correctionCount?: number; // Times sent back for corrections
+  lastReviewNotes?: string; // Most recent review notes for employee
 }
 
 interface Task {
@@ -34,6 +48,7 @@ interface Task {
   dueDate?: string;
   // Review workflow
   needsReview?: boolean; // Supervisor marks task as requiring review before completion
+  reviewHistory?: ReviewHistoryEntry[]; // Full history of reviews
   // For shared tasks: who closed/completed the task
   completedByUserId?: string;
   completedByUserName?: string;
@@ -186,6 +201,7 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   in_progress: { label: 'En progreso', color: 'bg-primary/20 text-primary' },
   pending_review: { label: 'Lista para revisar', color: 'bg-warning/20 text-warning' },
   completed: { label: 'Completada', color: 'bg-success/20 text-success' },
+  rejected: { label: 'Rechazada', color: 'bg-destructive/20 text-destructive' },
 };
 
 const formatTime = (minutes: number) => {
@@ -210,6 +226,10 @@ const AdminTasks: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<TaskAssignment | null>(null);
   const [showAssignmentSelector, setShowAssignmentSelector] = useState<{ taskId: string; task: Task; action: 'time' | 'complete' } | null>(null);
   const [manualTimeInput, setManualTimeInput] = useState({ hours: 0, minutes: 0 });
+  
+  // Review modal state
+  const [showReviewModal, setShowReviewModal] = useState<{ taskId: string; task: Task; action: 'approve' | 'correct' | 'reject' } | null>(null);
+  const [reviewNotes, setReviewNotes] = useState('');
 
   const filterTasks = (frequency: string) => {
     let filtered = tasks;
@@ -274,16 +294,131 @@ const AdminTasks: React.FC = () => {
     }
   };
 
-  // Supervisor approves task after review
-  const approveTask = (taskId: string, assignmentUserId?: string) => {
-    updateTaskStatus(taskId, 'completed', assignmentUserId);
-    toast.success('Tarea aprobada y completada');
+  // Supervisor approves task after review (may resolve previous corrections = error resuelto)
+  const approveTask = (taskId: string, notes: string = '') => {
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        const hadCorrections = task.assignments.some(a => (a.correctionCount || 0) > 0);
+        const newHistoryEntry: ReviewHistoryEntry = {
+          type: 'approval',
+          reviewerUserId: 'current-supervisor', // In real app, get from auth
+          reviewerName: 'Supervisor',
+          notes,
+          timestamp: new Date().toISOString(),
+          wasResolved: hadCorrections, // If there were corrections, this approval resolves them
+        };
+        
+        return {
+          ...task,
+          reviewHistory: [...(task.reviewHistory || []), newHistoryEntry],
+          assignments: task.assignments.map(a => ({ 
+            ...a, 
+            status: 'completed' as const,
+            lastReviewNotes: notes || undefined,
+          })),
+        };
+      }
+      return task;
+    }));
+    
+    const task = tasks.find(t => t.id === taskId);
+    const hadCorrections = task?.assignments.some(a => (a.correctionCount || 0) > 0);
+    
+    if (hadCorrections) {
+      toast.success('Tarea aprobada - Error resuelto registrado');
+    } else {
+      toast.success('Tarea aprobada y completada');
+    }
   };
 
-  // Supervisor rejects task - sends back to in_progress
-  const rejectTask = (taskId: string, assignmentUserId?: string) => {
-    updateTaskStatus(taskId, 'in_progress', assignmentUserId);
-    toast.info('Tarea devuelta para correcciones');
+  // Supervisor sends task back for corrections (error salvable)
+  const correctTask = (taskId: string, notes: string) => {
+    if (!notes.trim()) {
+      toast.error('Debes indicar qué debe corregirse');
+      return;
+    }
+    
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        const newHistoryEntry: ReviewHistoryEntry = {
+          type: 'correction',
+          reviewerUserId: 'current-supervisor',
+          reviewerName: 'Supervisor',
+          notes,
+          timestamp: new Date().toISOString(),
+        };
+        
+        return {
+          ...task,
+          reviewHistory: [...(task.reviewHistory || []), newHistoryEntry],
+          assignments: task.assignments.map(a => ({ 
+            ...a, 
+            status: 'in_progress' as const,
+            correctionCount: (a.correctionCount || 0) + 1,
+            lastReviewNotes: notes,
+          })),
+        };
+      }
+      return task;
+    }));
+    
+    toast.info('Tarea enviada para corrección');
+  };
+
+  // Supervisor rejects task completely (error no salvable)
+  const rejectTask = (taskId: string, notes: string) => {
+    if (!notes.trim()) {
+      toast.error('Debes indicar el motivo del rechazo');
+      return;
+    }
+    
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        const newHistoryEntry: ReviewHistoryEntry = {
+          type: 'rejection',
+          reviewerUserId: 'current-supervisor',
+          reviewerName: 'Supervisor',
+          notes,
+          timestamp: new Date().toISOString(),
+        };
+        
+        return {
+          ...task,
+          reviewHistory: [...(task.reviewHistory || []), newHistoryEntry],
+          assignments: task.assignments.map(a => ({ 
+            ...a, 
+            status: 'rejected' as const,
+            lastReviewNotes: notes,
+          })),
+        };
+      }
+      return task;
+    }));
+    
+    // TODO: In real implementation, log to error_logs table as unsalvageable error
+    toast.error('Tarea rechazada - Error no salvable registrado');
+  };
+
+  // Handle review action submission
+  const handleReviewSubmit = () => {
+    if (!showReviewModal) return;
+    
+    const { taskId, action } = showReviewModal;
+    
+    switch (action) {
+      case 'approve':
+        approveTask(taskId, reviewNotes);
+        break;
+      case 'correct':
+        correctTask(taskId, reviewNotes);
+        break;
+      case 'reject':
+        rejectTask(taskId, reviewNotes);
+        break;
+    }
+    
+    setShowReviewModal(null);
+    setReviewNotes('');
   };
 
   const setTaskPending = (taskId: string, assignmentUserId?: string) => {
@@ -399,9 +534,11 @@ const AdminTasks: React.FC = () => {
     const completedCount = task.assignments.filter(a => a.status === 'completed').length;
     const inProgressCount = task.assignments.filter(a => a.status === 'in_progress').length;
     const pendingReviewCount = task.assignments.filter(a => a.status === 'pending_review').length;
+    const rejectedCount = task.assignments.filter(a => a.status === 'rejected').length;
     const totalAssignments = task.assignments.length;
     
-    const overallStatus = completedCount === totalAssignments ? 'completed' 
+    const overallStatus = rejectedCount > 0 ? 'rejected'
+                        : completedCount === totalAssignments ? 'completed' 
                         : pendingReviewCount > 0 ? 'pending_review'
                         : inProgressCount > 0 || completedCount > 0 ? 'in_progress' 
                         : 'pending';
@@ -429,6 +566,20 @@ const AdminTasks: React.FC = () => {
                   Requiere revisión
                 </span>
               )}
+              {/* Correction count badge */}
+              {task.assignments.some(a => (a.correctionCount || 0) > 0) && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning flex items-center gap-1">
+                  <Pencil className="w-3 h-3" />
+                  {task.assignments[0]?.correctionCount || 0} corrección(es)
+                </span>
+              )}
+              {/* Rejected badge */}
+              {overallStatus === 'rejected' && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/20 text-destructive flex items-center gap-1">
+                  <Ban className="w-3 h-3" />
+                  Error no salvable
+                </span>
+              )}
               {/* Assignment type badge */}
               {task.assignmentType === 'shared' ? (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 flex items-center gap-1">
@@ -454,6 +605,7 @@ const AdminTasks: React.FC = () => {
                     <div className={cn(
                       "w-2 h-2 rounded-full",
                       assignment.status === 'completed' ? 'bg-success' 
+                        : assignment.status === 'rejected' ? 'bg-destructive'
                         : assignment.status === 'pending_review' ? 'bg-warning'
                         : assignment.status === 'in_progress' ? 'bg-primary' 
                         : 'bg-muted-foreground'
@@ -466,11 +618,12 @@ const AdminTasks: React.FC = () => {
                     <span className={cn(
                       "text-xs",
                       assignment.status === 'completed' ? 'text-success' 
+                        : assignment.status === 'rejected' ? 'text-destructive'
                         : assignment.status === 'pending_review' ? 'text-warning'
                         : assignment.status === 'in_progress' ? 'text-primary' 
                         : 'text-muted-foreground'
                     )}>
-                      • {statusLabels[assignment.status].label}
+                      • {statusLabels[assignment.status]?.label || 'Pendiente'}
                     </span>
                     {assignment.timeSpentMinutes && assignment.timeSpentMinutes > 0 && (
                       <span className="text-xs text-primary ml-auto">
@@ -509,9 +662,35 @@ const AdminTasks: React.FC = () => {
                       <span className="text-success text-xs">
                         Cerrada por: <span className="font-medium">{task.completedByUserName}</span>
                       </span>
-                    </div>
-                  )}
                 </div>
+              )}
+              
+              {/* Show last review notes if exists */}
+              {task.assignments.some(a => a.lastReviewNotes) && (
+                <div className={cn(
+                  "mt-2 p-2 rounded-lg text-xs",
+                  overallStatus === 'rejected' 
+                    ? "bg-destructive/10 border border-destructive/20" 
+                    : "bg-warning/10 border border-warning/20"
+                )}>
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className={cn(
+                      "w-3 h-3 mt-0.5 flex-shrink-0",
+                      overallStatus === 'rejected' ? 'text-destructive' : 'text-warning'
+                    )} />
+                    <div>
+                      <span className={cn(
+                        "font-medium",
+                        overallStatus === 'rejected' ? 'text-destructive' : 'text-warning'
+                      )}>
+                        {overallStatus === 'rejected' ? 'Motivo de rechazo: ' : 'Notas del supervisor: '}
+                      </span>
+                      <span className="text-foreground">{task.assignments[0]?.lastReviewNotes}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
               )}
             </div>
 
@@ -578,22 +757,29 @@ const AdminTasks: React.FC = () => {
                 </DropdownMenuItem>
                 <div className="h-px bg-border my-1" />
                 
-                {/* Approve/Reject actions for pending_review status */}
+                {/* Review actions for pending_review status */}
                 {overallStatus === 'pending_review' && (
                   <>
                     <DropdownMenuItem 
-                      onClick={() => approveTask(task.id)}
+                      onClick={() => setShowReviewModal({ taskId: task.id, task, action: 'approve' })}
                       className="text-success focus:text-success"
                     >
                       <ThumbsUp className="w-4 h-4 mr-2" />
-                      Aprobar tarea
+                      Aprobar
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => rejectTask(task.id)}
+                      onClick={() => setShowReviewModal({ taskId: task.id, task, action: 'correct' })}
+                      className="text-warning focus:text-warning"
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Corregir
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setShowReviewModal({ taskId: task.id, task, action: 'reject' })}
                       className="text-destructive focus:text-destructive"
                     >
-                      <ThumbsDown className="w-4 h-4 mr-2" />
-                      Devolver para corrección
+                      <Ban className="w-4 h-4 mr-2" />
+                      Rechazar (no salvable)
                     </DropdownMenuItem>
                     <div className="h-px bg-border my-1" />
                   </>
@@ -629,21 +815,21 @@ const AdminTasks: React.FC = () => {
                 if (overallStatus === 'completed') {
                   setTaskPending(task.id);
                 } else if (overallStatus === 'pending_review') {
-                  approveTask(task.id);
+                  setShowReviewModal({ taskId: task.id, task, action: 'approve' });
                 } else {
                   handleCompleteAction(task);
                 }
               }}
               title={
                 overallStatus === 'completed' ? 'Volver a pendiente' 
-                : overallStatus === 'pending_review' ? 'Aprobar tarea'
+                : overallStatus === 'pending_review' ? 'Revisar tarea'
                 : task.needsReview ? 'Enviar a revisión' : 'Marcar completada'
               }
             >
               {overallStatus === 'completed' ? (
                 <RotateCcw className="w-4 h-4 text-muted-foreground" />
               ) : overallStatus === 'pending_review' ? (
-                <ThumbsUp className="w-4 h-4 text-warning" />
+                <Eye className="w-4 h-4 text-warning" />
               ) : (
                 <CheckCircle className="w-4 h-4 text-primary" />
               )}
@@ -866,6 +1052,132 @@ const AdminTasks: React.FC = () => {
               </Button>
               <Button variant="hero" className="flex-1" onClick={saveManualTime}>
                 Guardar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {showReviewModal.action === 'approve' && (
+                  <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                    <ThumbsUp className="w-5 h-5 text-success" />
+                  </div>
+                )}
+                {showReviewModal.action === 'correct' && (
+                  <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center">
+                    <Pencil className="w-5 h-5 text-warning" />
+                  </div>
+                )}
+                {showReviewModal.action === 'reject' && (
+                  <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
+                    <Ban className="w-5 h-5 text-destructive" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {showReviewModal.action === 'approve' && 'Aprobar Tarea'}
+                    {showReviewModal.action === 'correct' && 'Enviar a Corrección'}
+                    {showReviewModal.action === 'reject' && 'Rechazar Tarea'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{showReviewModal.task.title}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setShowReviewModal(null); setReviewNotes(''); }}
+                className="p-1 rounded hover:bg-secondary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Show correction history if exists */}
+            {showReviewModal.task.assignments.some(a => (a.correctionCount || 0) > 0) && (
+              <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                <p className="text-xs text-warning font-medium flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Esta tarea ya fue enviada a corrección {showReviewModal.task.assignments[0]?.correctionCount || 0} vez(es)
+                </p>
+              </div>
+            )}
+            
+            {/* Context for each action */}
+            <div className="mb-4 p-3 rounded-lg bg-secondary/50">
+              {showReviewModal.action === 'approve' && (
+                <p className="text-sm text-muted-foreground">
+                  La tarea será marcada como completada.
+                  {showReviewModal.task.assignments.some(a => (a.correctionCount || 0) > 0) && (
+                    <span className="text-success"> Se registrará como error resuelto.</span>
+                  )}
+                </p>
+              )}
+              {showReviewModal.action === 'correct' && (
+                <p className="text-sm text-muted-foreground">
+                  La tarea volverá al empleado para que realice las correcciones indicadas. 
+                  <span className="text-warning"> Esto se registra como error potencialmente salvable.</span>
+                </p>
+              )}
+              {showReviewModal.action === 'reject' && (
+                <p className="text-sm text-destructive">
+                  La tarea será rechazada definitivamente. 
+                  <span className="font-medium"> Esto se registrará como error no salvable.</span>
+                </p>
+              )}
+            </div>
+            
+            {/* Notes input */}
+            <div className="space-y-2 mb-6">
+              <label className="text-sm font-medium">
+                {showReviewModal.action === 'approve' && 'Notas (opcional)'}
+                {showReviewModal.action === 'correct' && 'Qué debe corregirse *'}
+                {showReviewModal.action === 'reject' && 'Motivo del rechazo *'}
+              </label>
+              <Textarea
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                placeholder={
+                  showReviewModal.action === 'approve' 
+                    ? 'Comentarios adicionales...' 
+                    : showReviewModal.action === 'correct'
+                    ? 'Describe qué debe corregir el empleado...'
+                    : 'Explica por qué no se puede salvar esta tarea...'
+                }
+                rows={3}
+                className={cn(
+                  showReviewModal.action === 'reject' && 'border-destructive/50 focus:border-destructive'
+                )}
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                onClick={() => { setShowReviewModal(null); setReviewNotes(''); }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant={
+                  showReviewModal.action === 'approve' ? 'default' 
+                  : showReviewModal.action === 'correct' ? 'outline'
+                  : 'destructive'
+                }
+                className={cn(
+                  "flex-1",
+                  showReviewModal.action === 'approve' && 'bg-success hover:bg-success/90',
+                  showReviewModal.action === 'correct' && 'border-warning text-warning hover:bg-warning/10'
+                )}
+                onClick={handleReviewSubmit}
+              >
+                {showReviewModal.action === 'approve' && 'Aprobar'}
+                {showReviewModal.action === 'correct' && 'Enviar a corrección'}
+                {showReviewModal.action === 'reject' && 'Rechazar'}
               </Button>
             </div>
           </div>
