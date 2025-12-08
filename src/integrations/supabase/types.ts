@@ -308,6 +308,67 @@ export type Database = {
           },
         ]
       }
+      metric_results: {
+        Row: {
+          actual_value: number
+          assignment_id: string
+          efficiency_percentage: number | null
+          id: string
+          metric_id: string
+          notes: string | null
+          registered_at: string | null
+          target_value: number
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          actual_value: number
+          assignment_id: string
+          efficiency_percentage?: number | null
+          id?: string
+          metric_id: string
+          notes?: string | null
+          registered_at?: string | null
+          target_value: number
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          actual_value?: number
+          assignment_id?: string
+          efficiency_percentage?: number | null
+          id?: string
+          metric_id?: string
+          notes?: string | null
+          registered_at?: string | null
+          target_value?: number
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metric_results_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metric_results_metric_id_fkey"
+            columns: ["metric_id"]
+            isOneToOne: false
+            referencedRelation: "task_metrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metric_results_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       micro_learnings: {
         Row: {
           category: string | null
@@ -880,6 +941,78 @@ export type Database = {
           },
           {
             foreignKeyName: "task_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_metrics: {
+        Row: {
+          aggregation_type: string | null
+          allow_decimal: boolean | null
+          created_at: string | null
+          custom_unit_label: string | null
+          excellence_threshold: number | null
+          id: string
+          is_required: boolean | null
+          metric_type: string
+          minimum_acceptable: number | null
+          name: string
+          order_index: number | null
+          target_value: number
+          task_id: string
+          team_id: string
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          aggregation_type?: string | null
+          allow_decimal?: boolean | null
+          created_at?: string | null
+          custom_unit_label?: string | null
+          excellence_threshold?: number | null
+          id?: string
+          is_required?: boolean | null
+          metric_type: string
+          minimum_acceptable?: number | null
+          name: string
+          order_index?: number | null
+          target_value: number
+          task_id: string
+          team_id: string
+          unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          aggregation_type?: string | null
+          allow_decimal?: boolean | null
+          created_at?: string | null
+          custom_unit_label?: string | null
+          excellence_threshold?: number | null
+          id?: string
+          is_required?: boolean | null
+          metric_type?: string
+          minimum_acceptable?: number | null
+          name?: string
+          order_index?: number | null
+          target_value?: number
+          task_id?: string
+          team_id?: string
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_metrics_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_metrics_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
