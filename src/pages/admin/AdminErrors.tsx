@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
+import { DateRangeFilter, useDateRangeFilter } from '@/components/filters/DateRangeFilter';
+import { ComparisonBadge } from '@/components/filters/ComparisonBadge';
 import { toast } from 'sonner';
 
 interface ErrorItem {
@@ -137,8 +139,13 @@ const AdminErrors: React.FC = () => {
   const [noteModal, setNoteModal] = useState<{ errorId: string; type: 'admin' } | null>(null);
   const [newNote, setNewNote] = useState('');
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+  const { dateRange, setDateRange, filterByDateRange, getComparisonItems } = useDateRangeFilter(30);
 
-  const filteredErrors = errors.filter((error) => {
+  // Filter by date range first
+  const dateFilteredErrors = filterByDateRange(errors);
+  const comparisonErrors = getComparisonItems(errors);
+
+  const filteredErrors = dateFilteredErrors.filter((error) => {
     const matchesSearch =
       error.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       error.employee.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -153,14 +160,19 @@ const AdminErrors: React.FC = () => {
     return matchesSearch && matchesType && matchesHierarchy;
   });
 
-  // Stats
-  const totalErrors = errors.length;
-  const pendingErrors = errors.filter((e) => e.status === 'pending').length;
-  const resolvedErrors = errors.filter((e) => e.status === 'resolved').length;
-  const unsolvableErrors = errors.filter((e) => e.status === 'unsolvable').length;
+  // Stats for current period
+  const totalErrors = dateFilteredErrors.length;
+  const pendingErrors = dateFilteredErrors.filter((e) => e.status === 'pending').length;
+  const resolvedErrors = dateFilteredErrors.filter((e) => e.status === 'resolved').length;
+  const unsolvableErrors = dateFilteredErrors.filter((e) => e.status === 'unsolvable').length;
+
+  // Stats for comparison period
+  const prevTotalErrors = comparisonErrors.length;
+  const prevPendingErrors = comparisonErrors.filter((e) => e.status === 'pending').length;
+  const prevResolvedErrors = comparisonErrors.filter((e) => e.status === 'resolved').length;
 
   // Stats by employee
-  const errorsByEmployee = errors.reduce((acc, err) => {
+  const errorsByEmployee = dateFilteredErrors.reduce((acc, err) => {
     acc[err.employee] = acc[err.employee] || { total: 0, resolved: 0, unsolvable: 0 };
     acc[err.employee].total++;
     if (err.status === 'resolved') acc[err.employee].resolved++;
@@ -216,11 +228,19 @@ const AdminErrors: React.FC = () => {
           Exportar historial
         </Button>
       </div>
-      {/* Hierarchy Filter */}
-      <HierarchyFilter 
-        value={hierarchyFilter}
-        onChange={setHierarchyFilter}
-      />
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangeFilter
+          value={dateRange}
+          onChange={setDateRange}
+          showComparison={true}
+        />
+        <HierarchyFilter 
+          value={hierarchyFilter}
+          onChange={setHierarchyFilter}
+        />
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -230,7 +250,10 @@ const AdminErrors: React.FC = () => {
               <AlertTriangle className="w-5 h-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{totalErrors}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold text-foreground">{totalErrors}</p>
+                {dateRange.comparison && <ComparisonBadge current={totalErrors} previous={prevTotalErrors} inverse />}
+              </div>
               <p className="text-sm text-muted-foreground">Total</p>
             </div>
           </div>
@@ -241,7 +264,10 @@ const AdminErrors: React.FC = () => {
               <AlertTriangle className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{pendingErrors}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold text-foreground">{pendingErrors}</p>
+                {dateRange.comparison && <ComparisonBadge current={pendingErrors} previous={prevPendingErrors} inverse />}
+              </div>
               <p className="text-sm text-muted-foreground">Pendientes</p>
             </div>
           </div>
@@ -252,7 +278,10 @@ const AdminErrors: React.FC = () => {
               <CheckCircle className="w-5 h-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{resolvedErrors}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold text-foreground">{resolvedErrors}</p>
+                {dateRange.comparison && <ComparisonBadge current={resolvedErrors} previous={prevResolvedErrors} />}
+              </div>
               <p className="text-sm text-muted-foreground">Resueltos</p>
             </div>
           </div>
