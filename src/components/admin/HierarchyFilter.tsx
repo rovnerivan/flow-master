@@ -9,7 +9,7 @@ export interface HierarchySelection {
   selectedId?: string;
 }
 
-interface HierarchyOption {
+export interface HierarchyOption {
   id: string;
   name: string;
   type: 'vertical' | 'management' | 'department' | 'employee';
@@ -17,7 +17,7 @@ interface HierarchyOption {
 }
 
 // Mock organizational structure - in production this would come from DB
-const mockHierarchy: HierarchyOption[] = [
+export const mockHierarchy: HierarchyOption[] = [
   {
     id: 'v1',
     name: 'Operaciones',
@@ -127,6 +127,60 @@ const mockHierarchy: HierarchyOption[] = [
   }
 ];
 
+// Helper function to get all IDs under a hierarchy node
+export const getHierarchyIds = (nodeId: string, hierarchy: HierarchyOption[] = mockHierarchy): string[] => {
+  const ids: string[] = [];
+  
+  const findAndCollect = (nodes: HierarchyOption[], collecting: boolean): boolean => {
+    for (const node of nodes) {
+      const shouldCollect = collecting || node.id === nodeId;
+      
+      if (shouldCollect) {
+        ids.push(node.id);
+      }
+      
+      if (node.children) {
+        if (node.id === nodeId) {
+          // Found the target, collect all children
+          findAndCollect(node.children, true);
+          return true;
+        } else if (findAndCollect(node.children, shouldCollect)) {
+          return true;
+        }
+      }
+      
+      if (node.id === nodeId) {
+        return true;
+      }
+    }
+    return false;
+  };
+  
+  findAndCollect(hierarchy, false);
+  return ids;
+};
+
+// Helper to check if an item matches the hierarchy filter
+export const matchesHierarchyFilter = (
+  filter: HierarchySelection,
+  itemHierarchy: { verticalId?: string; managementId?: string; departmentId?: string; employeeId?: string }
+): boolean => {
+  if (filter.level === 'all') return true;
+  if (!filter.selectedId) return true;
+  
+  const selectedIds = getHierarchyIds(filter.selectedId);
+  
+  // Check if any of the item's hierarchy IDs match
+  const itemIds = [
+    itemHierarchy.verticalId,
+    itemHierarchy.managementId,
+    itemHierarchy.departmentId,
+    itemHierarchy.employeeId,
+  ].filter(Boolean) as string[];
+  
+  return itemIds.some(id => selectedIds.includes(id));
+};
+
 interface HierarchyFilterProps {
   value: HierarchySelection;
   onChange: (selection: HierarchySelection) => void;
@@ -143,6 +197,38 @@ const levelConfig: Record<HierarchyLevel, { label: string; icon: React.ElementTy
   individual: { label: 'Individual', icon: UserCircle, color: 'bg-warning/20 text-warning' },
 };
 
+// Helper to get options for a specific level
+const getOptionsForLevel = (level: HierarchyLevel): HierarchyOption[] => {
+  const flattenByType = (nodes: HierarchyOption[], type: string): HierarchyOption[] => {
+    const result: HierarchyOption[] = [];
+    const traverse = (items: HierarchyOption[]) => {
+      for (const item of items) {
+        if (item.type === type) {
+          result.push(item);
+        }
+        if (item.children) {
+          traverse(item.children);
+        }
+      }
+    };
+    traverse(nodes);
+    return result;
+  };
+
+  switch (level) {
+    case 'vertical':
+      return mockHierarchy;
+    case 'management':
+      return flattenByType(mockHierarchy, 'management');
+    case 'department':
+      return flattenByType(mockHierarchy, 'department');
+    case 'individual':
+      return flattenByType(mockHierarchy, 'employee');
+    default:
+      return [];
+  }
+};
+
 export const HierarchyFilter: React.FC<HierarchyFilterProps> = ({
   value,
   onChange,
@@ -152,51 +238,10 @@ export const HierarchyFilter: React.FC<HierarchyFilterProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [expandedLevel, setExpandedLevel] = useState<HierarchyLevel | null>(null);
 
-  const handleLevelClick = (level: HierarchyLevel) => {
-    if (level === 'all') {
-      onChange({ level: 'all' });
-      setShowDropdown(false);
-      setExpandedLevel(null);
-    } else {
-      setExpandedLevel(expandedLevel === level ? null : level);
-    }
-  };
-
   const handleOptionSelect = (level: HierarchyLevel, id: string) => {
     onChange({ level, selectedId: id });
     setShowDropdown(false);
     setExpandedLevel(null);
-  };
-
-  const getOptionsForLevel = (level: HierarchyLevel): HierarchyOption[] => {
-    const flattenByType = (nodes: HierarchyOption[], type: string): HierarchyOption[] => {
-      const result: HierarchyOption[] = [];
-      const traverse = (items: HierarchyOption[]) => {
-        for (const item of items) {
-          if (item.type === type) {
-            result.push(item);
-          }
-          if (item.children) {
-            traverse(item.children);
-          }
-        }
-      };
-      traverse(nodes);
-      return result;
-    };
-
-    switch (level) {
-      case 'vertical':
-        return mockHierarchy;
-      case 'management':
-        return flattenByType(mockHierarchy, 'management');
-      case 'department':
-        return flattenByType(mockHierarchy, 'department');
-      case 'individual':
-        return flattenByType(mockHierarchy, 'employee');
-      default:
-        return [];
-    }
   };
 
   const getSelectedLabel = (): string => {
@@ -207,8 +252,6 @@ export const HierarchyFilter: React.FC<HierarchyFilterProps> = ({
     const selected = options.find(o => o.id === value.selectedId);
     return selected?.name || levelConfig[value.level].label;
   };
-
-  const CurrentIcon = levelConfig[value.level].icon;
 
   return (
     <div className={cn("relative", className)}>
@@ -225,6 +268,8 @@ export const HierarchyFilter: React.FC<HierarchyFilterProps> = ({
                 onClick={() => {
                   if (level === 'all') {
                     onChange({ level: 'all' });
+                    setShowDropdown(false);
+                    setExpandedLevel(null);
                   } else {
                     setShowDropdown(true);
                     setExpandedLevel(level as HierarchyLevel);
