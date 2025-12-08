@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import SuperAdminCompanies from './SuperAdminCompanies';
 import SuperAdminUsers from './SuperAdminUsers';
+import SuperAdminAnalytics from './SuperAdminAnalytics';
 
 // Mock data for companies/teams
 const mockCompanies = [
@@ -221,6 +222,7 @@ const SuperAdminSidebar: React.FC<{ collapsed: boolean; onToggle: () => void }> 
     { icon: BarChart3, label: 'Dashboard', path: '/superadmin' },
     { icon: Building2, label: 'Empresas', path: '/superadmin/companies' },
     { icon: Users, label: 'Usuarios', path: '/superadmin/users' },
+    { icon: TrendingUp, label: 'Analíticas', path: '/superadmin/analytics' },
     { icon: Activity, label: 'Sistema', path: '/superadmin/system' },
   ];
 
@@ -320,6 +322,7 @@ const SuperAdminDashboard: React.FC = () => {
           <Route path="/" element={<SuperAdminHome />} />
           <Route path="/companies" element={<SuperAdminCompanies />} />
           <Route path="/users" element={<SuperAdminUsers />} />
+          <Route path="/analytics" element={<SuperAdminAnalytics />} />
           <Route path="/system" element={<div className="text-foreground">Estado del Sistema (próximamente)</div>} />
           <Route path="/settings" element={<div className="text-foreground">Configuración SuperAdmin (próximamente)</div>} />
         </Routes>
