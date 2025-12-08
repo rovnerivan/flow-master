@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown, History, AlertTriangle, Archive, CheckCircle, Clock, Compass, Target, Rocket, CheckSquare as CheckSquareIcon, BarChart3 } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown, History, AlertTriangle, Archive, CheckCircle, Clock, Compass, Target, Rocket, CheckSquare as CheckSquareIcon, BarChart3, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +15,7 @@ import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/c
 import { ProcessStatusModal, ProcessStatus, StatusChangeDetails, statusConfig } from '@/components/admin/ProcessStatusModal';
 import { ProcessVersionHistory, ProcessVersion } from '@/components/admin/ProcessVersionHistory';
 import { ProcessAnalyticsModal } from '@/components/analytics/ProcessAnalyticsModal';
+import { ProcessViewerModal as EmployeeProcessViewer } from '@/components/employee/ProcessViewerModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -159,6 +160,7 @@ const AdminProcesses: React.FC = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showEmployeePreview, setShowEmployeePreview] = useState(false);
 
   const toggleTagFilter = (tagId: string) => {
     setSelectedTagFilters(prev => 
@@ -741,6 +743,10 @@ const AdminProcesses: React.FC = () => {
             setShowViewer(false);
             setSelectedProcess(null);
           }}
+          onShowEmployeePreview={() => {
+            setShowViewer(false);
+            setShowEmployeePreview(true);
+          }}
         />
       )}
 
@@ -825,19 +831,35 @@ const AdminProcesses: React.FC = () => {
           }}
         />
       )}
+
+      {/* Employee Preview Modal (Simulation) */}
+      {showEmployeePreview && selectedProcess && (
+        <EmployeeProcessViewer
+          processId={selectedProcess.id}
+          onClose={() => {
+            setShowEmployeePreview(false);
+            setSelectedProcess(null);
+          }}
+          isSimulation={true}
+        />
+      )}
     </div>
   );
 };
 
 // Process Viewer Modal for Admin
-const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = ({
+const ProcessViewerModal: React.FC<{ 
+  process: Process; 
+  onClose: () => void;
+  onShowEmployeePreview?: () => void;
+}> = ({
   process,
   onClose,
+  onShowEmployeePreview,
 }) => {
   const getTagInfoLocal = (tagId: string) => {
     return defaultTags.find(t => t.id === tagId) || { id: tagId, name: tagId, color: 'bg-muted text-muted-foreground' };
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
@@ -944,9 +966,16 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
             <Button variant="outline" onClick={onClose} className="flex-1">
               Cerrar
             </Button>
-            <Button variant="hero" className="flex-1 gap-2">
-              <Play className="w-4 h-4" />
-              Vista previa
+            <Button 
+              variant="hero" 
+              className="flex-1 gap-2"
+              onClick={() => {
+                onClose();
+                onShowEmployeePreview?.();
+              }}
+            >
+              <Monitor className="w-4 h-4" />
+              Vista empleado
             </Button>
           </div>
         </div>
