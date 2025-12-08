@@ -21,6 +21,7 @@ interface Step {
   title: string;
   description: string;
   duration: string;
+  extendedContent?: string;
 }
 
 export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
@@ -473,6 +474,24 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
                 placeholder="Descripción detallada del paso..."
                 rows={2}
               />
+              {/* Extended version - optional */}
+              <details className="group">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  <Plus className="w-3 h-3 group-open:rotate-45 transition-transform" />
+                  Versión extendida (opcional)
+                </summary>
+                <div className="mt-2">
+                  <Textarea
+                    value={step.extendedContent || ''}
+                    onChange={(e) => updateStep(step.id, 'extendedContent', e.target.value)}
+                    placeholder="Contenido adicional para profundizar en este paso: explicaciones detalladas, ejemplos, recursos, etc."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Este contenido aparecerá cuando el empleado pulse "Ver versión extendida"
+                  </p>
+                </div>
+              </details>
             </div>
           ))}
         </div>
