@@ -8,7 +8,9 @@ import {
   Lock,
   GripVertical,
   CheckCircle2,
-  Target
+  Target,
+  Undo2,
+  ArrowLeftRight
 } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, isAfter, isBefore, addWeeks, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -17,7 +19,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 
 // Types
@@ -42,6 +43,7 @@ interface ScheduledTask {
   isFixed: boolean;
   status: 'pending' | 'in_progress' | 'completed';
   scheduledBy: 'employee' | 'supervisor';
+  originalPendingId?: string; // To track if it came from pending
 }
 
 // Mock data for demonstration
@@ -54,7 +56,6 @@ const mockPendingTasks: PendingTask[] = [
 
 const generateMockScheduledTasks = (weekStart: Date): ScheduledTask[] => {
   const tasks: ScheduledTask[] = [];
-  const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   
   // Fixed daily tasks
   for (let i = 0; i < 5; i++) {
@@ -95,7 +96,8 @@ const generateMockScheduledTasks = (weekStart: Date): ScheduledTask[] => {
     frequency: 'weekly',
     isFixed: false,
     status: 'pending',
-    scheduledBy: 'employee'
+    scheduledBy: 'employee',
+    originalPendingId: 'sample-1'
   });
   
   return tasks;
@@ -124,6 +126,10 @@ const frequencyLabels: Record<string, { label: string; color: string }> = {
   occasional: { label: 'Ocasional', color: 'bg-gray-500/10 text-gray-600' },
 };
 
+type DragItem = 
+  | { type: 'pending'; task: PendingTask }
+  | { type: 'scheduled'; task: ScheduledTask };
+
 interface EmployeeCalendarPlannerProps {
   className?: string;
 }
@@ -134,8 +140,8 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>(() => 
     generateMockScheduledTasks(startOfWeek(new Date(), { weekStartsOn: 1 }))
   );
-  const [draggedTask, setDraggedTask] = useState<PendingTask | null>(null);
-  const [dragOverDay, setDragOverDay] = useState<Date | null>(null);
+  const [draggedItem, setDraggedItem] = useState<DragItem | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<'pending' | Date | null>(null);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -161,7 +167,7 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
 
   const dailyWorkload = useMemo(() => {
     const map: Record<string, { minutes: number; percentage: number }> = {};
-    const maxHoursPerDay = 8 * 60; // 8 hours in minutes
+    const maxHoursPerDay = 8 * 60;
     
     weekDays.forEach(day => {
       const dateKey = format(day, 'yyyy-MM-dd');
@@ -183,24 +189,36 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
     setCurrentWeek(new Date());
   };
 
-  const handleDragStart = (task: PendingTask) => {
-    setDraggedTask(task);
+  // Drag handlers for pending tasks
+  const handleDragStartPending = (task: PendingTask) => {
+    setDraggedItem({ type: 'pending', task });
+  };
+
+  // Drag handlers for scheduled tasks
+  const handleDragStartScheduled = (task: ScheduledTask) => {
+    if (task.isFixed) return;
+    setDraggedItem({ type: 'scheduled', task });
   };
 
   const handleDragEnd = () => {
-    setDraggedTask(null);
-    setDragOverDay(null);
+    setDraggedItem(null);
+    setDragOverTarget(null);
   };
 
-  const handleDragOver = (e: React.DragEvent, day: Date) => {
+  const handleDragOverDay = (e: React.DragEvent, day: Date) => {
     e.preventDefault();
-    setDragOverDay(day);
+    setDragOverTarget(day);
   };
 
-  const handleDrop = (e: React.DragEvent, day: Date) => {
+  const handleDragOverPending = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverTarget('pending');
+  };
+
+  const handleDropOnDay = (e: React.DragEvent, day: Date) => {
     e.preventDefault();
     
-    if (!draggedTask) return;
+    if (!draggedItem) return;
     
     // Check if day is in the past
     if (isBefore(day, new Date()) && !isSameDay(day, new Date())) {
@@ -213,103 +231,182 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
       return;
     }
 
-    // Check if deadline would be exceeded
-    if (draggedTask.deadline && isAfter(day, draggedTask.deadline)) {
+    if (draggedItem.type === 'pending') {
+      const task = draggedItem.task;
+      
+      // Check if deadline would be exceeded
+      if (task.deadline && isAfter(day, task.deadline)) {
+        toast({
+          title: "Fecha límite excedida",
+          description: `Esta tarea tiene fecha límite el ${format(task.deadline, "d 'de' MMMM", { locale: es })}.`,
+          variant: "destructive"
+        });
+        handleDragEnd();
+        return;
+      }
+
+      // Create new scheduled task from pending
+      const newScheduledTask: ScheduledTask = {
+        id: `scheduled-${task.id}-${Date.now()}`,
+        assignmentId: `assign-${task.id}`,
+        name: task.name,
+        scheduledDate: day,
+        estimatedMinutes: task.estimatedMinutes,
+        deadline: task.deadline,
+        frequency: task.frequency,
+        isFixed: false,
+        status: 'pending',
+        scheduledBy: 'employee',
+        originalPendingId: task.id
+      };
+
+      setScheduledTasks(prev => [...prev, newScheduledTask]);
+      setPendingTasks(prev => prev.filter(t => t.id !== task.id));
+      
       toast({
-        title: "Fecha límite excedida",
-        description: `Esta tarea tiene fecha límite el ${format(draggedTask.deadline, "d 'de' MMMM", { locale: es })}.`,
+        title: "Tarea programada",
+        description: `"${task.name}" programada para el ${format(day, "EEEE d 'de' MMMM", { locale: es })}.`
+      });
+    } else if (draggedItem.type === 'scheduled') {
+      const task = draggedItem.task;
+      
+      if (task.isFixed) {
+        toast({
+          title: "Tarea fijada",
+          description: "Esta tarea fue programada por tu supervisor y no puede moverse.",
+          variant: "destructive"
+        });
+        handleDragEnd();
+        return;
+      }
+
+      // Check deadline
+      if (task.deadline && isAfter(day, task.deadline)) {
+        toast({
+          title: "Fecha límite excedida",
+          description: `Esta tarea tiene fecha límite el ${format(task.deadline, "d 'de' MMMM", { locale: es })}.`,
+          variant: "destructive"
+        });
+        handleDragEnd();
+        return;
+      }
+
+      // Move scheduled task to new day
+      setScheduledTasks(prev => prev.map(t => 
+        t.id === task.id 
+          ? { ...t, scheduledDate: day, scheduledBy: 'employee' }
+          : t
+      ));
+
+      toast({
+        title: "Tarea movida",
+        description: `"${task.name}" movida al ${format(day, "EEEE d", { locale: es })}.`
+      });
+    }
+
+    handleDragEnd();
+  };
+
+  const handleDropOnPending = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    if (!draggedItem || draggedItem.type !== 'scheduled') {
+      handleDragEnd();
+      return;
+    }
+
+    const task = draggedItem.task;
+
+    if (task.isFixed) {
+      toast({
+        title: "Tarea fijada",
+        description: "Esta tarea fue programada por tu supervisor y no puede des-programarse.",
         variant: "destructive"
       });
       handleDragEnd();
       return;
     }
 
-    // Create new scheduled task
-    const newScheduledTask: ScheduledTask = {
-      id: `scheduled-${draggedTask.id}`,
-      assignmentId: `assign-${draggedTask.id}`,
-      name: draggedTask.name,
-      scheduledDate: day,
-      estimatedMinutes: draggedTask.estimatedMinutes,
-      deadline: draggedTask.deadline,
-      frequency: draggedTask.frequency,
-      isFixed: false,
-      status: 'pending',
-      scheduledBy: 'employee'
-    };
-
-    setScheduledTasks(prev => [...prev, newScheduledTask]);
-    setPendingTasks(prev => prev.filter(t => t.id !== draggedTask.id));
-    
-    toast({
-      title: "Tarea programada",
-      description: `"${draggedTask.name}" programada para el ${format(day, "EEEE d 'de' MMMM", { locale: es })}.`
-    });
-
-    handleDragEnd();
-  };
-
-  const handleMoveTask = (task: ScheduledTask, newDay: Date) => {
-    if (task.isFixed) {
+    // Only employee-scheduled tasks can be returned to pending
+    if (task.scheduledBy !== 'employee') {
       toast({
-        title: "Tarea fijada",
-        description: "Esta tarea fue programada por tu supervisor y no puede moverse.",
+        title: "No se puede devolver",
+        description: "Solo puedes devolver tareas que tú hayas programado.",
         variant: "destructive"
       });
+      handleDragEnd();
       return;
     }
 
-    setScheduledTasks(prev => prev.map(t => 
-      t.id === task.id 
-        ? { ...t, scheduledDate: newDay, scheduledBy: 'employee' }
-        : t
-    ));
+    // Return task to pending
+    const restoredPendingTask: PendingTask = {
+      id: task.originalPendingId || task.id,
+      name: task.name,
+      estimatedMinutes: task.estimatedMinutes,
+      deadline: task.deadline,
+      frequency: task.frequency as PendingTask['frequency'],
+      isFixed: false
+    };
+
+    setScheduledTasks(prev => prev.filter(t => t.id !== task.id));
+    setPendingTasks(prev => [...prev, restoredPendingTask]);
 
     toast({
-      title: "Tarea movida",
-      description: `"${task.name}" movida al ${format(newDay, "EEEE d", { locale: es })}.`
+      title: "Tarea devuelta",
+      description: `"${task.name}" devuelta a pendientes.`
     });
+
+    handleDragEnd();
   };
 
   const isToday = (date: Date) => isSameDay(date, new Date());
   const isPast = (date: Date) => isBefore(date, new Date()) && !isSameDay(date, new Date());
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn("flex flex-col h-full min-h-0", className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-3 md:p-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-semibold">Mi Calendario</h2>
+          <h2 className="text-base md:text-lg font-semibold">Mi Calendario</h2>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigateWeek('prev')}>
+        <div className="flex items-center gap-1 md:gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigateWeek('prev')}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={goToToday}>
+          <Button variant="outline" size="sm" className="h-8 text-xs md:text-sm" onClick={goToToday}>
             Hoy
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => navigateWeek('next')}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigateWeek('next')}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {/* Week label */}
-      <div className="px-4 py-2 bg-muted/30 border-b border-border">
-        <span className="text-sm text-muted-foreground">
-          {format(weekStart, "d 'de' MMMM", { locale: es })} - {format(weekEnd, "d 'de' MMMM yyyy", { locale: es })}
+      <div className="px-3 md:px-4 py-2 bg-muted/30 border-b border-border shrink-0">
+        <span className="text-xs md:text-sm text-muted-foreground">
+          {format(weekStart, "d MMM", { locale: es })} - {format(weekEnd, "d MMM yyyy", { locale: es })}
         </span>
       </div>
 
-      {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Pending tasks sidebar */}
-        <div className="w-64 border-r border-border bg-muted/20 flex flex-col">
-          <div className="p-3 border-b border-border">
+      {/* Main content - responsive layout */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        {/* Pending tasks panel */}
+        <div 
+          className={cn(
+            "lg:w-72 border-b lg:border-b-0 lg:border-r border-border bg-muted/20 flex flex-col shrink-0",
+            "max-h-48 lg:max-h-none"
+          )}
+          onDragOver={handleDragOverPending}
+          onDragLeave={() => setDragOverTarget(null)}
+          onDrop={handleDropOnPending}
+        >
+          <div className="p-3 border-b border-border shrink-0">
             <h3 className="text-sm font-medium flex items-center gap-2">
               <Target className="w-4 h-4 text-muted-foreground" />
-              Pendientes de planificar
+              <span className="hidden sm:inline">Pendientes de planificar</span>
+              <span className="sm:hidden">Pendientes</span>
               {pendingTasks.length > 0 && (
                 <Badge variant="secondary" className="ml-auto">
                   {pendingTasks.length}
@@ -318,9 +415,22 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
             </h3>
           </div>
           
-          <ScrollArea className="flex-1">
+          <ScrollArea 
+            className={cn(
+              "flex-1",
+              dragOverTarget === 'pending' && draggedItem?.type === 'scheduled' && "bg-primary/5"
+            )}
+          >
             <div className="p-2 space-y-2">
-              {pendingTasks.length === 0 ? (
+              {/* Drop hint when dragging scheduled task */}
+              {draggedItem?.type === 'scheduled' && (
+                <div className="p-3 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 text-center">
+                  <Undo2 className="w-5 h-5 mx-auto mb-1 text-primary" />
+                  <p className="text-xs text-primary font-medium">Suelta aquí para devolver</p>
+                </div>
+              )}
+              
+              {pendingTasks.length === 0 && !draggedItem ? (
                 <div className="p-4 text-center text-muted-foreground text-sm">
                   <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p>¡Todo planificado!</p>
@@ -332,24 +442,24 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
                     <div
                       key={task.id}
                       draggable
-                      onDragStart={() => handleDragStart(task)}
+                      onDragStart={() => handleDragStartPending(task)}
                       onDragEnd={handleDragEnd}
                       className={cn(
-                        "p-3 rounded-lg bg-background border border-border cursor-grab active:cursor-grabbing",
+                        "p-2.5 md:p-3 rounded-lg bg-background border border-border cursor-grab active:cursor-grabbing",
                         "hover:border-primary/50 hover:shadow-sm transition-all",
-                        draggedTask?.id === task.id && "opacity-50 border-primary"
+                        draggedItem?.type === 'pending' && draggedItem.task.id === task.id && "opacity-50 border-primary"
                       )}
                     >
                       <div className="flex items-start gap-2">
                         <GripVertical className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{task.name}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {formatDuration(task.estimatedMinutes)}
                             </span>
-                            <Badge variant="outline" className={cn("text-xs", frequencyLabels[task.frequency].color)}>
+                            <Badge variant="outline" className={cn("text-[10px] h-5", frequencyLabels[task.frequency].color)}>
                               {frequencyLabels[task.frequency].label}
                             </Badge>
                           </div>
@@ -375,23 +485,24 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
         </div>
 
         {/* Calendar grid */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {/* Days header */}
-          <div className="grid grid-cols-7 border-b border-border">
+          <div className="grid grid-cols-7 border-b border-border shrink-0">
             {weekDays.map(day => (
               <div 
                 key={day.toISOString()} 
                 className={cn(
-                  "p-2 text-center border-r border-border last:border-r-0",
+                  "p-1.5 md:p-2 text-center border-r border-border last:border-r-0",
                   isToday(day) && "bg-primary/5",
                   isPast(day) && "opacity-50"
                 )}
               >
-                <div className="text-xs text-muted-foreground uppercase">
-                  {format(day, 'EEE', { locale: es })}
+                <div className="text-[10px] md:text-xs text-muted-foreground uppercase">
+                  {format(day, 'EEEEE', { locale: es })}
+                  <span className="hidden md:inline">{format(day, 'EE', { locale: es }).slice(1)}</span>
                 </div>
                 <div className={cn(
-                  "text-lg font-semibold mt-0.5",
+                  "text-sm md:text-lg font-semibold",
                   isToday(day) && "text-primary"
                 )}>
                   {format(day, 'd')}
@@ -401,25 +512,25 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
           </div>
 
           {/* Workload indicators */}
-          <div className="grid grid-cols-7 border-b border-border bg-muted/20">
+          <div className="grid grid-cols-7 border-b border-border bg-muted/20 shrink-0">
             {weekDays.map(day => {
               const dateKey = format(day, 'yyyy-MM-dd');
               const workload = dailyWorkload[dateKey];
               return (
                 <div 
                   key={`workload-${day.toISOString()}`}
-                  className="p-1.5 border-r border-border last:border-r-0"
+                  className="p-1 md:p-1.5 border-r border-border last:border-r-0"
                 >
-                  <div className="flex items-center justify-between text-xs mb-1">
+                  <div className="flex items-center justify-between text-[10px] md:text-xs mb-0.5 md:mb-1">
                     <span className="text-muted-foreground">{formatDuration(workload.minutes)}</span>
                     {workload.percentage > 90 && (
-                      <AlertTriangle className="w-3 h-3 text-amber-500" />
+                      <AlertTriangle className="w-2.5 h-2.5 md:w-3 md:h-3 text-amber-500" />
                     )}
                   </div>
                   <Progress 
                     value={workload.percentage} 
                     className={cn(
-                      "h-1.5",
+                      "h-1 md:h-1.5",
                       workload.percentage > 100 && "[&>div]:bg-destructive",
                       workload.percentage > 80 && workload.percentage <= 100 && "[&>div]:bg-amber-500"
                     )}
@@ -430,57 +541,70 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
           </div>
 
           {/* Tasks grid */}
-          <div className="flex-1 grid grid-cols-7 overflow-hidden">
+          <div className="flex-1 grid grid-cols-7 overflow-hidden min-h-0">
             {weekDays.map(day => {
               const dateKey = format(day, 'yyyy-MM-dd');
               const dayTasks = tasksPerDay[dateKey] || [];
-              const isDropTarget = dragOverDay && isSameDay(dragOverDay, day);
+              const isDropTarget = dragOverTarget instanceof Date && isSameDay(dragOverTarget, day);
               
               return (
                 <div
                   key={`col-${day.toISOString()}`}
-                  onDragOver={(e) => handleDragOver(e, day)}
-                  onDragLeave={() => setDragOverDay(null)}
-                  onDrop={(e) => handleDrop(e, day)}
+                  onDragOver={(e) => handleDragOverDay(e, day)}
+                  onDragLeave={() => setDragOverTarget(null)}
+                  onDrop={(e) => handleDropOnDay(e, day)}
                   className={cn(
                     "border-r border-border last:border-r-0 overflow-y-auto",
-                    isDropTarget && !isPast(day) && "bg-primary/5",
+                    isDropTarget && !isPast(day) && "bg-primary/10",
                     isPast(day) && "bg-muted/30"
                   )}
                 >
-                  <div className="p-1.5 space-y-1">
+                  <div className="p-1 md:p-1.5 space-y-1">
                     {dayTasks.map(task => (
                       <div
                         key={task.id}
+                        draggable={!task.isFixed}
+                        onDragStart={() => handleDragStartScheduled(task)}
+                        onDragEnd={handleDragEnd}
                         className={cn(
-                          "p-2 rounded-md text-xs transition-all",
+                          "p-1.5 md:p-2 rounded-md text-[10px] md:text-xs transition-all",
                           task.isFixed 
                             ? "bg-muted border border-border" 
-                            : "bg-primary/10 border border-primary/20 cursor-grab hover:shadow-sm",
-                          task.status === 'completed' && "opacity-60 line-through"
+                            : "bg-primary/10 border border-primary/20 cursor-grab hover:shadow-sm active:cursor-grabbing",
+                          task.status === 'completed' && "opacity-60 line-through",
+                          draggedItem?.type === 'scheduled' && draggedItem.task.id === task.id && "opacity-50 border-primary"
                         )}
                       >
                         <div className="flex items-start gap-1">
-                          {task.isFixed && (
-                            <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          {task.isFixed ? (
+                            <Lock className="w-2.5 h-2.5 md:w-3 md:h-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <ArrowLeftRight className="w-2.5 h-2.5 md:w-3 md:h-3 text-primary/60 flex-shrink-0 mt-0.5" />
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{task.name}</p>
+                            <p className="font-medium truncate leading-tight">{task.name}</p>
                             <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">
-                              <Clock className="w-2.5 h-2.5" />
+                              <Clock className="w-2 h-2 md:w-2.5 md:h-2.5" />
                               <span>{formatDuration(task.estimatedMinutes)}</span>
                             </div>
                           </div>
                         </div>
                         {!task.isFixed && task.scheduledBy === 'employee' && (
-                          <div className="mt-1">
-                            <Badge variant="outline" className="text-[10px] h-4 bg-primary/5">
-                              Yo lo programé
-                            </Badge>
-                          </div>
+                          <Badge variant="outline" className="mt-1 text-[8px] md:text-[10px] h-4 bg-primary/5 w-full justify-center">
+                            Yo lo programé
+                          </Badge>
                         )}
                       </div>
                     ))}
+                    
+                    {/* Empty state hint */}
+                    {dayTasks.length === 0 && !isPast(day) && (
+                      <div className="h-16 md:h-20 flex items-center justify-center text-muted-foreground/40">
+                        <span className="text-[10px] md:text-xs text-center">
+                          {draggedItem ? 'Soltar aquí' : ''}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -490,16 +614,20 @@ export const EmployeeCalendarPlanner: React.FC<EmployeeCalendarPlannerProps> = (
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 p-3 border-t border-border bg-muted/20 text-xs">
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2 md:gap-4 p-2 md:p-3 border-t border-border bg-muted/20 text-[10px] md:text-xs shrink-0">
+        <div className="flex items-center gap-1">
           <Lock className="w-3 h-3 text-muted-foreground" />
-          <span className="text-muted-foreground">Fijado por supervisor</span>
+          <span className="text-muted-foreground">Fijado</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-primary/20 border border-primary/30" />
-          <span className="text-muted-foreground">Programado por mí</span>
+          <span className="text-muted-foreground">Por mí</span>
         </div>
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-1">
+          <ArrowLeftRight className="w-3 h-3 text-primary/60" />
+          <span className="text-muted-foreground">Movible</span>
+        </div>
+        <div className="flex items-center gap-1 ml-auto">
           <AlertTriangle className="w-3 h-3 text-amber-500" />
           <span className="text-muted-foreground">Carga alta</span>
         </div>
