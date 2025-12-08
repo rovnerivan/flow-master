@@ -21,6 +21,7 @@ import {
   User,
   HelpCircle,
   Eye,
+  Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,13 +35,14 @@ import {
   ProcessFrequency,
   ChecklistItem
 } from '@/lib/processTypes';
+import { PrerequisiteStatus } from '@/components/analytics/ProcessPrerequisites';
 
 interface ProcessViewerModalProps {
   processId: string;
   onClose: () => void;
 }
 
-// Mock process data with Phase 1 features
+// Mock process data with Phase 1 & 3 features
 const mockProcess = {
   id: '1',
   name: 'Preparación de Pedidos',
@@ -58,6 +60,12 @@ const mockProcess = {
   frequency: 'daily' as ProcessFrequency,
   requiredTools: ['Computadora', 'Escáner', 'Etiquetadora', 'Cinta de empaque'],
   successCriteria: 'Pedido empacado correctamente, etiqueta legible, sin productos dañados',
+  // Phase 3: Prerequisites
+  prerequisites: [
+    { id: 'p1', name: 'Inducción General', status: 'published' as const, isCompleted: true },
+    { id: 'p2', name: 'Seguridad en Almacén', status: 'published' as const, isCompleted: true },
+    { id: 'p3', name: 'Manejo de Sistema', status: 'published' as const, isCompleted: false },
+  ],
   steps: [
     {
       id: 's1',
@@ -406,6 +414,16 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
               ))}
             </div>
           </div>
+        )}
+
+        {/* Prerequisites */}
+        {process.prerequisites && process.prerequisites.length > 0 && (
+          <PrerequisiteStatus 
+            prerequisites={process.prerequisites}
+            onProcessClick={(id) => {
+              console.log('Navigate to process:', id);
+            }}
+          />
         )}
 
         {/* Expected Result */}
