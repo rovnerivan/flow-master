@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Clock, AlertTriangle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
+import { DateRangeFilter, useDateRangeFilter } from '@/components/filters/DateRangeFilter';
+import { ComparisonValue } from '@/components/filters/ComparisonBadge';
 import {
   BarChart,
   Bar,
@@ -71,6 +73,17 @@ const errorDistributionData = [
 
 const AdminAnalytics: React.FC = () => {
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+  const { dateRange, setDateRange } = useDateRangeFilter(30);
+
+  // Mock comparison values (in real app, these would be calculated from filtered data)
+  const currentAvgCompliance = 85;
+  const previousAvgCompliance = dateRange.comparison ? 78 : undefined;
+  const currentTimeSaved = 45;
+  const previousTimeSaved = dateRange.comparison ? 32 : undefined;
+  const currentTotalErrors = 50;
+  const previousTotalErrors = dateRange.comparison ? 65 : undefined;
+  const currentActiveEmployees = 7;
+  const previousActiveEmployees = dateRange.comparison ? 6 : undefined;
 
   // Filter data based on hierarchy selection
   const filteredErrorsByProcess = errorsByProcessData.filter(d => 
@@ -106,23 +119,32 @@ const AdminAnalytics: React.FC = () => {
         <Button variant="outline">Exportar datos</Button>
       </div>
 
-      {/* Hierarchy Filter */}
-      <HierarchyFilter 
-        value={hierarchyFilter}
-        onChange={setHierarchyFilter}
-      />
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangeFilter
+          value={dateRange}
+          onChange={setDateRange}
+          showComparison={true}
+        />
+        <HierarchyFilter 
+          value={hierarchyFilter}
+          onChange={setHierarchyFilter}
+        />
+      </div>
 
-      {/* Summary Stats */}
+      {/* Summary Stats with Comparison */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="kpi-card">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{avgCompliance}%</p>
-              <p className="text-sm text-muted-foreground">Cumplimiento</p>
-            </div>
+            <ComparisonValue
+              current={currentAvgCompliance}
+              previous={previousAvgCompliance}
+              label="Cumplimiento"
+              format="percentage"
+            />
           </div>
         </div>
         <div className="kpi-card">
@@ -130,10 +152,12 @@ const AdminAnalytics: React.FC = () => {
             <div className="p-2 rounded-lg bg-success/10">
               <Clock className="w-5 h-5 text-success" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">45h</p>
-              <p className="text-sm text-muted-foreground">Tiempo salvado</p>
-            </div>
+            <ComparisonValue
+              current={currentTimeSaved}
+              previous={previousTimeSaved}
+              label="Tiempo salvado"
+              format="time"
+            />
           </div>
         </div>
         <div className="kpi-card">
@@ -141,10 +165,12 @@ const AdminAnalytics: React.FC = () => {
             <div className="p-2 rounded-lg bg-warning/10">
               <AlertTriangle className="w-5 h-5 text-warning" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{totalErrors}</p>
-              <p className="text-sm text-muted-foreground">Errores</p>
-            </div>
+            <ComparisonValue
+              current={currentTotalErrors}
+              previous={previousTotalErrors}
+              label="Errores"
+              inverse={true}
+            />
           </div>
         </div>
         <div className="kpi-card">
@@ -152,10 +178,11 @@ const AdminAnalytics: React.FC = () => {
             <div className="p-2 rounded-lg bg-primary/10">
               <Users className="w-5 h-5 text-primary" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{activeEmployees}</p>
-              <p className="text-sm text-muted-foreground">Empleados</p>
-            </div>
+            <ComparisonValue
+              current={currentActiveEmployees}
+              previous={previousActiveEmployees}
+              label="Empleados"
+            />
           </div>
         </div>
       </div>

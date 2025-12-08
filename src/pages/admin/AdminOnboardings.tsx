@@ -3,6 +3,8 @@ import { UserPlus, Clock, CheckCircle, TrendingUp, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
+import { DateRangeFilter, useDateRangeFilter } from '@/components/filters/DateRangeFilter';
+import { ComparisonBadge } from '@/components/filters/ComparisonBadge';
 
 interface Onboarding {
   id: string;
@@ -102,8 +104,15 @@ const mockOnboardings: Onboarding[] = [
 
 const AdminOnboardings: React.FC = () => {
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+  const { dateRange, setDateRange } = useDateRangeFilter(30);
   
-  const filteredOnboardings = mockOnboardings.filter((o) => 
+  // Filter by date range (using startDate)
+  const dateFilteredOnboardings = mockOnboardings.filter((o) => {
+    const startDate = new Date(o.startDate);
+    return startDate >= dateRange.primary.from && startDate <= dateRange.primary.to;
+  });
+
+  const filteredOnboardings = dateFilteredOnboardings.filter((o) => 
     matchesHierarchyFilter(hierarchyFilter, {
       verticalId: o.verticalId,
       managementId: o.managementId,
@@ -114,6 +123,16 @@ const AdminOnboardings: React.FC = () => {
   
   const activeOnboardings = filteredOnboardings.filter((o) => o.status === 'in_progress');
   const completedOnboardings = filteredOnboardings.filter((o) => o.status === 'completed');
+
+  // Comparison period stats
+  const comparisonOnboardings = dateRange.comparison 
+    ? mockOnboardings.filter((o) => {
+        const startDate = new Date(o.startDate);
+        return startDate >= dateRange.comparison!.from && startDate <= dateRange.comparison!.to;
+      })
+    : [];
+  const prevActiveOnboardings = comparisonOnboardings.filter((o) => o.status === 'in_progress').length;
+  const prevCompletedOnboardings = comparisonOnboardings.filter((o) => o.status === 'completed').length;
 
   const getInitials = (name: string) => {
     return name
@@ -143,11 +162,18 @@ const AdminOnboardings: React.FC = () => {
         </div>
       </div>
 
-      {/* Hierarchy Filter */}
-      <HierarchyFilter 
-        value={hierarchyFilter}
-        onChange={setHierarchyFilter}
-      />
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <DateRangeFilter
+          value={dateRange}
+          onChange={setDateRange}
+          showComparison={true}
+        />
+        <HierarchyFilter 
+          value={hierarchyFilter}
+          onChange={setHierarchyFilter}
+        />
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -157,7 +183,10 @@ const AdminOnboardings: React.FC = () => {
               <UserPlus className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{activeOnboardings.length}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold text-foreground">{activeOnboardings.length}</p>
+                {dateRange.comparison && <ComparisonBadge current={activeOnboardings.length} previous={prevActiveOnboardings} />}
+              </div>
               <p className="text-sm text-muted-foreground">En progreso</p>
             </div>
           </div>
@@ -168,8 +197,11 @@ const AdminOnboardings: React.FC = () => {
               <CheckCircle className="w-5 h-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{completedOnboardings.length}</p>
-              <p className="text-sm text-muted-foreground">Completados este mes</p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold text-foreground">{completedOnboardings.length}</p>
+                {dateRange.comparison && <ComparisonBadge current={completedOnboardings.length} previous={prevCompletedOnboardings} />}
+              </div>
+              <p className="text-sm text-muted-foreground">Completados este período</p>
             </div>
           </div>
         </div>
