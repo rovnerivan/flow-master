@@ -10,7 +10,7 @@ interface ProcessCreatorModalProps {
   onClose: () => void;
 }
 
-type CreationMethod = 'select' | 'manual' | 'upload' | 'record' | 'audio-complete';
+type CreationMethod = 'select' | 'manual' | 'upload' | 'record' | 'audio-complete' | 'audio-guided';
 
 interface Step {
   id: string;
@@ -214,7 +214,24 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
             <div>
               <h4 className="font-medium text-foreground">Grabar audio completo</h4>
               <p className="text-sm text-muted-foreground">
-                Explica todo el proceso y la IA lo estructurará
+                Explica todo el proceso y la IA lo estructurará automáticamente
+              </p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setMethod('audio-guided')}
+          className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all text-left group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h4 className="font-medium text-foreground">Formulario con audio por campo</h4>
+              <p className="text-sm text-muted-foreground">
+                Completa cada campo dictando o escribiendo
               </p>
             </div>
           </div>
@@ -543,6 +560,266 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
     </div>
   );
 
+  // Audio-guided form with microphone option per field
+  const [recordingField, setRecordingField] = useState<string | null>(null);
+  const [fieldRecordingTime, setFieldRecordingTime] = useState(0);
+  const fieldTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startFieldRecording = async (fieldName: string) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        // Simulate AI transcription
+        toast.success('Procesando audio...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mock transcription result
+        const mockTranscriptions: Record<string, string> = {
+          name: 'Proceso de Control de Calidad',
+          description: 'Este proceso asegura que todos los productos cumplan con los estándares de calidad antes de su envío.',
+          importance: 'Es fundamental para mantener la satisfacción del cliente y evitar devoluciones costosas.',
+          expectedResult: 'Productos verificados y aprobados listos para distribución.',
+        };
+        
+        if (fieldName in formData) {
+          setFormData(prev => ({ ...prev, [fieldName]: mockTranscriptions[fieldName] || 'Texto transcrito del audio' }));
+        }
+        toast.success('Audio transcrito correctamente');
+      };
+
+      mediaRecorder.start();
+      setRecordingField(fieldName);
+      setFieldRecordingTime(0);
+
+      fieldTimerRef.current = setInterval(() => {
+        setFieldRecordingTime(t => t + 1);
+      }, 1000);
+
+      toast.success('Grabando...');
+    } catch (error) {
+      toast.error('No se pudo acceder al micrófono');
+    }
+  };
+
+  const stopFieldRecording = () => {
+    if (mediaRecorderRef.current && recordingField) {
+      mediaRecorderRef.current.stop();
+      setRecordingField(null);
+      if (fieldTimerRef.current) {
+        clearInterval(fieldTimerRef.current);
+      }
+    }
+  };
+
+  const renderAudioGuidedForm = () => (
+    <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+        <p className="text-sm text-foreground">
+          <strong>Tip:</strong> Haz clic en el ícono de micrófono junto a cada campo para dictar el contenido.
+        </p>
+      </div>
+
+      {/* Basic Info with audio option */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-foreground border-b border-border pb-2">
+          Información General
+        </h3>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Nombre del proceso *</label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Ej: Preparación de Pedidos"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="flex-1"
+            />
+            <Button
+              variant={recordingField === 'name' ? 'destructive' : 'outline'}
+              size="icon"
+              onClick={() => recordingField === 'name' ? stopFieldRecording() : startFieldRecording('name')}
+            >
+              {recordingField === 'name' ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+          </div>
+          {recordingField === 'name' && (
+            <p className="text-xs text-destructive animate-pulse">Grabando... {formatTime(fieldRecordingTime)}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Descripción</label>
+          <div className="flex gap-2">
+            <Textarea
+              placeholder="Describe brevemente el proceso..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              className="flex-1"
+            />
+            <Button
+              variant={recordingField === 'description' ? 'destructive' : 'outline'}
+              size="icon"
+              className="self-start"
+              onClick={() => recordingField === 'description' ? stopFieldRecording() : startFieldRecording('description')}
+            >
+              {recordingField === 'description' ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+          </div>
+          {recordingField === 'description' && (
+            <p className="text-xs text-destructive animate-pulse">Grabando... {formatTime(fieldRecordingTime)}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">¿Por qué es importante?</label>
+          <div className="flex gap-2">
+            <Textarea
+              placeholder="Explica el impacto..."
+              value={formData.importance}
+              onChange={(e) => setFormData({ ...formData, importance: e.target.value })}
+              rows={2}
+              className="flex-1"
+            />
+            <Button
+              variant={recordingField === 'importance' ? 'destructive' : 'outline'}
+              size="icon"
+              className="self-start"
+              onClick={() => recordingField === 'importance' ? stopFieldRecording() : startFieldRecording('importance')}
+            >
+              {recordingField === 'importance' ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+          </div>
+          {recordingField === 'importance' && (
+            <p className="text-xs text-destructive animate-pulse">Grabando... {formatTime(fieldRecordingTime)}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Resultado esperado</label>
+          <div className="flex gap-2">
+            <Textarea
+              placeholder="Al completar correctamente..."
+              value={formData.expectedResult}
+              onChange={(e) => setFormData({ ...formData, expectedResult: e.target.value })}
+              rows={2}
+              className="flex-1"
+            />
+            <Button
+              variant={recordingField === 'expectedResult' ? 'destructive' : 'outline'}
+              size="icon"
+              className="self-start"
+              onClick={() => recordingField === 'expectedResult' ? stopFieldRecording() : startFieldRecording('expectedResult')}
+            >
+              {recordingField === 'expectedResult' ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+          </div>
+          {recordingField === 'expectedResult' && (
+            <p className="text-xs text-destructive animate-pulse">Grabando... {formatTime(fieldRecordingTime)}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Tiempo estimado (minutos)</label>
+          <Input
+            type="number"
+            placeholder="15"
+            value={formData.estimatedTime}
+            onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+            className="w-32"
+          />
+        </div>
+      </div>
+
+      {/* Steps */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-2">
+          <h3 className="font-semibold text-foreground">Pasos del Proceso</h3>
+          <Button variant="outline" size="sm" onClick={addStep} className="gap-1">
+            <Plus className="w-4 h-4" />
+            Agregar paso
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          {steps.map((step, index) => (
+            <div key={step.id} className="p-4 rounded-lg border border-border bg-secondary/20 space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary flex-shrink-0">
+                  {index + 1}
+                </span>
+                <Input
+                  value={step.title}
+                  onChange={(e) => updateStep(step.id, 'title', e.target.value)}
+                  placeholder="Título del paso"
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  value={step.duration}
+                  onChange={(e) => updateStep(step.id, 'duration', e.target.value)}
+                  className="w-16"
+                />
+                <span className="text-xs text-muted-foreground">min</span>
+                {steps.length > 1 && (
+                  <button
+                    onClick={() => removeStep(step.id)}
+                    className="p-1.5 rounded hover:bg-destructive/10 text-destructive transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Textarea
+                  value={step.description}
+                  onChange={(e) => updateStep(step.id, 'description', e.target.value)}
+                  placeholder="Descripción del paso..."
+                  rows={2}
+                  className="flex-1"
+                />
+                <Button
+                  variant={recordingField === `step-${step.id}` ? 'destructive' : 'outline'}
+                  size="icon"
+                  className="self-start"
+                  onClick={() => {
+                    if (recordingField === `step-${step.id}`) {
+                      stopFieldRecording();
+                    } else {
+                      // Start recording for this step
+                      startFieldRecording(`step-${step.id}`);
+                    }
+                  }}
+                >
+                  {recordingField === `step-${step.id}` ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              </div>
+              {recordingField === `step-${step.id}` && (
+                <p className="text-xs text-destructive animate-pulse">Grabando... {formatTime(fieldRecordingTime)}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-4 border-t border-border">
+        <Button variant="outline" onClick={() => setMethod('select')} className="flex-1">
+          Volver
+        </Button>
+        <Button variant="hero" onClick={handleCreate} className="flex-1 gap-2">
+          Crear proceso
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
@@ -572,6 +849,7 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
           {method === 'manual' && renderManualForm()}
           {method === 'upload' && renderUploadForm()}
           {(method === 'record' || method === 'audio-complete') && renderRecordForm()}
+          {method === 'audio-guided' && renderAudioGuidedForm()}
         </div>
       </div>
     </div>
