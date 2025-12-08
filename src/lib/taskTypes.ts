@@ -3,7 +3,7 @@
 export type TaskFrequency = 'daily' | 'weekly' | 'monthly' | 'annual' | 'occasional';
 export type TaskStatus = 'pending' | 'in_progress' | 'pending_review' | 'completed' | 'rejected';
 export type AssignmentType = 'individual' | 'shared';
-export type ViewMode = 'list' | 'calendar' | 'kanban';
+export type ViewMode = 'list' | 'calendar' | 'kanban' | 'birdeye';
 
 export interface ReviewHistoryEntry {
   type: 'correction' | 'rejection' | 'approval';

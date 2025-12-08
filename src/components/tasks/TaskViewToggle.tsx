@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, Calendar, LayoutGrid } from 'lucide-react';
+import { List, Calendar, LayoutGrid, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ViewMode } from '@/lib/taskTypes';
@@ -10,6 +10,7 @@ interface TaskViewToggleProps {
 }
 
 const views: { mode: ViewMode; icon: React.ElementType; label: string }[] = [
+  { mode: 'birdeye', icon: Eye, label: 'Panorama' },
   { mode: 'list', icon: List, label: 'Lista' },
   { mode: 'calendar', icon: Calendar, label: 'Calendario' },
   { mode: 'kanban', icon: LayoutGrid, label: 'Kanban' },
