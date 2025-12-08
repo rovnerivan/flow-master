@@ -41,6 +41,7 @@ const mockProcess = {
         'Verifica que tengas la orden impresa o en el sistema. Revisa todos los items, cantidades y especificaciones especiales.',
       videoUrl: null,
       duration: '2 min',
+      extendedContent: 'Al recibir la orden, asegúrate de verificar lo siguiente:\n\n1. **Número de orden**: Confirma que coincida con el ticket impreso\n2. **Datos del cliente**: Nombre, dirección y teléfono de contacto\n3. **Items solicitados**: Lista completa con códigos SKU\n4. **Cantidades**: Verifica cada cantidad individualmente\n5. **Especificaciones especiales**: Notas de empaque, instrucciones de entrega, etc.\n\nSi encuentras alguna discrepancia, comunícate inmediatamente con el supervisor antes de continuar.',
     },
     {
       id: 's2',
@@ -50,6 +51,7 @@ const mockProcess = {
         'Ubica cada producto en el almacén siguiendo el orden de la lista para optimizar el recorrido.',
       videoUrl: null,
       duration: '3 min',
+      extendedContent: 'Para optimizar el tiempo de recolección:\n\n1. **Organiza la ruta**: Revisa todas las ubicaciones antes de empezar\n2. **Sigue el patrón de pasillo**: Ve de izquierda a derecha, arriba hacia abajo\n3. **Usa el carro adecuado**: Selecciona según el tamaño del pedido\n4. **Verifica códigos**: Escanea cada producto al tomarlo\n5. **Productos pesados abajo**: Coloca items pesados en la base del carro\n\nTiempo objetivo por item: 30-45 segundos máximo.',
     },
     {
       id: 's3',
@@ -59,6 +61,7 @@ const mockProcess = {
         'Cuenta cada producto y verifica que coincida exactamente con la orden. Marca cada item verificado.',
       videoUrl: null,
       duration: '2 min',
+      extendedContent: 'La verificación de cantidades es crítica para evitar errores:\n\n1. **Cuenta física**: Cuenta cada unidad manualmente\n2. **Doble verificación**: Cuenta de nuevo si hay más de 5 unidades\n3. **Marca en lista**: Usa el sistema para confirmar cada item\n4. **Productos similares**: Presta atención extra a productos parecidos\n5. **Registro de faltantes**: Si falta stock, documenta inmediatamente\n\nError máximo permitido: 0%',
     },
     {
       id: 's4',
@@ -68,6 +71,7 @@ const mockProcess = {
         'Revisa que cada producto esté en perfectas condiciones. Descarta cualquier item dañado.',
       videoUrl: null,
       duration: '2 min',
+      extendedContent: 'Criterios de inspección de calidad:\n\n**Verificar:**\n- Empaque original intacto\n- Sin abolladuras ni roturas\n- Etiquetas legibles y completas\n- Fechas de vencimiento vigentes\n- Sin signos de humedad o contaminación\n\n**Rechazar si:**\n- Empaque abierto o dañado\n- Producto vencido o próximo a vencer (menos de 30 días)\n- Etiqueta ilegible o faltante\n- Signos de manipulación indebida',
     },
     {
       id: 's5',
@@ -77,6 +81,7 @@ const mockProcess = {
         'Selecciona la caja o empaque apropiado según el tamaño y fragilidad de los productos.',
       videoUrl: null,
       duration: '2 min',
+      extendedContent: 'Guía de selección de empaque:\n\n**Cajas pequeñas (S)**: 1-5 items pequeños, peso < 2kg\n**Cajas medianas (M)**: 5-15 items, peso 2-5kg\n**Cajas grandes (L)**: 15+ items o bultos, peso 5-10kg\n**Sobres acolchados**: Items planos, documentos, accesorios pequeños\n\n**Regla de oro**: El producto debe caber sin forzar, con espacio para material de protección.',
     },
     {
       id: 's6',
@@ -86,6 +91,7 @@ const mockProcess = {
         'Añade material de protección para productos frágiles. Asegura que nada se mueva dentro del paquete.',
       videoUrl: null,
       duration: '1 min',
+      extendedContent: 'Materiales de protección según tipo de producto:\n\n**Papel kraft**: Relleno general, productos no frágiles\n**Plástico burbuja**: Productos frágiles, electrónicos, vidrio\n**Esquineros de cartón**: Marcos, cuadros, pantallas\n**Separadores**: Múltiples productos frágiles en una caja\n\n**Test de agitación**: Sacude suavemente la caja. Si algo se mueve, añade más protección.',
     },
     {
       id: 's7',
@@ -95,6 +101,7 @@ const mockProcess = {
         'Coloca la etiqueta de envío correctamente visible. Añade etiquetas de "frágil" si aplica.',
       videoUrl: null,
       duration: '1 min',
+      extendedContent: 'Protocolo de etiquetado:\n\n1. **Etiqueta principal**: Lado superior de la caja, completamente visible\n2. **Orientación**: Flechas "Este lado arriba" cuando aplique\n3. **Etiqueta frágil**: Dos lados opuestos de la caja\n4. **Código de barras**: Debe ser escaneable, sin arrugas\n5. **Duplicado interior**: Incluir copia de la orden dentro del paquete\n\n**Nunca**: Cubrir información importante con cinta o etiquetas adicionales.',
     },
     {
       id: 's8',
@@ -104,6 +111,7 @@ const mockProcess = {
         'Registra el pedido como preparado en el sistema. Coloca en el área de despacho correspondiente.',
       videoUrl: null,
       duration: '2 min',
+      extendedContent: 'Pasos finales de registro:\n\n1. **Escanear código**: Confirmar preparación en sistema\n2. **Foto opcional**: Documentar estado del paquete si aplica\n3. **Zona de despacho**: Ubicar según transportista asignado\n4. **Prioridad**: Colocar envíos express al frente\n5. **Hora límite**: Verificar que llegue antes del corte de despacho\n\n**Confirmación exitosa**: El sistema debe mostrar estado "Listo para envío".',
     },
   ],
 };
@@ -114,6 +122,7 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
 }) => {
   const [view, setView] = useState<'overview' | 'learning'>('overview');
   const [currentStep, setCurrentStep] = useState(0);
+  const [showExtended, setShowExtended] = useState(false);
 
   const process = mockProcess;
   const step = process.steps[currentStep];
@@ -121,18 +130,25 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   const handleNext = () => {
     if (currentStep < process.steps.length - 1) {
       setCurrentStep(currentStep + 1);
+      setShowExtended(false);
     }
   };
 
   const handlePrev = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      setShowExtended(false);
     }
   };
 
   const goToStep = (stepIndex: number) => {
     setCurrentStep(stepIndex);
+    setShowExtended(false);
     setView('learning');
+  };
+
+  const toggleExtended = () => {
+    setShowExtended(!showExtended);
   };
 
   const progress = ((currentStep + 1) / process.steps.length) * 100;
@@ -268,7 +284,10 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
           {process.steps.map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentStep(index)}
+              onClick={() => {
+                setCurrentStep(index);
+                setShowExtended(false);
+              }}
               className={`flex-1 h-1.5 rounded-full transition-colors cursor-pointer hover:opacity-80 ${
                 index <= currentStep ? 'bg-primary' : 'bg-border'
               }`}
@@ -279,65 +298,103 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
 
       {/* Step Content - Scrollable */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Step Video/Content Placeholder - Smaller and better contained */}
-        <div className="w-full bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center mb-4" style={{ aspectRatio: '16/9', maxHeight: '35vh' }}>
-          <div className="text-center">
-            <Play className="w-12 h-12 text-primary/50 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Video del paso</p>
-          </div>
-        </div>
-
-        {/* Step Title and Description */}
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
-                {step.number}
-              </div>
-              <span className="text-sm text-muted-foreground">{step.duration}</span>
+        {showExtended && step.extendedContent ? (
+          /* Extended Content View */
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <FileText className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold text-foreground">Versión Extendida</h3>
             </div>
-            <h3 className="text-xl font-bold text-foreground">{step.title}</h3>
+            
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+              <h4 className="font-medium text-foreground mb-3">{step.title}</h4>
+              <div className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                {step.extendedContent}
+              </div>
+            </div>
+
+            <Button 
+              variant="outline" 
+              className="w-full gap-2"
+              onClick={toggleExtended}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Volver al paso
+            </Button>
           </div>
+        ) : (
+          /* Normal Step View */
+          <>
+            {/* Step Video/Content Placeholder - Smaller and better contained */}
+            <div className="w-full bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center mb-4" style={{ aspectRatio: '16/9', maxHeight: '35vh' }}>
+              <div className="text-center">
+                <Play className="w-12 h-12 text-primary/50 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Video del paso</p>
+              </div>
+            </div>
 
-          <p className="text-muted-foreground">{step.description}</p>
+            {/* Step Title and Description */}
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
+                    {step.number}
+                  </div>
+                  <span className="text-sm text-muted-foreground">{step.duration}</span>
+                </div>
+                <h3 className="text-xl font-bold text-foreground">{step.title}</h3>
+              </div>
 
-          {/* Extended Version Button */}
-          <Button variant="outline" size="sm" className="gap-2">
-            <FileText className="w-4 h-4" />
-            Ver versión extendida
-          </Button>
-        </div>
+              <p className="text-muted-foreground">{step.description}</p>
+
+              {/* Extended Version Button */}
+              {step.extendedContent && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={toggleExtended}
+                >
+                  <FileText className="w-4 h-4" />
+                  Ver versión extendida
+                </Button>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Navigation - Fixed at bottom */}
-      <div className="p-4 border-t border-border shrink-0 bg-background">
-        <div className="flex items-center justify-between gap-4">
-          {currentStep > 0 ? (
-            <Button
-              variant="outline"
-              onClick={handlePrev}
-              className="gap-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Paso anterior
-            </Button>
-          ) : (
-            <div />
-          )}
+      {!showExtended && (
+        <div className="p-4 border-t border-border shrink-0 bg-background">
+          <div className="flex items-center justify-between gap-4">
+            {currentStep > 0 ? (
+              <Button
+                variant="outline"
+                onClick={handlePrev}
+                className="gap-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Paso anterior
+              </Button>
+            ) : (
+              <div />
+            )}
 
-          {currentStep === process.steps.length - 1 ? (
-            <Button variant="hero" onClick={onClose} className="gap-2">
-              <CheckCircle className="w-4 h-4" />
-              Completar
-            </Button>
-          ) : (
-            <Button variant="hero" onClick={handleNext} className="gap-2">
-              Siguiente
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          )}
+            {currentStep === process.steps.length - 1 ? (
+              <Button variant="hero" onClick={onClose} className="gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Completar
+              </Button>
+            ) : (
+              <Button variant="hero" onClick={handleNext} className="gap-2">
+                Siguiente
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 
