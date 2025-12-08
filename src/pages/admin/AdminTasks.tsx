@@ -19,6 +19,7 @@ interface TaskAssignment {
   userName: string;
   instanceLabel?: string;
   status: 'pending' | 'in_progress' | 'completed';
+  timeSpentMinutes?: number; // Individual time contribution
 }
 
 interface Task {
@@ -182,7 +183,9 @@ const AdminTasks: React.FC = () => {
   const [showProcessViewer, setShowProcessViewer] = useState<{ taskId: string; processId: string; allProcesses: { id: string; name: string }[] } | null>(null);
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
   const [tasks, setTasks] = useState<Task[]>(initialMockTasks);
-  const [showTimeInputModal, setShowTimeInputModal] = useState<{ taskId: string; assignment?: TaskAssignment } | null>(null);
+  const [showTimeInputModal, setShowTimeInputModal] = useState<{ taskId: string; task?: Task } | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<TaskAssignment | null>(null);
+  const [showAssignmentSelector, setShowAssignmentSelector] = useState<{ taskId: string; task: Task; action: 'time' | 'complete' } | null>(null);
   const [manualTimeInput, setManualTimeInput] = useState({ hours: 0, minutes: 0 });
 
   const filterTasks = (frequency: string) => {
@@ -248,24 +251,69 @@ const AdminTasks: React.FC = () => {
     toast.info('Tarea marcada en progreso');
   };
 
-  const openTimeInputModal = (taskId: string, assignment?: TaskAssignment) => {
+  // Handle time/complete actions - check if we need to ask which assignment
+  const handleTimeAction = (task: Task) => {
+    if (task.assignments.length > 1) {
+      // Multiple assignments - need to ask which one
+      setShowAssignmentSelector({ taskId: task.id, task, action: 'time' });
+    } else {
+      // Single assignment - go directly to time input
+      setSelectedAssignment(task.assignments[0]);
+      setManualTimeInput({ hours: 0, minutes: 0 });
+      setShowTimeInputModal({ taskId: task.id, task });
+    }
+  };
+
+  const handleCompleteAction = (task: Task) => {
+    if (task.assignments.length > 1) {
+      // Multiple assignments - need to ask which one(s)
+      setShowAssignmentSelector({ taskId: task.id, task, action: 'complete' });
+    } else {
+      // Single assignment - complete directly
+      completeTask(task.id, task.assignments[0].userId);
+    }
+  };
+
+  const selectAssignmentForTime = (assignment: TaskAssignment) => {
+    setSelectedAssignment(assignment);
     setManualTimeInput({ hours: 0, minutes: 0 });
-    setShowTimeInputModal({ taskId, assignment });
+    setShowTimeInputModal({ taskId: showAssignmentSelector!.taskId, task: showAssignmentSelector!.task });
+    setShowAssignmentSelector(null);
+  };
+
+  const selectAssignmentForComplete = (assignment: TaskAssignment) => {
+    completeTask(showAssignmentSelector!.taskId, assignment.userId);
+    setShowAssignmentSelector(null);
   };
 
   const saveManualTime = () => {
-    if (!showTimeInputModal) return;
+    if (!showTimeInputModal || !selectedAssignment) return;
     
     const totalMinutes = (manualTimeInput.hours * 60) + manualTimeInput.minutes;
-    const { taskId, assignment } = showTimeInputModal;
+    const { taskId } = showTimeInputModal;
     
-    // Here you would save to database - for now just show toast
-    const assigneeName = assignment?.userName || 'la tarea';
-    toast.success(`Tiempo registrado: ${formatTime(totalMinutes)} para ${assigneeName}`);
+    // Add time to the assignment and set status to in_progress if pending
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        return {
+          ...task,
+          assignments: task.assignments.map(a => {
+            if (a.userId === selectedAssignment.userId) {
+              const newTimeSpent = (a.timeSpentMinutes || 0) + totalMinutes;
+              // Only change to in_progress if currently pending
+              const newStatus = a.status === 'pending' ? 'in_progress' : a.status;
+              return { ...a, timeSpentMinutes: newTimeSpent, status: newStatus };
+            }
+            return a;
+          })
+        };
+      }
+      return task;
+    }));
     
-    // Also mark as completed if time is being registered
-    completeTask(taskId, assignment?.userId);
+    toast.success(`Tiempo registrado: ${formatTime(totalMinutes)} para ${selectedAssignment.userName}`);
     setShowTimeInputModal(null);
+    setSelectedAssignment(null);
   };
 
   const handleEditTask = (task: Task) => {
@@ -322,7 +370,7 @@ const AdminTasks: React.FC = () => {
             {/* Assignments detail */}
             <div className="mb-3 space-y-1.5">
               {task.assignmentType === 'individual' ? (
-                // Individual: show each assignment with its status
+                // Individual: show each assignment with its status and time
                 task.assignments.map((assignment, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm">
                     <div className={cn(
@@ -344,15 +392,36 @@ const AdminTasks: React.FC = () => {
                     )}>
                       • {statusLabels[assignment.status].label}
                     </span>
+                    {assignment.timeSpentMinutes && assignment.timeSpentMinutes > 0 && (
+                      <span className="text-xs text-primary ml-auto">
+                        ⏱ {formatTime(assignment.timeSpentMinutes)}
+                      </span>
+                    )}
                   </div>
                 ))
               ) : (
-                // Shared: show all assignees together
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {task.assignments.map(a => a.userName).join(', ')}
-                  </span>
+                // Shared: show all assignees with individual time contributions
+                <div className="space-y-1">
+                  {task.assignments.map((assignment, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm">
+                      <User className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">{assignment.userName}</span>
+                      {assignment.timeSpentMinutes && assignment.timeSpentMinutes > 0 && (
+                        <span className="text-xs text-primary ml-auto">
+                          ⏱ {formatTime(assignment.timeSpentMinutes)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {/* Total time for shared task */}
+                  {task.assignments.some(a => a.timeSpentMinutes && a.timeSpentMinutes > 0) && (
+                    <div className="flex items-center gap-2 text-sm pt-1 border-t border-border/50 mt-1">
+                      <Clock className="w-3 h-3 text-primary" />
+                      <span className="text-primary font-medium">
+                        Total: {formatTime(task.assignments.reduce((sum, a) => sum + (a.timeSpentMinutes || 0), 0))}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -414,7 +483,7 @@ const AdminTasks: React.FC = () => {
                   <Edit className="w-4 h-4 mr-2" />
                   Editar tarea
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openTimeInputModal(task.id)}>
+                <DropdownMenuItem onClick={() => handleTimeAction(task)}>
                   <Clock className="w-4 h-4 mr-2" />
                   Registrar tiempo
                 </DropdownMenuItem>
@@ -432,7 +501,7 @@ const AdminTasks: React.FC = () => {
                   </DropdownMenuItem>
                 )}
                 {overallStatus !== 'completed' && (
-                  <DropdownMenuItem onClick={() => completeTask(task.id)}>
+                  <DropdownMenuItem onClick={() => handleCompleteAction(task)}>
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Marcar completada
                   </DropdownMenuItem>
@@ -445,7 +514,7 @@ const AdminTasks: React.FC = () => {
               variant="ghost" 
               size="icon" 
               className="h-8 w-8" 
-              onClick={() => overallStatus === 'completed' ? setTaskPending(task.id) : completeTask(task.id)}
+              onClick={() => overallStatus === 'completed' ? setTaskPending(task.id) : handleCompleteAction(task)}
               title={overallStatus === 'completed' ? 'Volver a pendiente' : 'Marcar completada'}
             >
               {overallStatus === 'completed' ? (
@@ -545,6 +614,79 @@ const AdminTasks: React.FC = () => {
         />
       )}
 
+      {/* Assignment Selector Modal */}
+      {showAssignmentSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                {showAssignmentSelector.action === 'time' ? '¿Para quién registrar tiempo?' : '¿Quién completó la tarea?'}
+              </h3>
+              <button 
+                onClick={() => setShowAssignmentSelector(null)}
+                className="p-1 rounded hover:bg-secondary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-muted-foreground mb-4">
+              {showAssignmentSelector.task.title}
+            </p>
+            
+            <div className="space-y-2">
+              {showAssignmentSelector.task.assignments.map((assignment) => (
+                <button
+                  key={assignment.userId}
+                  onClick={() => showAssignmentSelector.action === 'time' 
+                    ? selectAssignmentForTime(assignment) 
+                    : selectAssignmentForComplete(assignment)
+                  }
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left",
+                    assignment.status === 'completed' 
+                      ? "border-success/30 bg-success/5" 
+                      : "border-border hover:border-primary/50 hover:bg-primary/5"
+                  )}
+                >
+                  <div className={cn(
+                    "w-3 h-3 rounded-full",
+                    assignment.status === 'completed' ? 'bg-success' 
+                      : assignment.status === 'in_progress' ? 'bg-primary' 
+                      : 'bg-muted-foreground'
+                  )} />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{assignment.userName}</p>
+                    {assignment.instanceLabel && (
+                      <p className="text-xs text-muted-foreground">{assignment.instanceLabel}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className={cn(
+                      "text-xs",
+                      assignment.status === 'completed' ? 'text-success' 
+                        : assignment.status === 'in_progress' ? 'text-primary' 
+                        : 'text-muted-foreground'
+                    )}>
+                      {statusLabels[assignment.status].label}
+                    </span>
+                    {assignment.timeSpentMinutes && assignment.timeSpentMinutes > 0 && (
+                      <p className="text-xs text-primary">⏱ {formatTime(assignment.timeSpentMinutes)}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-border">
+              <Button variant="outline" className="w-full" onClick={() => setShowAssignmentSelector(null)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Manual Time Input Modal */}
       {showTimeInputModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -559,9 +701,10 @@ const AdminTasks: React.FC = () => {
               </button>
             </div>
             
-            {showTimeInputModal.assignment && (
+            {selectedAssignment && (
               <p className="text-sm text-muted-foreground mb-4">
-                Para: <span className="text-foreground">{showTimeInputModal.assignment.userName}</span>
+                Para: <span className="text-foreground">{selectedAssignment.userName}</span>
+                {selectedAssignment.instanceLabel && <span className="text-muted-foreground"> ({selectedAssignment.instanceLabel})</span>}
               </p>
             )}
             
