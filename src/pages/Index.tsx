@@ -102,16 +102,16 @@ const Index: React.FC = () => {
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            Entrena a tu equipo{' '}
-            <span className="gradient-text">sin perder tiempo</span>
+            Todo fluye cuando{' '}
+            <span className="gradient-text">gestionas bien</span>
           </h1>
 
           {/* Solution */}
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <span className="text-primary font-semibold">ProcessFlow</span> te ayuda a que eso no pase más.
+            <span className="text-primary font-semibold">Viento en Popa Manager</span> te ayuda a que eso no pase más.
           </p>
           <p className="text-lg text-foreground max-w-2xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-            Mejora la productividad y libera tu tiempo para lo verdaderamente importante.
+            Procesos claros, tareas organizadas, equipo alineado. Navega sin contratiempos.
           </p>
 
           {/* CTA Buttons */}
@@ -243,7 +243,7 @@ const Index: React.FC = () => {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <Logo size="sm" />
           <p className="text-sm text-muted-foreground">
-            © 2024 ProcessFlow. Todos los derechos reservados.
+            © 2024 Viento en Popa Manager. Todos los derechos reservados.
           </p>
         </div>
       </footer>

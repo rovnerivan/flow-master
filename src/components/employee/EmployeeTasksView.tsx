@@ -13,11 +13,14 @@ import {
   FileText,
   Play,
   Pause,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import EmployeeTaskMetrics from '@/components/tasks/EmployeeTaskMetrics';
+import { Task as SharedTask } from '@/lib/taskTypes';
 
 // Shared interfaces - should match AdminTasks
 interface ReviewHistoryEntry {
@@ -570,12 +573,45 @@ const EmployeeTasksView: React.FC = () => {
     );
   };
 
+  const [showMetrics, setShowMetrics] = useState(false);
+
+  // Convert to shared task format for metrics
+  const convertToSharedTask = (task: EmployeeTask): SharedTask => ({
+    ...task,
+    assignments: task.assignments.map(a => ({
+      ...a,
+      status: a.status as any,
+    })),
+    frequency: task.frequency as any,
+    assignmentType: task.assignmentType as any,
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Mis Tareas</h1>
-        <p className="text-muted-foreground">Tareas asignadas a ti</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Mis Tareas</h1>
+          <p className="text-muted-foreground">Tareas asignadas a ti</p>
+        </div>
+        <Button 
+          variant={showMetrics ? "default" : "outline"} 
+          size="sm"
+          onClick={() => setShowMetrics(!showMetrics)}
+          className="gap-1"
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span className="hidden sm:inline">Mi progreso</span>
+        </Button>
       </div>
+
+      {/* Personal metrics */}
+      {showMetrics && (
+        <EmployeeTaskMetrics 
+          tasks={myTasks.map(convertToSharedTask)} 
+          userId={currentUserId}
+          lessonsCount={2} // Mock - would come from EmployeeErrorsView
+        />
+      )}
 
       {/* Priority sections */}
       <TaskSection 
