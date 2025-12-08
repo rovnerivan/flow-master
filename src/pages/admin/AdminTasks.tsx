@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw, Eye, AlertCircle, ThumbsUp, ThumbsDown, MessageSquare, Ban, Pencil } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw, Eye, AlertCircle, ThumbsUp, ThumbsDown, MessageSquare, Ban, Pencil, BarChart3, List, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
+import TaskViewToggle from '@/components/tasks/TaskViewToggle';
+import TaskCalendarView from '@/components/tasks/TaskCalendarView';
+import TaskKanbanView from '@/components/tasks/TaskKanbanView';
+import TaskMetricsDashboard from '@/components/tasks/TaskMetricsDashboard';
+import { ViewMode, Task as SharedTask } from '@/lib/taskTypes';
 
 // Review history entry for tracking corrections and rejections
 interface ReviewHistoryEntry {
@@ -226,6 +231,11 @@ const AdminTasks: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<TaskAssignment | null>(null);
   const [showAssignmentSelector, setShowAssignmentSelector] = useState<{ taskId: string; task: Task; action: 'time' | 'complete' } | null>(null);
   const [manualTimeInput, setManualTimeInput] = useState({ hours: 0, minutes: 0 });
+  
+  // View mode state (list, calendar, kanban)
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showMetrics, setShowMetrics] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>();
   
   // Review modal state
   const [showReviewModal, setShowReviewModal] = useState<{ taskId: string; task: Task; action: 'approve' | 'correct' | 'reject' } | null>(null);
@@ -840,6 +850,32 @@ const AdminTasks: React.FC = () => {
     );
   };
 
+  // Convert tasks to shared format for new components
+  const convertToSharedTask = (task: Task): SharedTask => ({
+    ...task,
+    assignments: task.assignments.map(a => ({
+      ...a,
+      status: a.status as any,
+    })),
+    frequency: task.frequency as any,
+    assignmentType: task.assignmentType as any,
+  });
+
+  const handleTaskClickFromView = (task: SharedTask) => {
+    const originalTask = tasks.find(t => t.id === task.id);
+    if (originalTask) {
+      setSelectedTask(originalTask);
+      setShowEditTaskModal(true);
+    }
+  };
+
+  const handleReviewFromView = (taskId: string, action: 'approve' | 'correct' | 'reject') => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      setShowReviewModal({ taskId, task, action });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -850,11 +886,31 @@ const AdminTasks: React.FC = () => {
             Administra tareas por frecuencia y asignación
           </p>
         </div>
-        <Button variant="hero" className="gap-2" onClick={() => setShowNewTaskModal(true)}>
-          <Plus className="w-4 h-4" />
-          Nueva Tarea
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant={showMetrics ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setShowMetrics(!showMetrics)}
+            className="gap-1"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Métricas</span>
+          </Button>
+          <Button variant="hero" className="gap-2" onClick={() => setShowNewTaskModal(true)}>
+            <Plus className="w-4 h-4" />
+            Nueva Tarea
+          </Button>
+        </div>
       </div>
+
+      {/* Metrics Dashboard */}
+      {showMetrics && (
+        <TaskMetricsDashboard 
+          tasks={filterTasks('all').map(convertToSharedTask)} 
+          showEmployeeBreakdown={true}
+          title="Métricas del Equipo"
+        />
+      )}
 
       {/* Hierarchy Filter */}
       <HierarchyFilter 
@@ -862,53 +918,76 @@ const AdminTasks: React.FC = () => {
         onChange={setHierarchyFilter}
       />
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar tareas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and View Toggle */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar tareas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <TaskViewToggle currentView={viewMode} onViewChange={setViewMode} />
       </div>
 
-      {/* Tabs by Frequency */}
-      <Tabs defaultValue="all" onValueChange={setSelectedFrequency}>
-        <div className="overflow-x-auto -mx-4 px-4">
-          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-6">
-            <TabsTrigger value="all" className="whitespace-nowrap">Todas</TabsTrigger>
-            <TabsTrigger value="daily" className="whitespace-nowrap">Diarias</TabsTrigger>
-            <TabsTrigger value="weekly" className="whitespace-nowrap">Semanales</TabsTrigger>
-            <TabsTrigger value="monthly" className="whitespace-nowrap">Mensuales</TabsTrigger>
-            <TabsTrigger value="annual" className="whitespace-nowrap">Anuales</TabsTrigger>
-            <TabsTrigger value="occasional" className="whitespace-nowrap">Ocasionales</TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="all" className="mt-6">
-          <div className="space-y-4">
-            {filterTasks('all').map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
+      {/* View modes */}
+      {viewMode === 'calendar' ? (
+        <TaskCalendarView
+          tasks={filterTasks('all').map(convertToSharedTask)}
+          onTaskClick={handleTaskClickFromView}
+          selectedDate={selectedCalendarDate}
+          onDateSelect={setSelectedCalendarDate}
+        />
+      ) : viewMode === 'kanban' ? (
+        <TaskKanbanView
+          tasks={filterTasks('all').map(convertToSharedTask)}
+          onTaskClick={handleTaskClickFromView}
+        />
+      ) : (
+        /* List view with frequency tabs */
+        <Tabs defaultValue="all" onValueChange={setSelectedFrequency}>
+          <div className="overflow-x-auto -mx-4 px-4">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-6">
+              <TabsTrigger value="all" className="whitespace-nowrap">Todas</TabsTrigger>
+              <TabsTrigger value="daily" className="whitespace-nowrap">Diarias</TabsTrigger>
+              <TabsTrigger value="weekly" className="whitespace-nowrap">Semanales</TabsTrigger>
+              <TabsTrigger value="monthly" className="whitespace-nowrap">Mensuales</TabsTrigger>
+              <TabsTrigger value="annual" className="whitespace-nowrap">Anuales</TabsTrigger>
+              <TabsTrigger value="occasional" className="whitespace-nowrap">Ocasionales</TabsTrigger>
+            </TabsList>
           </div>
-        </TabsContent>
 
-        {['daily', 'weekly', 'monthly', 'annual', 'occasional'].map((freq) => (
-          <TabsContent key={freq} value={freq} className="mt-6">
+          <TabsContent value="all" className="mt-6">
             <div className="space-y-4">
-              {filterTasks(freq).map((task) => (
+              {filterTasks('all').map((task) => (
                 <TaskCard key={task.id} task={task} />
               ))}
-              {filterTasks(freq).length === 0 && (
+              {filterTasks('all').length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  No hay tareas {frequencyLabels[freq].label.toLowerCase()}s
+                  No hay tareas que coincidan con los filtros
                 </div>
               )}
             </div>
           </TabsContent>
-        ))}
-      </Tabs>
+
+          {['daily', 'weekly', 'monthly', 'annual', 'occasional'].map((freq) => (
+            <TabsContent key={freq} value={freq} className="mt-6">
+              <div className="space-y-4">
+                {filterTasks(freq).map((task) => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+                {filterTasks(freq).length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hay tareas {frequencyLabels[freq].label.toLowerCase()}s
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
 
       {/* New Task Modal */}
       <NewTaskModal open={showNewTaskModal} onClose={() => setShowNewTaskModal(false)} />
