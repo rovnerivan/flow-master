@@ -11,6 +11,7 @@ import {
   Home,
   Settings,
   LogOut,
+  ChevronRight,
 } from 'lucide-react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -18,6 +19,7 @@ import { DailyChecklist } from '@/components/mobile/DailyChecklist';
 import { MicroLearningCard } from '@/components/mobile/MicroLearningCard';
 import { ProcessCard } from '@/components/mobile/ProcessCard';
 import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
+import { TeamMemberModal } from '@/components/employee/TeamMemberModal';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
@@ -160,12 +162,104 @@ const EmployeeProcesses: React.FC<{ onProcessClick: (id: string) => void }> = ({
 
 // Team Page
 const EmployeeTeam: React.FC = () => {
-  const teamMembers = [
-    { id: '1', name: 'Carlos López', cargo: 'Operador de Caja', isMe: true },
-    { id: '2', name: 'Ana Martínez', cargo: 'Vendedora' },
-    { id: '3', name: 'Pedro Sánchez', cargo: 'Almacenista' },
-    { id: '4', name: 'Luis Ramírez', cargo: 'Vendedor' },
+  const [selectedMember, setSelectedMember] = useState<TeamMemberData | null>(null);
+
+  const teamMembersData: TeamMemberData[] = [
+    { 
+      id: '1', 
+      name: 'Carlos López', 
+      cargo: 'Operador de Caja',
+      cargoDescription: 'Responsable de gestionar las transacciones en caja, asegurando un servicio rápido y amable al cliente.',
+      skills: ['Atención al cliente', 'Manejo de efectivo', 'Resolución de problemas'],
+      usualTasks: [
+        { id: 't1', title: 'Apertura de caja', frequency: 'Diaria' },
+        { id: 't2', title: 'Cierre de caja', frequency: 'Diaria' },
+        { id: 't3', title: 'Arqueo de caja', frequency: 'Semanal' },
+      ],
+      usualProcesses: [
+        { id: 'p1', title: 'Proceso de cobro estándar' },
+        { id: 'p2', title: 'Gestión de devoluciones' },
+      ],
+      funFact: 'Le encanta el café y siempre tiene una sonrisa para los clientes.',
+      joinedDate: 'Marzo 2023',
+      isMe: true
+    },
+    { 
+      id: '2', 
+      name: 'Ana Martínez', 
+      cargo: 'Vendedora',
+      cargoDescription: 'Especialista en atención personalizada al cliente, con enfoque en identificar necesidades y ofrecer soluciones.',
+      skills: ['Ventas', 'Comunicación', 'Trabajo en equipo', 'Empatía'],
+      usualTasks: [
+        { id: 't1', title: 'Atención en piso de ventas', frequency: 'Diaria' },
+        { id: 't2', title: 'Reposición de productos', frequency: 'Diaria' },
+        { id: 't3', title: 'Inventario de sección', frequency: 'Semanal' },
+      ],
+      usualProcesses: [
+        { id: 'p1', title: 'Atención al cliente premium' },
+        { id: 'p2', title: 'Técnicas de venta cruzada' },
+      ],
+      funFact: 'Conoce todos los productos de memoria y siempre recomienda el mejor.',
+      joinedDate: 'Enero 2022'
+    },
+    { 
+      id: '3', 
+      name: 'Pedro Sánchez', 
+      cargo: 'Almacenista',
+      cargoDescription: 'Encargado de la recepción, organización y control de inventario en el almacén.',
+      skills: ['Organización', 'Logística', 'Fuerza física', 'Atención al detalle'],
+      usualTasks: [
+        { id: 't1', title: 'Recepción de mercancía', frequency: 'Diaria' },
+        { id: 't2', title: 'Acomodo de productos', frequency: 'Diaria' },
+        { id: 't3', title: 'Control de inventario', frequency: 'Mensual' },
+      ],
+      usualProcesses: [
+        { id: 'p1', title: 'Recepción de proveedores' },
+        { id: 'p2', title: 'Control de mermas' },
+      ],
+      funFact: 'Tiene el récord de organizar el almacén más rápido.',
+      joinedDate: 'Julio 2021'
+    },
+    { 
+      id: '4', 
+      name: 'Luis Ramírez', 
+      cargo: 'Vendedor',
+      cargoDescription: 'Asesor de ventas enfocado en productos tecnológicos y electrónicos.',
+      skills: ['Conocimiento técnico', 'Paciencia', 'Ventas', 'Tecnología'],
+      usualTasks: [
+        { id: 't1', title: 'Asesoría de productos', frequency: 'Diaria' },
+        { id: 't2', title: 'Demostración de equipos', frequency: 'Diaria' },
+        { id: 't3', title: 'Seguimiento a clientes', frequency: 'Semanal' },
+      ],
+      usualProcesses: [
+        { id: 'p1', title: 'Demostración de productos' },
+        { id: 'p2', title: 'Garantías y devoluciones' },
+      ],
+      funFact: 'Es el experto en tecnología del equipo, siempre al día con las novedades.',
+      joinedDate: 'Octubre 2022'
+    },
   ];
+
+  // Supervisor data
+  const supervisorData: TeamMemberData = {
+    id: 'sup1',
+    name: mockUser.supervisor,
+    cargo: 'Supervisora de Operaciones',
+    cargoDescription: 'Líder del equipo de operaciones, responsable de coordinar actividades diarias y asegurar el cumplimiento de objetivos.',
+    skills: ['Liderazgo', 'Gestión de equipos', 'Planificación', 'Comunicación efectiva'],
+    usualTasks: [
+      { id: 't1', title: 'Revisión de KPIs del equipo', frequency: 'Diaria' },
+      { id: 't2', title: 'Reunión de equipo', frequency: 'Semanal' },
+      { id: 't3', title: 'Evaluaciones de desempeño', frequency: 'Mensual' },
+    ],
+    usualProcesses: [
+      { id: 'p1', title: 'Gestión de turnos' },
+      { id: 'p2', title: 'Resolución de conflictos' },
+      { id: 'p3', title: 'Capacitación de nuevos empleados' },
+    ],
+    funFact: 'Siempre tiene tiempo para escuchar y ayudar a su equipo.',
+    joinedDate: 'Marzo 2019'
+  };
 
   return (
     <div className="space-y-6">
@@ -174,44 +268,72 @@ const EmployeeTeam: React.FC = () => {
         <p className="text-muted-foreground">{mockUser.team}</p>
       </div>
 
-      <div className="mobile-card">
-        <div className="flex items-center gap-3 mb-4">
+      {/* Supervisor Card - Clickable */}
+      <div 
+        className="mobile-card cursor-pointer hover:border-primary/50 transition-colors"
+        onClick={() => setSelectedMember(supervisorData)}
+      >
+        <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
             <Users className="w-5 h-5 text-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="font-medium text-foreground">Supervisor</p>
             <p className="text-primary">{mockUser.supervisor}</p>
           </div>
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </div>
       </div>
 
       <div className="space-y-3">
         <h3 className="font-semibold text-foreground">Compañeros de equipo</h3>
-        {teamMembers.map((member) => (
+        {teamMembersData.map((member) => (
           <div 
             key={member.id} 
             className={cn(
-              "mobile-card flex items-center gap-3",
+              "mobile-card flex items-center gap-3 cursor-pointer hover:border-primary/50 transition-colors",
               member.isMe && "border-primary/30 bg-primary/5"
             )}
+            onClick={() => !member.isMe && setSelectedMember(member)}
           >
             <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
               <UserIcon className="w-5 h-5 text-muted-foreground" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-medium text-foreground">
                 {member.name}
                 {member.isMe && <span className="text-primary text-xs ml-2">(Tú)</span>}
               </p>
               <p className="text-sm text-muted-foreground">{member.cargo}</p>
             </div>
+            {!member.isMe && <ChevronRight className="w-5 h-5 text-muted-foreground" />}
           </div>
         ))}
       </div>
+
+      {/* Team Member Modal */}
+      <TeamMemberModal
+        member={selectedMember}
+        open={!!selectedMember}
+        onClose={() => setSelectedMember(null)}
+      />
     </div>
   );
 };
+
+// Interface for team member data
+interface TeamMemberData {
+  id: string;
+  name: string;
+  cargo: string;
+  cargoDescription: string;
+  skills: string[];
+  usualTasks: { id: string; title: string; frequency: string }[];
+  usualProcesses: { id: string; title: string }[];
+  funFact?: string;
+  joinedDate: string;
+  isMe?: boolean;
+}
 
 // Profile Page with Mi Cargo
 const EmployeeProfile: React.FC = () => {
