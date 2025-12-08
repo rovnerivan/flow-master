@@ -630,6 +630,7 @@ interface TaskCardProps {
   onCompleteTask?: (taskId: string) => void;
   onCorrectTask?: (taskId: string) => void;
   onViewTimeLog?: (taskId: string) => void;
+  onReopenTask?: (taskId: string) => void;
   hasActiveTimer?: boolean;
 }
 
@@ -641,6 +642,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onCompleteTask,
   onCorrectTask,
   onViewTimeLog,
+  onReopenTask,
   hasActiveTimer
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -864,6 +866,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 >
                   <Timer className="w-3.5 h-3.5" />
                   Registrar tiempo
+                </Button>
+              )}
+              {/* Reopen button for completed tasks */}
+              {task.status === 'completed' && (
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 h-8 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReopenTask?.(task.id);
+                  }}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reabrir
                 </Button>
               )}
               {/* Time log button - show if task has time spent */}
@@ -1181,6 +1198,17 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
     });
   };
 
+  // Reopen a completed task to continue working on it
+  const handleReopenTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, status: 'in_progress' as const } : t
+    ));
+    toast({
+      title: "Tarea reabierta",
+      description: "Puedes seguir añadiendo tiempo a esta tarea."
+    });
+  };
+
   // Handle viewing a process
   const handleViewProcess = (processId: string) => {
     setSelectedProcess(processId);
@@ -1238,6 +1266,7 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 onTaskAction={handleTaskAction}
                 onCorrectTask={handleCorrectTask}
                 onViewTimeLog={handleViewTimeLog}
+                onReopenTask={handleReopenTask}
                 hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
@@ -1266,6 +1295,7 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 onTaskAction={handleTaskAction}
                 onCorrectTask={handleCorrectTask}
                 onViewTimeLog={handleViewTimeLog}
+                onReopenTask={handleReopenTask}
                 hasActiveTimer={activeTimer?.taskId === task.id}
               />
             ))}
