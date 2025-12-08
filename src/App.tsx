@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
 import SupervisorDashboard from "./pages/supervisor/SupervisorDashboard";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
+          <Route path="/owner/*" element={<OwnerDashboard />} />
           <Route path="/employee/*" element={<EmployeeDashboard />} />
           <Route path="/supervisor/*" element={<SupervisorDashboard />} />
           <Route path="/superadmin/*" element={<SuperAdminDashboard />} />
