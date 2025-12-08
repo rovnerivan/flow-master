@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Mic, FileText, Plus, ArrowRight, Square, Loader2, FileAudio, Tag } from 'lucide-react';
+import { X, Upload, Mic, FileText, Plus, ArrowRight, Square, Loader2, FileAudio, Tag, AlertTriangle, User, Clock, Wrench, Trash2, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,16 @@ import { cn } from '@/lib/utils';
 import { defaultTags, TagInfo } from '@/lib/processTags';
 import { ExtendedContentEditor, ExtendedContentItem } from './ExtendedContentEditor';
 import { MediaUploader } from './MediaUploader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  ProcessStep, 
+  RiskLevel, 
+  ProcessFrequency, 
+  riskLevelConfig, 
+  frequencyConfig,
+  ChecklistItem 
+} from '@/lib/processTypes';
 
 interface ProcessCreatorModalProps {
   open: boolean;
@@ -28,6 +38,10 @@ interface Step {
   imageUrl?: string;
   documentUrl?: string;
   extendedContent?: ExtendedContentItem[];
+  // Phase 2 fields
+  isCritical?: boolean;
+  checklist?: ChecklistItem[];
+  troubleshooting?: string;
 }
 
 export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
@@ -55,12 +69,18 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
     importance: '',
     expectedResult: '',
     estimatedTime: '15',
+    // Phase 2 fields
+    owner: '',
+    riskLevel: 'low' as RiskLevel,
+    frequency: 'daily' as ProcessFrequency,
+    requiredTools: '',
+    successCriteria: '',
   });
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [steps, setSteps] = useState<Step[]>([
-    { id: '1', title: '', description: '', duration: '2', videoUrl: '', audioUrl: '', imageUrl: '', documentUrl: '', extendedContent: [] },
+    { id: '1', title: '', description: '', duration: '2', videoUrl: '', audioUrl: '', imageUrl: '', documentUrl: '', extendedContent: [], isCritical: false, checklist: [], troubleshooting: '' },
   ]);
 
   // Audio-guided form hooks - must be before conditional return
@@ -80,8 +100,19 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
 
   const resetState = () => {
     setMethod('select');
-    setFormData({ name: '', description: '', importance: '', expectedResult: '', estimatedTime: '15' });
-    setSteps([{ id: '1', title: '', description: '', duration: '2', videoUrl: '', audioUrl: '', imageUrl: '', documentUrl: '', extendedContent: [] }]);
+    setFormData({ 
+      name: '', 
+      description: '', 
+      importance: '', 
+      expectedResult: '', 
+      estimatedTime: '15',
+      owner: '',
+      riskLevel: 'low' as RiskLevel,
+      frequency: 'daily' as ProcessFrequency,
+      requiredTools: '',
+      successCriteria: '',
+    });
+    setSteps([{ id: '1', title: '', description: '', duration: '2', videoUrl: '', audioUrl: '', imageUrl: '', documentUrl: '', extendedContent: [], isCritical: false, checklist: [], troubleshooting: '' }]);
     setSelectedTags([]);
     setAudioBlob(null);
     setUploadedFile(null);
@@ -114,8 +145,44 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
       audioUrl: '',
       imageUrl: '',
       documentUrl: '',
-      extendedContent: []
+      extendedContent: [],
+      isCritical: false,
+      checklist: [],
+      troubleshooting: '',
     }]);
+  };
+
+  const addChecklistItem = (stepId: string) => {
+    setSteps(steps.map(s => {
+      if (s.id === stepId) {
+        const newItem: ChecklistItem = { id: Date.now().toString(), text: '', checked: false };
+        return { ...s, checklist: [...(s.checklist || []), newItem] };
+      }
+      return s;
+    }));
+  };
+
+  const updateChecklistItem = (stepId: string, itemId: string, text: string) => {
+    setSteps(steps.map(s => {
+      if (s.id === stepId) {
+        return {
+          ...s,
+          checklist: (s.checklist || []).map(item => 
+            item.id === itemId ? { ...item, text } : item
+          )
+        };
+      }
+      return s;
+    }));
+  };
+
+  const removeChecklistItem = (stepId: string, itemId: string) => {
+    setSteps(steps.map(s => {
+      if (s.id === stepId) {
+        return { ...s, checklist: (s.checklist || []).filter(item => item.id !== itemId) };
+      }
+      return s;
+    }));
   };
 
   const updateStepExtendedContent = (stepId: string, content: ExtendedContentItem[]) => {
@@ -200,12 +267,17 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
       importance: 'Este proceso es fundamental para mantener la consistencia operativa.',
       expectedResult: 'Al completar este proceso, el resultado será consistente y de alta calidad.',
       estimatedTime: '10',
+      owner: '',
+      riskLevel: 'low' as RiskLevel,
+      frequency: 'daily' as ProcessFrequency,
+      requiredTools: '',
+      successCriteria: '',
     });
     
     setSteps([
-      { id: '1', title: 'Paso 1: Preparación', description: 'Preparar los materiales necesarios', duration: '2', extendedContent: [] },
-      { id: '2', title: 'Paso 2: Ejecución', description: 'Realizar la tarea principal', duration: '5', extendedContent: [] },
-      { id: '3', title: 'Paso 3: Verificación', description: 'Verificar que todo está correcto', duration: '3', extendedContent: [] },
+      { id: '1', title: 'Paso 1: Preparación', description: 'Preparar los materiales necesarios', duration: '2', extendedContent: [], isCritical: false, checklist: [], troubleshooting: '' },
+      { id: '2', title: 'Paso 2: Ejecución', description: 'Realizar la tarea principal', duration: '5', extendedContent: [], isCritical: true, checklist: [{ id: 'c1', text: 'Verificar resultado' }], troubleshooting: 'Si hay problemas, consulte al supervisor.' },
+      { id: '3', title: 'Paso 3: Verificación', description: 'Verificar que todo está correcto', duration: '3', extendedContent: [], isCritical: false, checklist: [], troubleshooting: '' },
     ]);
 
     setIsProcessing(false);
@@ -441,6 +513,88 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
             className="w-32"
           />
         </div>
+
+        {/* Phase 2: Owner and Risk Level */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Responsable del proceso
+            </label>
+            <Input
+              value={formData.owner}
+              onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+              placeholder="Nombre del responsable"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Nivel de riesgo
+            </label>
+            <Select 
+              value={formData.riskLevel} 
+              onValueChange={(value: RiskLevel) => setFormData({ ...formData, riskLevel: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(riskLevelConfig).map(([key, config]) => (
+                  <SelectItem key={key} value={key}>
+                    <span className={config.color}>{config.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Phase 2: Frequency */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Frecuencia esperada
+          </label>
+          <Select 
+            value={formData.frequency} 
+            onValueChange={(value: ProcessFrequency) => setFormData({ ...formData, frequency: value })}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(frequencyConfig).map(([key, config]) => (
+                <SelectItem key={key} value={key}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Phase 2: Required Tools */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Wrench className="w-4 h-4" />
+            Herramientas/Recursos necesarios
+          </label>
+          <Input
+            value={formData.requiredTools}
+            onChange={(e) => setFormData({ ...formData, requiredTools: e.target.value })}
+            placeholder="Ej: Computadora, escáner, etiquetadora (separados por coma)"
+          />
+          <p className="text-xs text-muted-foreground">Separa cada herramienta con una coma</p>
+        </div>
+
+        {/* Phase 2: Success Criteria */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Criterios de éxito</label>
+          <Textarea
+            value={formData.successCriteria}
+            onChange={(e) => setFormData({ ...formData, successCriteria: e.target.value })}
+            placeholder="¿Cómo saber si el proceso se completó correctamente?"
+            rows={2}
+          />
+        </div>
       </div>
 
       {/* Steps */}
@@ -455,10 +609,21 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
 
         <div className="space-y-3">
           {steps.map((step, index) => (
-            <div key={step.id} className="p-4 rounded-lg border border-border bg-secondary/20 space-y-3">
+            <div 
+              key={step.id} 
+              className={cn(
+                "p-4 rounded-lg border bg-secondary/20 space-y-3",
+                step.isCritical ? "border-warning/50 bg-warning/5" : "border-border"
+              )}
+            >
               <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary flex-shrink-0">
-                  {index + 1}
+                <span className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0",
+                  step.isCritical 
+                    ? "bg-warning/20 text-warning" 
+                    : "bg-primary/10 text-primary"
+                )}>
+                  {step.isCritical ? '⚠️' : index + 1}
                 </span>
                 <Input
                   value={step.title}
@@ -483,12 +648,87 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
                   </button>
                 )}
               </div>
+
+              {/* Critical step toggle */}
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`critical-${step.id}`}
+                  checked={step.isCritical}
+                  onCheckedChange={(checked) => {
+                    setSteps(steps.map(s => s.id === step.id ? { ...s, isCritical: !!checked } : s));
+                  }}
+                />
+                <label 
+                  htmlFor={`critical-${step.id}`}
+                  className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1"
+                >
+                  <AlertTriangle className="w-3 h-3 text-warning" />
+                  Paso crítico (requiere atención especial)
+                </label>
+              </div>
+
               <Textarea
                 value={step.description}
                 onChange={(e) => updateStep(step.id, 'description', e.target.value)}
                 placeholder="Descripción detallada del paso..."
                 rows={2}
               />
+
+              {/* Checklist for step */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Checklist de verificación
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => addChecklistItem(step.id)}
+                    className="h-7 text-xs gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Agregar item
+                  </Button>
+                </div>
+                {(step.checklist || []).map((item) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <Input
+                      value={item.text}
+                      onChange={(e) => updateChecklistItem(step.id, item.id, e.target.value)}
+                      placeholder="Ej: Verificar que el producto no esté dañado"
+                      className="flex-1 h-8 text-sm"
+                    />
+                    <button
+                      onClick={() => removeChecklistItem(step.id, item.id)}
+                      className="p-1 rounded hover:bg-destructive/10 text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {(!step.checklist || step.checklist.length === 0) && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Sin items de verificación
+                  </p>
+                )}
+              </div>
+
+              {/* Troubleshooting */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <HelpCircle className="w-3 h-3" />
+                  ¿Qué hacer si algo sale mal?
+                </label>
+                <Textarea
+                  value={step.troubleshooting || ''}
+                  onChange={(e) => {
+                    setSteps(steps.map(s => s.id === step.id ? { ...s, troubleshooting: e.target.value } : s));
+                  }}
+                  placeholder="Instrucciones para resolver problemas comunes..."
+                  rows={2}
+                />
+              </div>
 
               {/* Media content for step */}
               <div className="grid grid-cols-2 gap-3 pt-2">
