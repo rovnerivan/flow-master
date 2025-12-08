@@ -9,6 +9,8 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
+  ChevronsDown,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProgressRing } from '@/components/dashboard/ProgressRing';
@@ -129,15 +131,26 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
     }
   };
 
+  const goToStep = (stepIndex: number) => {
+    setCurrentStep(stepIndex);
+    setView('learning');
+  };
+
   const progress = ((currentStep + 1) / process.steps.length) * 100;
 
   const renderOverview = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Cover/Diagram Placeholder */}
-      <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+      <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
         <div className="text-center">
           <FileText className="w-16 h-16 text-primary/50 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Diagrama del proceso</p>
+        </div>
+        
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce">
+          <ChevronsDown className="w-6 h-6 text-primary" />
+          <span className="text-xs text-muted-foreground mt-1">Desliza para ver más</span>
         </div>
       </div>
 
@@ -193,7 +206,7 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
             {process.steps.map((s, index) => (
               <div
                 key={s.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-border"
+                className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/30 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
                   {index + 1}
@@ -202,6 +215,15 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
                   <p className="font-medium text-foreground text-sm">{s.title}</p>
                   <p className="text-xs text-muted-foreground">{s.duration}</p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs text-primary"
+                  onClick={() => goToStep(index)}
+                >
+                  Ir al paso
+                  <ArrowRight className="w-3 h-3" />
+                </Button>
               </div>
             ))}
           </div>
@@ -243,9 +265,10 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
         {/* Mini step indicators */}
         <div className="flex gap-1 mt-3">
           {process.steps.map((_, index) => (
-            <div
+            <button
               key={index}
-              className={`flex-1 h-1 rounded-full transition-colors ${
+              onClick={() => setCurrentStep(index)}
+              className={`flex-1 h-1.5 rounded-full transition-colors cursor-pointer hover:opacity-80 ${
                 index <= currentStep ? 'bg-primary' : 'bg-border'
               }`}
             />
@@ -287,15 +310,18 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
 
       {/* Navigation */}
       <div className="p-4 border-t border-border flex items-center justify-between gap-4">
-        <Button
-          variant="outline"
-          onClick={handlePrev}
-          disabled={currentStep === 0}
-          className="gap-2"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Anterior
-        </Button>
+        {currentStep > 0 ? (
+          <Button
+            variant="outline"
+            onClick={handlePrev}
+            className="gap-2"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Paso anterior
+          </Button>
+        ) : (
+          <div />
+        )}
 
         {currentStep === process.steps.length - 1 ? (
           <Button variant="hero" onClick={onClose} className="gap-2">
