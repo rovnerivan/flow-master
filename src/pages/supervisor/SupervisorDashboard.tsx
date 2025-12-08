@@ -251,6 +251,39 @@ const SupervisorHome: React.FC = () => {
 // Team Tasks Page - Gestión de tareas del equipo
 const TeamTasksPage: React.FC = () => {
   const [activeTimers, setActiveTimers] = useState<Record<string, boolean>>({});
+  const [timerSeconds, setTimerSeconds] = useState<Record<string, number>>({});
+  const [tasks, setTasks] = useState(mockTeamTasks);
+  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const [showProcessViewer, setShowProcessViewer] = useState(false);
+  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
+  const [expandedProcesses, setExpandedProcesses] = useState<Record<string, boolean>>({});
+
+  // Mock processes for association
+  const availableProcesses = mockProcesses;
+
+  // Task associated processes mock
+  const taskProcesses: Record<string, typeof mockProcesses> = {
+    '1': [mockProcesses[0], mockProcesses[2]],
+    '2': [mockProcesses[1]],
+    '3': [],
+    '4': [mockProcesses[0]],
+    '5': [mockProcesses[1], mockProcesses[3]],
+  };
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setTimerSeconds(prev => {
+        const updated = { ...prev };
+        Object.keys(activeTimers).forEach(taskId => {
+          if (activeTimers[taskId]) {
+            updated[taskId] = (updated[taskId] || 0) + 1;
+          }
+        });
+        return updated;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeTimers]);
 
   const toggleTimer = (taskId: string) => {
     setActiveTimers(prev => ({ ...prev, [taskId]: !prev[taskId] }));
@@ -258,18 +291,41 @@ const TeamTasksPage: React.FC = () => {
   };
 
   const markComplete = (taskId: string) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
+    setActiveTimers(prev => ({ ...prev, [taskId]: false }));
     toast.success('Tarea marcada como completada');
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const toggleProcessDropdown = (taskId: string) => {
+    setExpandedProcesses(prev => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
+
+  const openProcessViewer = (processId: string) => {
+    setSelectedProcessId(processId);
+    setShowProcessViewer(true);
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Tareas del Equipo</h1>
-        <p className="text-muted-foreground">Gestiona y supervisa las tareas de tu equipo</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Tareas del Equipo</h1>
+          <p className="text-muted-foreground">Gestiona y supervisa las tareas de tu equipo</p>
+        </div>
+        <Button variant="hero" className="gap-2" onClick={() => setShowNewTaskModal(true)}>
+          <Plus className="w-4 h-4" />
+          Nueva Tarea
+        </Button>
       </div>
 
       <div className="space-y-4">
-        {mockTeamTasks.map((task) => (
+        {tasks.map((task) => (
           <div key={task.id} className="kpi-card">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -281,33 +337,70 @@ const TeamTasksPage: React.FC = () => {
                   )}>
                     {task.status === 'completed' ? 'Completada' : task.status === 'in_progress' ? 'En progreso' : 'Pendiente'}
                   </span>
+                  {activeTimers[task.id] && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning">
+                      {formatTime(timerSeconds[task.id] || 0)}
+                    </span>
+                  )}
                 </div>
                 <h4 className="font-medium text-foreground">{task.title}</h4>
                 <p className="text-sm text-muted-foreground mt-1">Asignado a: {task.assignedTo}</p>
                 <p className="text-sm text-muted-foreground">Vence: {task.dueTime}</p>
+
+                {/* Associated Processes */}
+                {taskProcesses[task.id] && taskProcesses[task.id].length > 0 && (
+                  <div className="mt-3">
+                    <button 
+                      onClick={() => toggleProcessDropdown(task.id)}
+                      className="flex items-center gap-2 text-sm text-primary hover:underline"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Ver procesos asociados ({taskProcesses[task.id].length})
+                      <ChevronRight className={cn('w-4 h-4 transition-transform', expandedProcesses[task.id] && 'rotate-90')} />
+                    </button>
+                    {expandedProcesses[task.id] && (
+                      <div className="mt-2 space-y-2 pl-6 border-l-2 border-primary/20">
+                        {taskProcesses[task.id].map(process => (
+                          <button
+                            key={process.id}
+                            onClick={() => openProcessViewer(process.id)}
+                            className="flex items-center gap-2 text-sm text-foreground hover:text-primary w-full text-left p-2 rounded-lg hover:bg-secondary/50"
+                          >
+                            <Eye className="w-4 h-4" />
+                            {process.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => toggleTimer(task.id)}
-                  className="h-8 w-8"
-                >
-                  {activeTimers[task.id] ? (
-                    <Pause className="w-4 h-4 text-warning" />
-                  ) : (
-                    <Play className="w-4 h-4 text-success" />
-                  )}
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => markComplete(task.id)}
-                  className="h-8 w-8"
-                >
-                  <CheckCircle className="w-4 h-4 text-primary" />
-                </Button>
+                {task.status !== 'completed' && (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => toggleTimer(task.id)}
+                      className="h-8 w-8"
+                    >
+                      {activeTimers[task.id] ? (
+                        <Pause className="w-4 h-4 text-warning" />
+                      ) : (
+                        <Play className="w-4 h-4 text-success" />
+                      )}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => markComplete(task.id)}
+                      className="h-8 w-8"
+                    >
+                      <CheckCircle className="w-4 h-4 text-primary" />
+                    </Button>
+                  </>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -334,6 +427,167 @@ const TeamTasksPage: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* New Task Modal */}
+      <NewTeamTaskModal 
+        open={showNewTaskModal}
+        onClose={() => setShowNewTaskModal(false)}
+        teamMembers={mockTeamMembers}
+        availableProcesses={availableProcesses}
+        onSave={(newTask) => {
+          setTasks(prev => [...prev, { ...newTask, id: String(prev.length + 1), status: 'pending' as const }]);
+          setShowNewTaskModal(false);
+          toast.success('Tarea creada exitosamente');
+        }}
+      />
+
+      {/* Process Viewer */}
+      {showProcessViewer && selectedProcessId && (
+        <ProcessViewerModal
+          processId={selectedProcessId}
+          onClose={() => {
+            setShowProcessViewer(false);
+            setSelectedProcessId(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// New Team Task Modal
+interface NewTeamTaskModalProps {
+  open: boolean;
+  onClose: () => void;
+  teamMembers: typeof mockTeamMembers;
+  availableProcesses: typeof mockProcesses;
+  onSave: (task: { title: string; assignedTo: string; dueTime: string; description?: string; associatedProcesses?: string[] }) => void;
+}
+
+const NewTeamTaskModal: React.FC<NewTeamTaskModalProps> = ({ open, onClose, teamMembers, availableProcesses, onSave }) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [dueTime, setDueTime] = useState('');
+  const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'occasional'>('daily');
+  const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
+
+  const handleSubmit = () => {
+    if (!title || !assignedTo || !dueTime) {
+      toast.error('Complete los campos obligatorios');
+      return;
+    }
+    onSave({ title, assignedTo, dueTime, description, associatedProcesses: selectedProcesses });
+    setTitle('');
+    setDescription('');
+    setAssignedTo('');
+    setDueTime('');
+    setSelectedProcesses([]);
+  };
+
+  const toggleProcess = (processId: string) => {
+    setSelectedProcesses(prev => 
+      prev.includes(processId) 
+        ? prev.filter(p => p !== processId)
+        : [...prev, processId]
+    );
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold mb-4">Nueva Tarea de Equipo</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Título de la tarea *</label>
+            <input 
+              type="text" 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+              placeholder="Ej: Verificar inventario de caja"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Descripción</label>
+            <textarea 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+              rows={2}
+              placeholder="Descripción opcional..."
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Asignar a *</label>
+            <select 
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+            >
+              <option value="">Seleccionar colaborador</option>
+              {teamMembers.map(member => (
+                <option key={member.id} value={member.name}>{member.name} - {member.cargo}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Frecuencia</label>
+              <select 
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly' | 'monthly' | 'occasional')}
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+              >
+                <option value="daily">Diaria</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensual</option>
+                <option value="occasional">Ocasional</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Hora de vencimiento *</label>
+              <input 
+                type="time" 
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background"
+              />
+            </div>
+          </div>
+
+          {/* Associated Processes */}
+          <div>
+            <label className="text-sm font-medium">Procesos Asociados</label>
+            <p className="text-xs text-muted-foreground mb-2">Selecciona los procesos relacionados con esta tarea</p>
+            <div className="space-y-2 max-h-40 overflow-y-auto border border-border rounded-lg p-2">
+              {availableProcesses.map(process => (
+                <label key={process.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    checked={selectedProcesses.includes(process.id)}
+                    onChange={() => toggleProcess(process.id)}
+                    className="rounded border-border"
+                  />
+                  <span className="text-sm">{process.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button variant="hero" onClick={handleSubmit} className="flex-1">Crear Tarea</Button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -341,11 +595,64 @@ const TeamTasksPage: React.FC = () => {
 // Team Page
 const SupervisorTeamPage: React.FC = () => {
   const [showCargoModal, setShowCargoModal] = useState(false);
+  const [showTasksModal, setShowTasksModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<typeof mockTeamMembers[0] | null>(null);
 
   const openCargoModal = (member: typeof mockTeamMembers[0]) => {
     setSelectedMember(member);
     setShowCargoModal(true);
+  };
+
+  const openTasksModal = (member: typeof mockTeamMembers[0]) => {
+    setSelectedMember(member);
+    setShowTasksModal(true);
+  };
+
+  const openHistoryModal = (member: typeof mockTeamMembers[0]) => {
+    setSelectedMember(member);
+    setShowHistoryModal(true);
+  };
+
+  // Mock tasks for each member
+  const memberTasks: Record<string, Array<{ id: string; title: string; status: string; dueTime: string }>> = {
+    '1': [
+      { id: 't1', title: 'Verificar inventario de caja', status: 'completed', dueTime: '10:00' },
+      { id: 't2', title: 'Reporte de incidencias', status: 'in_progress', dueTime: '16:00' },
+    ],
+    '2': [
+      { id: 't3', title: 'Revisar stock de productos', status: 'in_progress', dueTime: '11:00' },
+      { id: 't4', title: 'Atender clientes especiales', status: 'pending', dueTime: '15:00' },
+    ],
+    '3': [
+      { id: 't5', title: 'Limpieza área de ventas', status: 'completed', dueTime: '12:00' },
+      { id: 't6', title: 'Organizar almacén', status: 'completed', dueTime: '14:00' },
+    ],
+    '4': [
+      { id: 't7', title: 'Atender cliente especial', status: 'pending', dueTime: '14:00' },
+      { id: 't8', title: 'Cerrar ventas del día', status: 'pending', dueTime: '18:00' },
+    ],
+  };
+
+  // Mock history for each member
+  const memberHistory: Record<string, Array<{ date: string; tasksCompleted: number; tasksTotal: number; compliance: number }>> = {
+    '1': [
+      { date: '2024-01-15', tasksCompleted: 5, tasksTotal: 5, compliance: 100 },
+      { date: '2024-01-14', tasksCompleted: 4, tasksTotal: 5, compliance: 80 },
+      { date: '2024-01-13', tasksCompleted: 5, tasksTotal: 6, compliance: 83 },
+    ],
+    '2': [
+      { date: '2024-01-15', tasksCompleted: 3, tasksTotal: 4, compliance: 75 },
+      { date: '2024-01-14', tasksCompleted: 4, tasksTotal: 4, compliance: 100 },
+    ],
+    '3': [
+      { date: '2024-01-15', tasksCompleted: 3, tasksTotal: 3, compliance: 100 },
+      { date: '2024-01-14', tasksCompleted: 3, tasksTotal: 3, compliance: 100 },
+    ],
+    '4': [
+      { date: '2024-01-15', tasksCompleted: 4, tasksTotal: 6, compliance: 67 },
+      { date: '2024-01-14', tasksCompleted: 5, tasksTotal: 6, compliance: 83 },
+    ],
   };
 
   return (
@@ -381,8 +688,8 @@ const SupervisorTeamPage: React.FC = () => {
               />
             </div>
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1">Ver tareas</Button>
-              <Button variant="outline" size="sm" className="flex-1">Historial</Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => openTasksModal(member)}>Ver tareas</Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => openHistoryModal(member)}>Historial</Button>
               <Button variant="outline" size="sm" onClick={() => openCargoModal(member)}>
                 <Briefcase className="w-4 h-4" />
               </Button>
@@ -422,6 +729,86 @@ const SupervisorTeamPage: React.FC = () => {
             <div className="flex gap-3 mt-6">
               <Button variant="outline" onClick={() => setShowCargoModal(false)} className="flex-1">Cancelar</Button>
               <Button variant="hero" onClick={() => { toast.success('Cargo actualizado'); setShowCargoModal(false); }} className="flex-1">Guardar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tasks Modal */}
+      {showTasksModal && selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowTasksModal(false)} />
+          <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl p-6 max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-2">Tareas de {selectedMember.name}</h2>
+            <p className="text-sm text-muted-foreground mb-4">{selectedMember.cargo}</p>
+            
+            <div className="space-y-3">
+              {(memberTasks[selectedMember.id] || []).map(task => (
+                <div key={task.id} className="p-3 rounded-lg border border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-foreground">{task.title}</span>
+                    <span className={cn(
+                      'px-2 py-0.5 rounded-full text-xs font-medium',
+                      task.status === 'completed' ? 'bg-success/20 text-success' :
+                      task.status === 'in_progress' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                    )}>
+                      {task.status === 'completed' ? 'Completada' : task.status === 'in_progress' ? 'En progreso' : 'Pendiente'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">Vence: {task.dueTime}</p>
+                </div>
+              ))}
+              {(!memberTasks[selectedMember.id] || memberTasks[selectedMember.id].length === 0) && (
+                <p className="text-center text-muted-foreground py-4">No hay tareas asignadas</p>
+              )}
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowTasksModal(false)} className="flex-1">Cerrar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {showHistoryModal && selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowHistoryModal(false)} />
+          <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl p-6 max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-2">Historial de {selectedMember.name}</h2>
+            <p className="text-sm text-muted-foreground mb-4">{selectedMember.cargo}</p>
+            
+            <div className="space-y-3">
+              {(memberHistory[selectedMember.id] || []).map((entry, index) => (
+                <div key={index} className="p-3 rounded-lg border border-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-foreground">{entry.date}</span>
+                    <span className={cn(
+                      'px-2 py-0.5 rounded-full text-xs font-medium',
+                      entry.compliance >= 90 ? 'bg-success/20 text-success' :
+                      entry.compliance >= 70 ? 'bg-warning/20 text-warning' : 'bg-destructive/20 text-destructive'
+                    )}>
+                      {entry.compliance}%
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {entry.tasksCompleted} de {entry.tasksTotal} tareas completadas
+                  </p>
+                  <div className="mt-2 h-2 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${entry.compliance}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {(!memberHistory[selectedMember.id] || memberHistory[selectedMember.id].length === 0) && (
+                <p className="text-center text-muted-foreground py-4">No hay historial disponible</p>
+              )}
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <Button variant="outline" onClick={() => setShowHistoryModal(false)} className="flex-1">Cerrar</Button>
             </div>
           </div>
         </div>
