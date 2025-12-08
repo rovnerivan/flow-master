@@ -519,6 +519,7 @@ export type Database = {
           hire_date: string | null
           id: string
           job_title: string | null
+          manual_time_entry_override: boolean | null
           reports_to_id: string | null
           team_id: string | null
           updated_at: string
@@ -531,6 +532,7 @@ export type Database = {
           hire_date?: string | null
           id: string
           job_title?: string | null
+          manual_time_entry_override?: boolean | null
           reports_to_id?: string | null
           team_id?: string | null
           updated_at?: string
@@ -543,6 +545,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           job_title?: string | null
+          manual_time_entry_override?: boolean | null
           reports_to_id?: string | null
           team_id?: string | null
           updated_at?: string
@@ -879,6 +882,7 @@ export type Database = {
       }
       teams: {
         Row: {
+          allow_manual_time_entry: boolean
           created_at: string
           id: string
           invite_code: string
@@ -888,6 +892,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_manual_time_entry?: boolean
           created_at?: string
           id?: string
           invite_code?: string
@@ -897,6 +902,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_manual_time_entry?: boolean
           created_at?: string
           id?: string
           invite_code?: string
