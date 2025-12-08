@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { defaultTags } from '@/pages/admin/AdminProcesses';
 
 interface ProcessCreatorModalProps {
   open: boolean;
@@ -20,17 +21,8 @@ interface Step {
   duration: string;
 }
 
-// Available tags for the system
-const availableTags = [
-  { id: 'operaciones', name: 'Operaciones', color: 'bg-blue-500/20 text-blue-400' },
-  { id: 'ventas', name: 'Ventas', color: 'bg-green-500/20 text-green-400' },
-  { id: 'atencion', name: 'Atención al Cliente', color: 'bg-purple-500/20 text-purple-400' },
-  { id: 'almacen', name: 'Almacén', color: 'bg-orange-500/20 text-orange-400' },
-  { id: 'finanzas', name: 'Finanzas', color: 'bg-yellow-500/20 text-yellow-400' },
-  { id: 'seguridad', name: 'Seguridad', color: 'bg-red-500/20 text-red-400' },
-  { id: 'calidad', name: 'Calidad', color: 'bg-teal-500/20 text-teal-400' },
-  { id: 'rrhh', name: 'RRHH', color: 'bg-pink-500/20 text-pink-400' },
-];
+// Use default tags from AdminProcesses
+const availableTags = defaultTags;
 
 export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   open,
