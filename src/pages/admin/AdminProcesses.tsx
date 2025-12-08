@@ -498,6 +498,22 @@ const AdminProcesses: React.FC = () => {
       <ProcessCreatorModal
         open={showCreator}
         onClose={() => setShowCreator(false)}
+        availableTags={availableTags}
+        onCreateTag={(name) => {
+          const tagId = name.toLowerCase().replace(/\s+/g, '-');
+          if (availableTags.some(t => t.id === tagId)) {
+            toast.error('Esta etiqueta ya existe');
+            return;
+          }
+          const colorIndex = (availableTags.length - defaultTags.length) % customTagColors.length;
+          const newTag: TagInfo = {
+            id: tagId,
+            name: name,
+            color: customTagColors[colorIndex],
+          };
+          setAvailableTags(prev => [...prev, newTag]);
+          toast.success(`Etiqueta "${name}" creada`);
+        }}
       />
 
       {/* Process Viewer Modal */}
@@ -523,6 +539,22 @@ const AdminProcesses: React.FC = () => {
             toast.success(`Proceso "${updatedProcess.name}" actualizado`);
             setShowEditor(false);
             setSelectedProcess(null);
+          }}
+          availableTags={availableTags}
+          onCreateTag={(name) => {
+            const tagId = name.toLowerCase().replace(/\s+/g, '-');
+            if (availableTags.some(t => t.id === tagId)) {
+              toast.error('Esta etiqueta ya existe');
+              return;
+            }
+            const colorIndex = (availableTags.length - defaultTags.length) % customTagColors.length;
+            const newTag: TagInfo = {
+              id: tagId,
+              name: name,
+              color: customTagColors[colorIndex],
+            };
+            setAvailableTags(prev => [...prev, newTag]);
+            toast.success(`Etiqueta "${name}" creada`);
           }}
         />
       )}
