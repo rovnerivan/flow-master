@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, Play, Pause, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit } from 'lucide-react';
+import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, Play, Pause, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,7 @@ interface Task {
   departmentId?: string;
 }
 
-const mockTasks: Task[] = [
+const initialMockTasks: Task[] = [
   {
     id: '1',
     title: 'Verificar inventario de caja',
@@ -187,10 +187,11 @@ const AdminTasks: React.FC = () => {
   const [expandedProcess, setExpandedProcess] = useState<string | null>(null);
   const [showProcessViewer, setShowProcessViewer] = useState<{ taskId: string; processId: string; allProcesses: { id: string; name: string }[] } | null>(null);
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+  const [tasks, setTasks] = useState<Task[]>(initialMockTasks);
   const timerRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
   const filterTasks = (frequency: string) => {
-    let filtered = mockTasks;
+    let filtered = tasks;
     
     // Frequency filter
     if (frequency !== 'all') {
@@ -231,6 +232,8 @@ const AdminTasks: React.FC = () => {
       }));
     }, 1000);
     
+    // Update task status to in_progress
+    updateTaskStatus(taskId, 'in_progress');
     toast.success('Temporizador iniciado');
   };
 
@@ -246,6 +249,18 @@ const AdminTasks: React.FC = () => {
     toast.info('Temporizador pausado');
   };
 
+  const updateTaskStatus = (taskId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        return {
+          ...task,
+          assignments: task.assignments.map(a => ({ ...a, status: newStatus }))
+        };
+      }
+      return task;
+    }));
+  };
+
   const completeTask = (taskId: string) => {
     if (timerRefs.current[taskId]) {
       clearInterval(timerRefs.current[taskId]);
@@ -253,11 +268,25 @@ const AdminTasks: React.FC = () => {
     }
     const timer = activeTimers[taskId];
     const timeSpent = timer ? Math.floor(timer.seconds / 60) : 0;
+    
+    // Update task status to completed
+    updateTaskStatus(taskId, 'completed');
+    
     toast.success(`Tarea completada. Tiempo registrado: ${formatTime(timeSpent)}`);
     setActiveTimers(prev => {
       const { [taskId]: _, ...rest } = prev;
       return rest;
     });
+  };
+
+  const setTaskPending = (taskId: string) => {
+    updateTaskStatus(taskId, 'pending');
+    toast.info('Tarea marcada como pendiente');
+  };
+
+  const setTaskInProgress = (taskId: string) => {
+    updateTaskStatus(taskId, 'in_progress');
+    toast.info('Tarea marcada en progreso');
   };
 
   const handleEditTask = (task: Task) => {
@@ -437,10 +466,25 @@ const AdminTasks: React.FC = () => {
                     Pausar tiempo
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => completeTask(task.id)}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Marcar completada
-                </DropdownMenuItem>
+                <div className="h-px bg-border my-1" />
+                {overallStatus !== 'pending' && (
+                  <DropdownMenuItem onClick={() => setTaskPending(task.id)}>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Volver a pendiente
+                  </DropdownMenuItem>
+                )}
+                {overallStatus !== 'in_progress' && (
+                  <DropdownMenuItem onClick={() => setTaskInProgress(task.id)}>
+                    <Play className="w-4 h-4 mr-2" />
+                    Marcar en progreso
+                  </DropdownMenuItem>
+                )}
+                {overallStatus !== 'completed' && (
+                  <DropdownMenuItem onClick={() => completeTask(task.id)}>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Marcar completada
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
