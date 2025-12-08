@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 
 interface ErrorItem {
@@ -98,6 +99,7 @@ const AdminErrors: React.FC = () => {
   const [expandedError, setExpandedError] = useState<string | null>(null);
   const [noteModal, setNoteModal] = useState<{ errorId: string; type: 'admin' } | null>(null);
   const [newNote, setNewNote] = useState('');
+  const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
 
   const filteredErrors = errors.filter((error) => {
     const matchesSearch =
@@ -171,6 +173,11 @@ const AdminErrors: React.FC = () => {
           Exportar historial
         </Button>
       </div>
+      {/* Hierarchy Filter */}
+      <HierarchyFilter 
+        value={hierarchyFilter}
+        onChange={setHierarchyFilter}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

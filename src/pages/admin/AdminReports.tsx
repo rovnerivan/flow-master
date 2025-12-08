@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Download, Calendar, Filter, Plus, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
 import { toast } from 'sonner';
 
 interface Report {
@@ -68,6 +69,7 @@ const AdminReports: React.FC = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [downloading, setDownloading] = useState<string | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
 
   const filteredReports = selectedType === 'all' 
     ? mockReports 
@@ -109,6 +111,12 @@ const AdminReports: React.FC = () => {
           Generar Reporte
         </Button>
       </div>
+
+      {/* Hierarchy Filter */}
+      <HierarchyFilter 
+        value={hierarchyFilter}
+        onChange={setHierarchyFilter}
+      />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">

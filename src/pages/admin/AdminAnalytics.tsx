@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Clock, AlertTriangle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
 import {
   BarChart,
   Bar,
@@ -55,6 +56,8 @@ const errorDistributionData = [
 ];
 
 const AdminAnalytics: React.FC = () => {
+  const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,6 +70,12 @@ const AdminAnalytics: React.FC = () => {
         </div>
         <Button variant="outline">Exportar datos</Button>
       </div>
+
+      {/* Hierarchy Filter */}
+      <HierarchyFilter 
+        value={hierarchyFilter}
+        onChange={setHierarchyFilter}
+      />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
