@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { defaultTags, TagInfo } from '@/lib/processTags';
+import { ExtendedContentEditor, ExtendedContentItem } from './ExtendedContentEditor';
 
 interface Process {
   id: string;
@@ -23,7 +24,7 @@ interface Step {
   title: string;
   description: string;
   duration: string;
-  extendedContent?: string;
+  extendedContent?: ExtendedContentItem[];
 }
 
 interface ProcessEditorModalProps {
@@ -54,7 +55,7 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
   const [showTagInput, setShowTagInput] = useState(false);
 
   const [steps, setSteps] = useState<Step[]>([
-    { id: '1', title: 'Paso 1', description: 'Descripción del paso', duration: '2' },
+    { id: '1', title: 'Paso 1', description: 'Descripción del paso', duration: '2', extendedContent: [] },
   ]);
 
   const toggleTag = (tagId: string) => {
@@ -71,8 +72,13 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
       title: `Paso ${steps.length + 1}`,
       description: '',
       duration: '2',
+      extendedContent: [],
     };
     setSteps([...steps, newStep]);
+  };
+
+  const updateStepExtendedContent = (stepId: string, content: ExtendedContentItem[]) => {
+    setSteps(steps.map(s => s.id === stepId ? { ...s, extendedContent: content } : s));
   };
 
   const removeStep = (id: string) => {
@@ -308,22 +314,20 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
                     placeholder="Descripción detallada del paso..."
                     rows={2}
                   />
-                  {/* Extended version - optional */}
+                  {/* Extended version - optional with rich content */}
                   <details className="group">
                     <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
                       <Plus className="w-3 h-3 group-open:rotate-45 transition-transform" />
-                      Versión extendida (opcional)
+                      Versión extendida (opcional) - {step.extendedContent?.length || 0} elemento(s)
                     </summary>
-                    <div className="mt-2">
-                      <Textarea
-                        value={step.extendedContent || ''}
-                        onChange={(e) => updateStep(step.id, 'extendedContent', e.target.value)}
-                        placeholder="Contenido adicional para profundizar en este paso: explicaciones detalladas, ejemplos, recursos, etc."
-                        rows={4}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Este contenido aparecerá cuando el empleado pulse "Ver versión extendida"
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Añade videos, audios, imágenes, documentos, textos o enlaces para profundizar en este paso.
                       </p>
+                      <ExtendedContentEditor
+                        items={step.extendedContent || []}
+                        onChange={(items) => updateStepExtendedContent(step.id, items)}
+                      />
                     </div>
                   </details>
                 </div>

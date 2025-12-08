@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { defaultTags, TagInfo } from '@/lib/processTags';
+import { ExtendedContentEditor, ExtendedContentItem } from './ExtendedContentEditor';
 
 interface ProcessCreatorModalProps {
   open: boolean;
@@ -21,7 +22,7 @@ interface Step {
   title: string;
   description: string;
   duration: string;
-  extendedContent?: string;
+  extendedContent?: ExtendedContentItem[];
 }
 
 export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
@@ -54,7 +55,7 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [steps, setSteps] = useState<Step[]>([
-    { id: '1', title: '', description: '', duration: '2' },
+    { id: '1', title: '', description: '', duration: '2', extendedContent: [] },
   ]);
 
   // Audio-guided form hooks - must be before conditional return
@@ -75,7 +76,7 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   const resetState = () => {
     setMethod('select');
     setFormData({ name: '', description: '', importance: '', expectedResult: '', estimatedTime: '15' });
-    setSteps([{ id: '1', title: '', description: '', duration: '2' }]);
+    setSteps([{ id: '1', title: '', description: '', duration: '2', extendedContent: [] }]);
     setSelectedTags([]);
     setAudioBlob(null);
     setUploadedFile(null);
@@ -103,8 +104,13 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
       id: Date.now().toString(), 
       title: '', 
       description: '', 
-      duration: '2' 
+      duration: '2',
+      extendedContent: []
     }]);
+  };
+
+  const updateStepExtendedContent = (stepId: string, content: ExtendedContentItem[]) => {
+    setSteps(steps.map(s => s.id === stepId ? { ...s, extendedContent: content } : s));
   };
 
   const removeStep = (id: string) => {
@@ -188,9 +194,9 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
     });
     
     setSteps([
-      { id: '1', title: 'Paso 1: Preparación', description: 'Preparar los materiales necesarios', duration: '2' },
-      { id: '2', title: 'Paso 2: Ejecución', description: 'Realizar la tarea principal', duration: '5' },
-      { id: '3', title: 'Paso 3: Verificación', description: 'Verificar que todo está correcto', duration: '3' },
+      { id: '1', title: 'Paso 1: Preparación', description: 'Preparar los materiales necesarios', duration: '2', extendedContent: [] },
+      { id: '2', title: 'Paso 2: Ejecución', description: 'Realizar la tarea principal', duration: '5', extendedContent: [] },
+      { id: '3', title: 'Paso 3: Verificación', description: 'Verificar que todo está correcto', duration: '3', extendedContent: [] },
     ]);
 
     setIsProcessing(false);
@@ -474,22 +480,20 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
                 placeholder="Descripción detallada del paso..."
                 rows={2}
               />
-              {/* Extended version - optional */}
+              {/* Extended version - optional with rich content */}
               <details className="group">
                 <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
                   <Plus className="w-3 h-3 group-open:rotate-45 transition-transform" />
-                  Versión extendida (opcional)
+                  Versión extendida (opcional) - {step.extendedContent?.length || 0} elemento(s)
                 </summary>
-                <div className="mt-2">
-                  <Textarea
-                    value={step.extendedContent || ''}
-                    onChange={(e) => updateStep(step.id, 'extendedContent', e.target.value)}
-                    placeholder="Contenido adicional para profundizar en este paso: explicaciones detalladas, ejemplos, recursos, etc."
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Este contenido aparecerá cuando el empleado pulse "Ver versión extendida"
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Añade videos, audios, imágenes, documentos, textos o enlaces para profundizar en este paso.
                   </p>
+                  <ExtendedContentEditor
+                    items={step.extendedContent || []}
+                    onChange={(items) => updateStepExtendedContent(step.id, items)}
+                  />
                 </div>
               </details>
             </div>
@@ -930,6 +934,22 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
               {recordingField === `step-${step.id}` && (
                 <p className="text-xs text-destructive animate-pulse">Grabando... {formatTime(fieldRecordingTime)}</p>
               )}
+              {/* Extended version - optional with rich content */}
+              <details className="group">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  <Plus className="w-3 h-3 group-open:rotate-45 transition-transform" />
+                  Versión extendida (opcional) - {step.extendedContent?.length || 0} elemento(s)
+                </summary>
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Añade videos, audios, imágenes, documentos, textos o enlaces.
+                  </p>
+                  <ExtendedContentEditor
+                    items={step.extendedContent || []}
+                    onChange={(items) => updateStepExtendedContent(step.id, items)}
+                  />
+                </div>
+              </details>
             </div>
           ))}
         </div>
