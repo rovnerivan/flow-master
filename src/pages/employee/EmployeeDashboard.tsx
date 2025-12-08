@@ -18,6 +18,9 @@ import {
   Tag,
   ClipboardList,
   AlertTriangle,
+  CalendarDays,
+  Clock,
+  Target,
 } from 'lucide-react';
 import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -99,6 +102,9 @@ const mockUser = {
   ],
 };
 
+// Lazy load PendingPlanningWidget
+const PendingPlanningWidget = React.lazy(() => import('@/components/employee/PendingPlanningWidget'));
+
 // Home Page
 const EmployeeHome: React.FC = () => {
   return (
@@ -115,6 +121,13 @@ const EmployeeHome: React.FC = () => {
         <p className="text-muted-foreground mt-2">
           Tienes 3 tareas pendientes para hoy
         </p>
+      </div>
+
+      {/* Pending Planning Widget */}
+      <div className="animate-slide-up" style={{ animationDelay: '0.05s' }}>
+        <React.Suspense fallback={null}>
+          <PendingPlanningWidget />
+        </React.Suspense>
       </div>
 
       {/* Daily Checklist - KILLER FEATURE */}
@@ -515,6 +528,7 @@ interface TeamMemberData {
 // Lazy load error and tasks views
 const EmployeeErrorsView = React.lazy(() => import('@/components/employee/EmployeeErrorsView'));
 const EmployeeTasksView = React.lazy(() => import('@/components/employee/EmployeeTasksView'));
+const EmployeeCalendarPlanner = React.lazy(() => import('@/components/employee/EmployeeCalendarPlanner'));
 
 // Profile Page with Mi Cargo and Errors
 const EmployeeProfile: React.FC = () => {
@@ -736,6 +750,11 @@ const EmployeeDashboard: React.FC = () => {
           <Route path="/tasks" element={
             <React.Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
               <EmployeeTasksView />
+            </React.Suspense>
+          } />
+          <Route path="/calendar" element={
+            <React.Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
+              <EmployeeCalendarPlanner className="h-[calc(100vh-12rem)]" />
             </React.Suspense>
           } />
           <Route path="/processes" element={<EmployeeProcesses onProcessClick={handleProcessClick} />} />
