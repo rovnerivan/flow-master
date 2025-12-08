@@ -7,9 +7,9 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminTasks from "./pages/admin/AdminTasks";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
+import SupervisorDashboard from "./pages/supervisor/SupervisorDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +26,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
           <Route path="/employee/*" element={<EmployeeDashboard />} />
+          <Route path="/supervisor/*" element={<SupervisorDashboard />} />
           <Route path="/superadmin/*" element={<SuperAdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

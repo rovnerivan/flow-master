@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   UserPlus,
   ListTodo,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -23,9 +24,10 @@ import { toast } from 'sonner';
 interface AdminSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  isSupervisor?: boolean;
 }
 
-const navItems = [
+const adminNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Layers, label: 'Procesos', path: '/admin/processes' },
   { icon: ListTodo, label: 'Tareas', path: '/admin/tasks' },
@@ -36,12 +38,23 @@ const navItems = [
   { icon: FileText, label: 'Reportes', path: '/admin/reports' },
 ];
 
+const supervisorNavItems = [
+  { icon: LayoutDashboard, label: 'Mi Dashboard', path: '/supervisor' },
+  { icon: ListTodo, label: 'Mis Tareas', path: '/supervisor/my-tasks' },
+  { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
+  { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
+];
+
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   collapsed,
   onToggle,
+  isSupervisor = false,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const navItems = isSupervisor ? supervisorNavItems : adminNavItems;
+  const basePath = isSupervisor ? '/supervisor' : '/admin';
 
   const handleLogout = async () => {
     try {
@@ -55,8 +68,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   };
 
   const isActive = (path: string) => {
-    if (path === '/admin') {
-      return location.pathname === '/admin';
+    if (path === basePath) {
+      return location.pathname === basePath;
     }
     return location.pathname.startsWith(path);
   };
@@ -85,6 +98,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </Button>
       </div>
 
+      {/* Role indicator */}
+      {!collapsed && (
+        <div className="px-4 py-2 border-b border-sidebar-border">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10">
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
+              {isSupervisor ? 'Supervisor' : 'Administrador'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 overflow-y-auto">
         <div className="space-y-1">
@@ -103,16 +128,30 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </button>
           ))}
         </div>
+
+        {/* If supervisor, show link to switch to collaborator view */}
+        {isSupervisor && !collapsed && (
+          <div className="mt-6 pt-4 border-t border-sidebar-border">
+            <p className="text-xs text-sidebar-foreground/50 px-3 mb-2">Vista Colaborador</p>
+            <button
+              onClick={() => navigate('/employee')}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200"
+            >
+              <LayoutDashboard className="w-5 h-5 shrink-0" />
+              <span className="text-sm">Mi Espacio</span>
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
         <button
-          onClick={() => navigate('/admin/settings')}
+          onClick={() => navigate(`${basePath}/settings`)}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200',
             collapsed && 'justify-center',
-            isActive('/admin/settings') && 'bg-sidebar-accent text-sidebar-primary font-medium'
+            isActive(`${basePath}/settings`) && 'bg-sidebar-accent text-sidebar-primary font-medium'
           )}
         >
           <Settings className="w-5 h-5 shrink-0" />

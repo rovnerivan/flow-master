@@ -1,15 +1,30 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Filter, Search, ChevronDown, Calendar, User, Layers, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Filter, Search, ChevronDown, Calendar, User, Layers, MessageSquare, XCircle, CheckCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 
-const mockErrors = [
+interface ErrorItem {
+  id: string;
+  date: string;
+  type: string;
+  process: string;
+  task: string;
+  employee: string;
+  description: string;
+  employeeNotes: string;
+  adminNotes: string;
+  status: 'pending' | 'reviewed' | 'resolved' | 'unsolvable';
+}
+
+const initialMockErrors: ErrorItem[] = [
   {
     id: '1',
     date: '2024-01-15',
@@ -73,14 +88,18 @@ const statusLabels: Record<string, { label: string; class: string }> = {
   pending: { label: 'Pendiente', class: 'bg-warning/20 text-warning' },
   reviewed: { label: 'Revisado', class: 'bg-primary/20 text-primary' },
   resolved: { label: 'Resuelto', class: 'bg-success/20 text-success' },
+  unsolvable: { label: 'No salvable', class: 'bg-destructive/20 text-destructive' },
 };
 
 const AdminErrors: React.FC = () => {
+  const [errors, setErrors] = useState<ErrorItem[]>(initialMockErrors);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('Todos los tipos');
   const [expandedError, setExpandedError] = useState<string | null>(null);
+  const [noteModal, setNoteModal] = useState<{ errorId: string; type: 'admin' } | null>(null);
+  const [newNote, setNewNote] = useState('');
 
-  const filteredErrors = mockErrors.filter((error) => {
+  const filteredErrors = errors.filter((error) => {
     const matchesSearch =
       error.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       error.employee.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -90,9 +109,52 @@ const AdminErrors: React.FC = () => {
   });
 
   // Stats
-  const totalErrors = mockErrors.length;
-  const pendingErrors = mockErrors.filter((e) => e.status === 'pending').length;
-  const resolvedErrors = mockErrors.filter((e) => e.status === 'resolved').length;
+  const totalErrors = errors.length;
+  const pendingErrors = errors.filter((e) => e.status === 'pending').length;
+  const resolvedErrors = errors.filter((e) => e.status === 'resolved').length;
+  const unsolvableErrors = errors.filter((e) => e.status === 'unsolvable').length;
+
+  // Stats by employee
+  const errorsByEmployee = errors.reduce((acc, err) => {
+    acc[err.employee] = acc[err.employee] || { total: 0, resolved: 0, unsolvable: 0 };
+    acc[err.employee].total++;
+    if (err.status === 'resolved') acc[err.employee].resolved++;
+    if (err.status === 'unsolvable') acc[err.employee].unsolvable++;
+    return acc;
+  }, {} as Record<string, { total: number; resolved: number; unsolvable: number }>);
+
+  const handleAddNote = (errorId: string) => {
+    setNoteModal({ errorId, type: 'admin' });
+  };
+
+  const saveNote = () => {
+    if (!noteModal || !newNote.trim()) {
+      toast.error('Ingresa una nota');
+      return;
+    }
+    setErrors(prev => prev.map(e => 
+      e.id === noteModal.errorId 
+        ? { ...e, adminNotes: e.adminNotes ? `${e.adminNotes}\n\n${newNote}` : newNote }
+        : e
+    ));
+    toast.success('Nota agregada');
+    setNoteModal(null);
+    setNewNote('');
+  };
+
+  const markAsResolved = (errorId: string) => {
+    setErrors(prev => prev.map(e => 
+      e.id === errorId ? { ...e, status: 'resolved' as const } : e
+    ));
+    toast.success('Error marcado como resuelto');
+  };
+
+  const markAsUnsolvable = (errorId: string) => {
+    setErrors(prev => prev.map(e => 
+      e.id === errorId ? { ...e, status: 'unsolvable' as const } : e
+    ));
+    toast.info('Error marcado como no salvable');
+  };
 
   return (
     <div className="space-y-6">
@@ -111,7 +173,7 @@ const AdminErrors: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="kpi-card">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-warning/10">
@@ -119,7 +181,7 @@ const AdminErrors: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{totalErrors}</p>
-              <p className="text-sm text-muted-foreground">Total este mes</p>
+              <p className="text-sm text-muted-foreground">Total</p>
             </div>
           </div>
         </div>
@@ -130,20 +192,48 @@ const AdminErrors: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{pendingErrors}</p>
-              <p className="text-sm text-muted-foreground">Pendientes de revisión</p>
+              <p className="text-sm text-muted-foreground">Pendientes</p>
             </div>
           </div>
         </div>
         <div className="kpi-card">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-success/10">
-              <AlertTriangle className="w-5 h-5 text-success" />
+              <CheckCircle className="w-5 h-5 text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold text-foreground">{resolvedErrors}</p>
               <p className="text-sm text-muted-foreground">Resueltos</p>
             </div>
           </div>
+        </div>
+        <div className="kpi-card">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <XCircle className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{unsolvableErrors}</p>
+              <p className="text-sm text-muted-foreground">No salvables</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Impact by Employee */}
+      <div className="kpi-card">
+        <h3 className="font-semibold text-foreground mb-4">Impacto por Empleado</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(errorsByEmployee).map(([employee, stats]) => (
+            <div key={employee} className="p-3 rounded-lg bg-secondary/30">
+              <p className="font-medium text-foreground text-sm">{employee}</p>
+              <div className="flex gap-3 mt-2 text-xs">
+                <span className="text-muted-foreground">Total: {stats.total}</span>
+                <span className="text-success">Resueltos: {stats.resolved}</span>
+                <span className="text-destructive">No salv: {stats.unsolvable}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -211,7 +301,7 @@ const AdminErrors: React.FC = () => {
 
             {/* Expanded Details */}
             {expandedError === error.id && (
-              <div className="mt-4 pt-4 border-t border-border space-y-4">
+              <div className="mt-4 pt-4 border-t border-border space-y-4" onClick={(e) => e.stopPropagation()}>
                 <div>
                   <p className="text-sm font-medium text-foreground mb-1">Tarea afectada</p>
                   <p className="text-sm text-muted-foreground">{error.task}</p>
@@ -233,23 +323,67 @@ const AdminErrors: React.FC = () => {
                       <MessageSquare className="w-3 h-3" />
                       Nota del administrador
                     </p>
-                    <p className="text-sm text-foreground">{error.adminNotes}</p>
+                    <p className="text-sm text-foreground whitespace-pre-line">{error.adminNotes}</p>
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleAddNote(error.id)} className="gap-1">
+                    <Plus className="w-3 h-3" />
                     Agregar nota
                   </Button>
-                  <Button variant="outline" size="sm">
-                    Marcar como resuelto
-                  </Button>
+                  {error.status !== 'resolved' && error.status !== 'unsolvable' && (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => markAsResolved(error.id)}
+                        className="gap-1 text-success hover:text-success"
+                      >
+                        <CheckCircle className="w-3 h-3" />
+                        Marcar resuelto
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => markAsUnsolvable(error.id)}
+                        className="gap-1 text-destructive hover:text-destructive"
+                      >
+                        <XCircle className="w-3 h-3" />
+                        No salvable
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
           </div>
         ))}
       </div>
+
+      {/* Add Note Modal */}
+      {noteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setNoteModal(null)} />
+          <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-xl p-6">
+            <h3 className="text-lg font-semibold mb-4">Agregar Nota</h3>
+            <Textarea
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Escribe tu nota aquí..."
+              rows={4}
+            />
+            <div className="flex gap-3 mt-4">
+              <Button variant="outline" onClick={() => setNoteModal(null)} className="flex-1">
+                Cancelar
+              </Button>
+              <Button variant="hero" onClick={saveNote} className="flex-1">
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
