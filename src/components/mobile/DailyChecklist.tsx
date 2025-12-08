@@ -16,7 +16,9 @@ import {
   CheckCircle,
   ChevronsDown,
   ArrowRight,
+  Maximize2,
 } from 'lucide-react';
+import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -113,9 +115,10 @@ const mockChecklist: ChecklistItem[] = [
 interface EmbeddedProcessViewerProps {
   process: ProcessInfo;
   onClose: () => void;
+  onMaximize: () => void;
 }
 
-const EmbeddedProcessViewer: React.FC<EmbeddedProcessViewerProps> = ({ process, onClose }) => {
+const EmbeddedProcessViewer: React.FC<EmbeddedProcessViewerProps> = ({ process, onClose, onMaximize }) => {
   const [currentStep, setCurrentStep] = useState<number | null>(null);
   const [showExtended, setShowExtended] = useState(false);
 
@@ -147,9 +150,18 @@ const EmbeddedProcessViewer: React.FC<EmbeddedProcessViewerProps> = ({ process, 
             <ArrowLeft className="w-4 h-4 text-muted-foreground" />
           </button>
           <span className="text-sm font-medium text-foreground">{process.name}</span>
-          <button onClick={onClose} className="p-1 hover:bg-secondary rounded-lg transition-colors">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={onMaximize} 
+              className="p-1 hover:bg-secondary rounded-lg transition-colors"
+              title="Ver vista completa"
+            >
+              <Maximize2 className="w-4 h-4 text-primary" />
+            </button>
+            <button onClick={onClose} className="p-1 hover:bg-secondary rounded-lg transition-colors">
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
 
         {/* Progress */}
@@ -248,9 +260,18 @@ const EmbeddedProcessViewer: React.FC<EmbeddedProcessViewerProps> = ({ process, 
           <ArrowLeft className="w-4 h-4 text-muted-foreground" />
         </button>
         <span className="text-sm font-medium text-foreground">{process.name}</span>
-        <button onClick={onClose} className="p-1 hover:bg-secondary rounded-lg transition-colors">
-          <X className="w-4 h-4 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={onMaximize} 
+            className="p-1 hover:bg-secondary rounded-lg transition-colors"
+            title="Ver vista completa"
+          >
+            <Maximize2 className="w-4 h-4 text-primary" />
+          </button>
+          <button onClick={onClose} className="p-1 hover:bg-secondary rounded-lg transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       <div className="p-4 space-y-4">
@@ -297,7 +318,8 @@ export const DailyChecklist: React.FC = () => {
   const [items, setItems] = useState(mockChecklist);
   const [showAll, setShowAll] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [activeProcess, setActiveProcess] = useState<{ itemId: string; process: ProcessInfo } | null>(null);
+  const [activeProcess, setActiveProcess] = useState<{ itemId: string; process: ProcessInfo; currentStep?: number } | null>(null);
+  const [maximizedProcess, setMaximizedProcess] = useState<{ processId: string; itemId: string; process: ProcessInfo } | null>(null);
   
   const dailyItems = items.filter((i) => i.frequency === 'daily');
   const otherItems = items.filter((i) => i.frequency !== 'daily');
@@ -328,6 +350,14 @@ export const DailyChecklist: React.FC = () => {
 
   const closeProcess = () => {
     setActiveProcess(null);
+  };
+
+  const handleMaximize = (itemId: string, process: ProcessInfo) => {
+    setMaximizedProcess({ processId: process.id, itemId, process });
+  };
+
+  const handleCloseMaximized = () => {
+    setMaximizedProcess(null);
   };
 
   const priorityColors = {
@@ -433,7 +463,8 @@ export const DailyChecklist: React.FC = () => {
                 {activeProcess?.itemId === item.id ? (
                   <EmbeddedProcessViewer 
                     process={activeProcess.process} 
-                    onClose={closeProcess} 
+                    onClose={closeProcess}
+                    onMaximize={() => handleMaximize(item.id, activeProcess.process)}
                   />
                 ) : (
                   <>
@@ -474,6 +505,14 @@ export const DailyChecklist: React.FC = () => {
         >
           {showAll ? 'Ver solo tareas diarias' : `Ver ${otherItems.length} tareas adicionales`}
         </button>
+      )}
+
+      {/* Maximized Process Modal */}
+      {maximizedProcess && (
+        <ProcessViewerModal
+          processId={maximizedProcess.processId}
+          onClose={handleCloseMaximized}
+        />
       )}
     </div>
   );
