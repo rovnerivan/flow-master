@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, Play, Pause, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, Play, Pause, CheckCircle, Square, Link2, ChevronDown, X, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,8 +18,8 @@ interface Task {
   description: string;
   frequency: 'daily' | 'weekly' | 'monthly' | 'annual' | 'occasional';
   assignedTo: string[];
-  linkedProcess?: string;
-  estimatedTime: number; // in minutes
+  linkedProcesses?: { id: string; name: string }[];
+  estimatedTime: number;
   trackedTime?: number;
   status: 'pending' | 'in_progress' | 'completed';
   dueDate?: string;
@@ -31,7 +32,10 @@ const mockTasks: Task[] = [
     description: 'Contar y registrar el efectivo inicial',
     frequency: 'daily',
     assignedTo: ['Carlos López', 'Ana Martínez'],
-    linkedProcess: 'Cierre de Caja',
+    linkedProcesses: [
+      { id: 'p1', name: 'Cierre de Caja' },
+      { id: 'p2', name: 'Apertura de Tienda' },
+    ],
     estimatedTime: 10,
     trackedTime: 8,
     status: 'completed',
@@ -42,7 +46,7 @@ const mockTasks: Task[] = [
     description: 'Verificar niveles de inventario',
     frequency: 'daily',
     assignedTo: ['María García'],
-    linkedProcess: 'Inventario Semanal',
+    linkedProcesses: [{ id: 'p3', name: 'Inventario Semanal' }],
     estimatedTime: 15,
     status: 'pending',
   },
@@ -110,9 +114,22 @@ const formatTime = (minutes: number) => {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 };
 
+const formatSeconds = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 const AdminTasks: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFrequency, setSelectedFrequency] = useState<string>('all');
+  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [activeTimers, setActiveTimers] = useState<Record<string, { running: boolean; seconds: number }>>({});
+  const [expandedProcess, setExpandedProcess] = useState<string | null>(null);
+  const [showProcessViewer, setShowProcessViewer] = useState<{ taskId: string; processId: string } | null>(null);
+  const timerRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
   const filterTasks = (frequency: string) => {
     let filtered = mockTasks;
@@ -129,76 +146,197 @@ const AdminTasks: React.FC = () => {
     return filtered;
   };
 
-  const TaskCard = ({ task }: { task: Task }) => (
-    <div className="kpi-card hover:border-primary/30 transition-colors">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${frequencyLabels[task.frequency].color}`}>
-              {frequencyLabels[task.frequency].label}
-            </span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusLabels[task.status].color}`}>
-              {statusLabels[task.status].label}
-            </span>
-          </div>
-          <h4 className="font-medium text-foreground mb-1">{task.title}</h4>
-          <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
+  const startTimer = (taskId: string) => {
+    setActiveTimers(prev => ({
+      ...prev,
+      [taskId]: { running: true, seconds: prev[taskId]?.seconds || 0 }
+    }));
+    
+    timerRefs.current[taskId] = setInterval(() => {
+      setActiveTimers(prev => ({
+        ...prev,
+        [taskId]: { ...prev[taskId], seconds: (prev[taskId]?.seconds || 0) + 1 }
+      }));
+    }, 1000);
+    
+    toast.success('Temporizador iniciado');
+  };
 
-          <div className="flex flex-wrap gap-4 text-sm">
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <User className="w-3 h-3" />
-              {task.assignedTo.join(', ')}
-            </span>
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              Est: {formatTime(task.estimatedTime)}
-              {task.trackedTime !== undefined && (
-                <span className="text-primary ml-1">
-                  (Real: {formatTime(task.trackedTime)})
+  const pauseTimer = (taskId: string) => {
+    if (timerRefs.current[taskId]) {
+      clearInterval(timerRefs.current[taskId]);
+      delete timerRefs.current[taskId];
+    }
+    setActiveTimers(prev => ({
+      ...prev,
+      [taskId]: { ...prev[taskId], running: false }
+    }));
+    toast.info('Temporizador pausado');
+  };
+
+  const completeTask = (taskId: string) => {
+    if (timerRefs.current[taskId]) {
+      clearInterval(timerRefs.current[taskId]);
+      delete timerRefs.current[taskId];
+    }
+    const timer = activeTimers[taskId];
+    const timeSpent = timer ? Math.floor(timer.seconds / 60) : 0;
+    toast.success(`Tarea completada. Tiempo registrado: ${formatTime(timeSpent)}`);
+    setActiveTimers(prev => {
+      const { [taskId]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(task);
+    setShowEditTaskModal(true);
+  };
+
+  const openProcessViewer = (taskId: string, processId: string) => {
+    setShowProcessViewer({ taskId, processId });
+  };
+
+  useEffect(() => {
+    return () => {
+      Object.values(timerRefs.current).forEach(clearInterval);
+    };
+  }, []);
+
+  const TaskCard = ({ task }: { task: Task }) => {
+    const timer = activeTimers[task.id];
+    const isRunning = timer?.running;
+    
+    return (
+      <div className="kpi-card hover:border-primary/30 transition-colors">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${frequencyLabels[task.frequency].color}`}>
+                {frequencyLabels[task.frequency].label}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusLabels[task.status].color}`}>
+                {statusLabels[task.status].label}
+              </span>
+            </div>
+            <h4 className="font-medium text-foreground mb-1">{task.title}</h4>
+            <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
+
+            <div className="flex flex-wrap gap-4 text-sm">
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <User className="w-3 h-3" />
+                {task.assignedTo.join(', ')}
+              </span>
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                Est: {formatTime(task.estimatedTime)}
+                {task.trackedTime !== undefined && (
+                  <span className="text-primary ml-1">
+                    (Real: {formatTime(task.trackedTime)})
+                  </span>
+                )}
+              </span>
+              {task.dueDate && (
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <Calendar className="w-3 h-3" />
+                  {task.dueDate}
                 </span>
               )}
-            </span>
-            {task.dueDate && (
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Calendar className="w-3 h-3" />
-                {task.dueDate}
-              </span>
+            </div>
+
+            {/* Timer display */}
+            {timer && (
+              <div className="mt-3 p-2 rounded-lg bg-primary/10 inline-flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                <span className="font-mono font-bold text-primary">
+                  {formatSeconds(timer.seconds)}
+                </span>
+                {isRunning && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+              </div>
+            )}
+
+            {/* Linked Processes - Dropdown */}
+            {task.linkedProcesses && task.linkedProcesses.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="relative">
+                  <button
+                    onClick={() => setExpandedProcess(expandedProcess === task.id ? null : task.id)}
+                    className="flex items-center gap-2 text-sm text-primary hover:underline"
+                  >
+                    <Link2 className="w-3 h-3" />
+                    <span>{task.linkedProcesses.length} proceso(s) asociado(s)</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedProcess === task.id ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {expandedProcess === task.id && (
+                    <div className="absolute left-0 top-full mt-1 z-10 w-64 p-2 rounded-lg border border-border bg-card shadow-lg">
+                      <p className="text-xs text-muted-foreground mb-2 px-2">Procesos asociados:</p>
+                      {task.linkedProcesses.map((proc) => (
+                        <button
+                          key={proc.id}
+                          onClick={() => openProcessViewer(task.id, proc.id)}
+                          className="w-full text-left px-3 py-2 text-sm rounded hover:bg-secondary transition-colors"
+                        >
+                          {proc.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
-          {task.linkedProcess && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <span className="text-xs text-muted-foreground">
-                Proceso asociado: <span className="text-primary">{task.linkedProcess}</span>
-              </span>
-            </div>
-          )}
-        </div>
+          <div className="flex flex-col gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1 rounded hover:bg-secondary">
+                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleEditTask(task)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar tarea
+                </DropdownMenuItem>
+                {!isRunning ? (
+                  <DropdownMenuItem onClick={() => startTimer(task.id)}>
+                    <Play className="w-4 h-4 mr-2" />
+                    Iniciar tiempo
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => pauseTimer(task.id)}>
+                    <Pause className="w-4 h-4 mr-2" />
+                    Pausar tiempo
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => completeTask(task.id)}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Marcar completada
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="p-1 rounded hover:bg-secondary">
-              <MoreVertical className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => toast.info('Iniciar temporizador')}>
-              <Play className="w-4 h-4 mr-2" />
-              Iniciar tiempo
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.info('Pausar temporizador')}>
-              <Pause className="w-4 h-4 mr-2" />
-              Pausar tiempo
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.success('Tarea completada')}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Marcar completada
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            {/* Quick timer buttons */}
+            <div className="flex flex-col gap-1">
+              {!isRunning ? (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startTimer(task.id)}>
+                  <Play className="w-4 h-4 text-success" />
+                </Button>
+              ) : (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => pauseTimer(task.id)}>
+                  <Pause className="w-4 h-4 text-warning" />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => completeTask(task.id)}>
+                <CheckCircle className="w-4 h-4 text-primary" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -210,7 +348,7 @@ const AdminTasks: React.FC = () => {
             Administra tareas por frecuencia y asignación
           </p>
         </div>
-        <Button variant="hero" className="gap-2" onClick={() => toast.info('Crear nueva tarea')}>
+        <Button variant="hero" className="gap-2" onClick={() => setShowNewTaskModal(true)}>
           <Plus className="w-4 h-4" />
           Nueva Tarea
         </Button>
@@ -229,14 +367,16 @@ const AdminTasks: React.FC = () => {
 
       {/* Tabs by Frequency */}
       <Tabs defaultValue="all" onValueChange={setSelectedFrequency}>
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="all">Todas</TabsTrigger>
-          <TabsTrigger value="daily">Diarias</TabsTrigger>
-          <TabsTrigger value="weekly">Semanales</TabsTrigger>
-          <TabsTrigger value="monthly">Mensuales</TabsTrigger>
-          <TabsTrigger value="annual">Anuales</TabsTrigger>
-          <TabsTrigger value="occasional">Ocasionales</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:grid-cols-6">
+            <TabsTrigger value="all" className="whitespace-nowrap">Todas</TabsTrigger>
+            <TabsTrigger value="daily" className="whitespace-nowrap">Diarias</TabsTrigger>
+            <TabsTrigger value="weekly" className="whitespace-nowrap">Semanales</TabsTrigger>
+            <TabsTrigger value="monthly" className="whitespace-nowrap">Mensuales</TabsTrigger>
+            <TabsTrigger value="annual" className="whitespace-nowrap">Anuales</TabsTrigger>
+            <TabsTrigger value="occasional" className="whitespace-nowrap">Ocasionales</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="all" className="mt-6">
           <div className="space-y-4">
@@ -261,6 +401,285 @@ const AdminTasks: React.FC = () => {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* New Task Modal */}
+      <NewTaskModal open={showNewTaskModal} onClose={() => setShowNewTaskModal(false)} />
+
+      {/* Edit Task Modal */}
+      {selectedTask && (
+        <EditTaskModal 
+          open={showEditTaskModal} 
+          task={selectedTask}
+          onClose={() => {
+            setShowEditTaskModal(false);
+            setSelectedTask(null);
+          }} 
+        />
+      )}
+
+      {/* Process Viewer Overlay */}
+      {showProcessViewer && (
+        <ProcessViewerOverlay
+          taskId={showProcessViewer.taskId}
+          processId={showProcessViewer.processId}
+          onClose={() => setShowProcessViewer(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+// New Task Modal
+const NewTaskModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    frequency: 'daily',
+    estimatedTime: '15',
+    assignedTo: '',
+    dueDate: '',
+  });
+
+  if (!open) return null;
+
+  const handleSubmit = () => {
+    if (!formData.title) {
+      toast.error('El título es requerido');
+      return;
+    }
+    toast.success('Tarea creada exitosamente');
+    onClose();
+    setFormData({ title: '', description: '', frequency: 'daily', estimatedTime: '15', assignedTo: '', dueDate: '' });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">Nueva Tarea</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Título *</label>
+            <Input
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Título de la tarea"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Descripción</label>
+            <Textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descripción de la tarea"
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Frecuencia</label>
+              <select
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="daily">Diaria</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensual</option>
+                <option value="annual">Anual</option>
+                <option value="occasional">Ocasional</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tiempo estimado (min)</label>
+              <Input
+                type="number"
+                value={formData.estimatedTime}
+                onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Asignar a</label>
+            <Input
+              value={formData.assignedTo}
+              onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+              placeholder="Nombres separados por coma"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Fecha límite</label>
+            <Input
+              type="date"
+              value={formData.dueDate}
+              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-border flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button variant="hero" onClick={handleSubmit} className="flex-1">Crear Tarea</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Edit Task Modal
+const EditTaskModal: React.FC<{ open: boolean; task: Task; onClose: () => void }> = ({ open, task, onClose }) => {
+  const [formData, setFormData] = useState({
+    title: task.title,
+    description: task.description,
+    frequency: task.frequency as string,
+    estimatedTime: task.estimatedTime.toString(),
+    assignedTo: task.assignedTo.join(', '),
+    dueDate: task.dueDate || '',
+  });
+
+  if (!open) return null;
+
+  const handleSubmit = () => {
+    if (!formData.title) {
+      toast.error('El título es requerido');
+      return;
+    }
+    toast.success('Tarea actualizada. Se notificará a los involucrados.');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-xl">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">Editar Tarea</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Título *</label>
+            <Input
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Descripción</label>
+            <Textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Frecuencia</label>
+              <select
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="daily">Diaria</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensual</option>
+                <option value="annual">Anual</option>
+                <option value="occasional">Ocasional</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tiempo estimado (min)</label>
+              <Input
+                type="number"
+                value={formData.estimatedTime}
+                onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Asignar a</label>
+            <Input
+              value={formData.assignedTo}
+              onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Fecha límite</label>
+            <Input
+              type="date"
+              value={formData.dueDate}
+              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-border flex gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button variant="hero" onClick={handleSubmit} className="flex-1">Guardar Cambios</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Process Viewer Overlay (dentro de tareas)
+const ProcessViewerOverlay: React.FC<{ taskId: string; processId: string; onClose: () => void }> = ({ onClose }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <header className="flex items-center justify-between p-4 border-b border-border">
+        <div>
+          <p className="text-xs text-muted-foreground">Viendo proceso de la tarea</p>
+          <h1 className="font-semibold text-foreground">Cierre de Caja</h1>
+        </div>
+        <Button variant="outline" onClick={onClose}>
+          Cerrar proceso
+        </Button>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center">
+            <p className="text-muted-foreground">Diagrama del proceso</p>
+          </div>
+          
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Cierre de Caja</h2>
+            <p className="text-muted-foreground">
+              Procedimiento estándar para el cierre diario de caja registradora.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((step) => (
+              <div key={step} className="p-3 rounded-lg border border-border flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                  {step}
+                </span>
+                <span className="text-foreground">Paso {step} del proceso</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

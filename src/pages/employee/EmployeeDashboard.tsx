@@ -7,6 +7,7 @@ import { ProcessCard } from '@/components/mobile/ProcessCard';
 import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { toast } from 'sonner';
 
 const mockProcesses = [
@@ -61,10 +62,7 @@ const EmployeeDashboard: React.FC = () => {
             <Button variant="ghost" size="icon" className="relative">
               <Search className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
-            </Button>
+            <NotificationBell />
           </div>
         </div>
       </header>
