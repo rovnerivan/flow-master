@@ -46,6 +46,11 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
     { id: '1', title: '', description: '', duration: '2' },
   ]);
 
+  // Audio-guided form hooks - must be before conditional return
+  const [recordingField, setRecordingField] = useState<string | null>(null);
+  const [fieldRecordingTime, setFieldRecordingTime] = useState(0);
+  const fieldTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   if (!open) return null;
 
   const resetState = () => {
@@ -561,9 +566,6 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   );
 
   // Audio-guided form with microphone option per field
-  const [recordingField, setRecordingField] = useState<string | null>(null);
-  const [fieldRecordingTime, setFieldRecordingTime] = useState(0);
-  const fieldTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const startFieldRecording = async (fieldName: string) => {
     try {
