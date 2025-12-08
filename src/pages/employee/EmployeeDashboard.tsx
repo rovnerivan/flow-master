@@ -102,54 +102,113 @@ const mockUser = {
   ],
 };
 
-// Lazy load PendingPlanningWidget
+// Lazy load components
 const PendingPlanningWidget = React.lazy(() => import('@/components/employee/PendingPlanningWidget'));
+const MyDayIntegrated = React.lazy(() => import('@/components/employee/MyDayIntegrated'));
+const PersonalMetricsCard = React.lazy(() => import('@/components/employee/PersonalMetricsCard'));
+const WeekPreviewWidget = React.lazy(() => import('@/components/employee/WeekPreviewWidget'));
 
-// Home Page
+// Home Page - Pilar 1: "Mi Día" Integrado
 const EmployeeHome: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'tasks' | 'metrics' | 'week'>('tasks');
+  
   return (
-    <div className="space-y-6">
-      {/* Greeting with name and cargo */}
-      <div className="animate-slide-up">
-        <h1 className="text-2xl font-bold text-foreground">
-          ¡Hola, {mockUser.name}! 👋
-        </h1>
-        <p className="text-primary font-medium">{mockUser.cargo}</p>
-        <p className="text-muted-foreground text-sm mt-1">
-          Supervisor: {mockUser.supervisor}
-        </p>
-        <p className="text-muted-foreground mt-2">
-          Tienes 3 tareas pendientes para hoy
-        </p>
+    <div className="space-y-4">
+      {/* Quick Tabs */}
+      <div className="flex gap-1 p-1 rounded-xl bg-secondary/50 animate-slide-up">
+        <button
+          onClick={() => setActiveTab('tasks')}
+          className={cn(
+            "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors",
+            activeTab === 'tasks' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Mi Día
+        </button>
+        <button
+          onClick={() => setActiveTab('metrics')}
+          className={cn(
+            "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors",
+            activeTab === 'metrics' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Métricas
+        </button>
+        <button
+          onClick={() => setActiveTab('week')}
+          className={cn(
+            "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors",
+            activeTab === 'week' 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Semana
+        </button>
       </div>
 
-      {/* Pending Planning Widget */}
-      <div className="animate-slide-up" style={{ animationDelay: '0.05s' }}>
-        <React.Suspense fallback={null}>
-          <PendingPlanningWidget />
-        </React.Suspense>
-      </div>
+      {/* Tab Content */}
+      {activeTab === 'tasks' && (
+        <div className="space-y-4 animate-slide-up">
+          {/* Pending Planning Widget - Only show if there are pending tasks */}
+          <React.Suspense fallback={null}>
+            <PendingPlanningWidget />
+          </React.Suspense>
 
-      {/* Daily Checklist - KILLER FEATURE */}
-      <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-        <DailyChecklist />
-      </div>
+          {/* My Day Integrated - Pilar 1 */}
+          <React.Suspense fallback={<div className="text-center py-8 text-muted-foreground">Cargando...</div>}>
+            <MyDayIntegrated userName={mockUser.name.split(' ')[0]} />
+          </React.Suspense>
 
-      {/* Culture Card */}
-      <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        <CultureCard
-          content={{
-            id: '1',
-            title: 'Nuestra visión para este trimestre',
-            type: 'text',
-            content: '',
-            author: { name: 'María González', role: 'owner' },
-            category: 'Visión',
-            createdAt: '2024-01-15',
-            isNew: true,
-          }}
-        />
-      </div>
+          {/* Culture Card */}
+          <CultureCard
+            content={{
+              id: '1',
+              title: 'Nuestra visión para este trimestre',
+              type: 'text',
+              content: '',
+              author: { name: 'María González', role: 'owner' },
+              category: 'Visión',
+              createdAt: '2024-01-15',
+              isNew: true,
+            }}
+          />
+        </div>
+      )}
+
+      {activeTab === 'metrics' && (
+        <div className="space-y-4 animate-slide-up">
+          {/* Pilar 3: Métricas Personales Motivadoras */}
+          <React.Suspense fallback={<div className="text-center py-8 text-muted-foreground">Cargando...</div>}>
+            <PersonalMetricsCard />
+          </React.Suspense>
+          
+          {/* Additional metrics could go here */}
+          <div className="p-4 rounded-xl bg-muted/30 border border-border text-center">
+            <p className="text-sm text-muted-foreground">
+              Más estadísticas próximamente
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'week' && (
+        <div className="space-y-4 animate-slide-up">
+          {/* Pilar 4: Vista de Semana Simplificada */}
+          <React.Suspense fallback={<div className="text-center py-8 text-muted-foreground">Cargando...</div>}>
+            <WeekPreviewWidget />
+          </React.Suspense>
+          
+          {/* Pending Planning Widget */}
+          <React.Suspense fallback={null}>
+            <PendingPlanningWidget />
+          </React.Suspense>
+        </div>
+      )}
     </div>
   );
 };
