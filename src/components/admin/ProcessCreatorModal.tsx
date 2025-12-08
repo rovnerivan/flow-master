@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { defaultTags } from '@/lib/processTags';
+import { defaultTags, TagInfo } from '@/lib/processTags';
 
 interface ProcessCreatorModalProps {
   open: boolean;
   onClose: () => void;
+  availableTags?: TagInfo[];
+  onCreateTag?: (name: string) => void;
 }
 
 type CreationMethod = 'select' | 'manual' | 'upload' | 'record' | 'audio-complete' | 'audio-guided';
@@ -21,18 +23,19 @@ interface Step {
   duration: string;
 }
 
-// Use default tags from AdminProcesses
-const availableTags = defaultTags;
-
 export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   open,
   onClose,
+  availableTags = defaultTags,
+  onCreateTag,
 }) => {
   const [method, setMethod] = useState<CreationMethod>('select');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [newTagName, setNewTagName] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -327,7 +330,64 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
                 {tag.name}
               </button>
             ))}
+            {/* Add new tag button */}
+            {onCreateTag && !showTagInput && (
+              <button
+                type="button"
+                onClick={() => setShowTagInput(true)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-muted-foreground hover:bg-secondary/80 flex items-center gap-1 border border-dashed border-border"
+              >
+                <Plus className="w-3 h-3" />
+                Nueva
+              </button>
+            )}
           </div>
+          {/* New tag input */}
+          {showTagInput && onCreateTag && (
+            <div className="flex gap-2 items-center">
+              <Input
+                placeholder="Nombre de la etiqueta"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                className="h-8 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (newTagName.trim()) {
+                      onCreateTag(newTagName.trim());
+                      setNewTagName('');
+                      setShowTagInput(false);
+                    }
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="hero"
+                onClick={() => {
+                  if (newTagName.trim()) {
+                    onCreateTag(newTagName.trim());
+                    setNewTagName('');
+                    setShowTagInput(false);
+                  }
+                }}
+              >
+                Crear
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setNewTagName('');
+                  setShowTagInput(false);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
           {selectedTags.length > 0 && (
             <p className="text-xs text-muted-foreground">
               {selectedTags.length} etiqueta{selectedTags.length > 1 ? 's' : ''} seleccionada{selectedTags.length > 1 ? 's' : ''}
