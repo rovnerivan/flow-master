@@ -67,7 +67,7 @@ interface TasksBirdEyeViewProps {
   onDrillDown?: (filter: { type: string; value: string }) => void;
 }
 
-type ViewMode = 'frequency' | 'strategic';
+type ViewMode = 'frequency' | 'strategic' | 'combined';
 
 const strategicLevelConfig = {
   strategy: { 
@@ -466,7 +466,7 @@ const UnlinkedTasksCard: React.FC<{
 };
 
 export const TasksBirdEyeView: React.FC<TasksBirdEyeViewProps> = ({ tasks, strategicItems = [], onDrillDown }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('strategic');
+  const [viewMode, setViewMode] = useState<ViewMode>('combined');
 
   // Group tasks by frequency
   const tasksByFrequency = {
@@ -546,9 +546,13 @@ export const TasksBirdEyeView: React.FC<TasksBirdEyeViewProps> = ({ tasks, strat
       <div className="flex items-center justify-between">
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
           <TabsList>
+            <TabsTrigger value="combined" className="flex items-center gap-2">
+              <Layers className="w-4 h-4" />
+              Combinada
+            </TabsTrigger>
             <TabsTrigger value="strategic" className="flex items-center gap-2">
               <GitBranch className="w-4 h-4" />
-              Por Jerarquía Estratégica
+              Por Jerarquía
             </TabsTrigger>
             <TabsTrigger value="frequency" className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
@@ -684,6 +688,210 @@ export const TasksBirdEyeView: React.FC<TasksBirdEyeViewProps> = ({ tasks, strat
               onDrillDown={onDrillDown}
             />
           ))}
+        </div>
+      )}
+
+      {/* Combined View - Strategic hierarchy with frequency breakdown */}
+      {viewMode === 'combined' && (
+        <div className="space-y-8">
+          {(['strategy', 'objective', 'initiative', 'action'] as const).map(level => {
+            const levelData = level === 'strategy' ? tasksByStrategy :
+                             level === 'objective' ? tasksByObjective :
+                             level === 'initiative' ? tasksByInitiative : tasksByAction;
+            
+            if (levelData.length === 0) return null;
+            
+            const levelTasks = levelData.flatMap(d => d.tasks);
+            const config = strategicLevelConfig[level];
+            const Icon = config.icon;
+
+            // Group tasks by frequency within this strategic level
+            const tasksByFreqInLevel = {
+              daily: levelTasks.filter(t => t.frequency === 'daily'),
+              weekly: levelTasks.filter(t => t.frequency === 'weekly'),
+              monthly: levelTasks.filter(t => t.frequency === 'monthly'),
+              annual: levelTasks.filter(t => t.frequency === 'annual'),
+              occasional: levelTasks.filter(t => t.frequency === 'occasional'),
+            };
+
+            const levelAssignments = levelTasks.flatMap(t => t.assignments);
+            const levelCompleted = levelAssignments.filter(a => a.status === 'completed').length;
+            const levelTotal = levelAssignments.length;
+            const levelRate = levelTotal > 0 ? Math.round((levelCompleted / levelTotal) * 100) : 0;
+
+            return (
+              <div key={level} className={cn("kpi-card border-l-4", config.borderColor)}>
+                {/* Level Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2.5 rounded-xl", config.color)}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground text-lg">{config.label}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {levelData.length} elementos • {levelTasks.length} tareas
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-foreground">{levelRate}%</span>
+                    {getTrendIcon(levelRate)}
+                  </div>
+                </div>
+
+                <Progress value={levelRate} className="h-2 mb-4" />
+
+                {/* Frequency breakdown within this level */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {(Object.entries(tasksByFreqInLevel) as [keyof typeof frequencyConfig, Task[]][]).map(([freq, freqTasks]) => {
+                    if (freqTasks.length === 0) return null;
+                    
+                    const freqAssignments = freqTasks.flatMap(t => t.assignments);
+                    const freqCompleted = freqAssignments.filter(a => a.status === 'completed').length;
+                    const freqTotal = freqAssignments.length;
+                    const freqRate = freqTotal > 0 ? Math.round((freqCompleted / freqTotal) * 100) : 0;
+                    const freqConfig = frequencyConfig[freq];
+
+                    return (
+                      <div 
+                        key={freq}
+                        className={cn(
+                          "p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md",
+                          freqConfig.color
+                        )}
+                        onClick={() => onDrillDown?.({ type: 'frequency', value: freq })}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span className="text-xs font-medium">{freqConfig.label}</span>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <span className="text-lg font-bold">{freqTasks.length}</span>
+                          <span className={cn(
+                            "text-xs font-medium",
+                            freqRate >= 70 ? "text-success" : freqRate >= 40 ? "text-warning" : "text-destructive"
+                          )}>
+                            {freqRate}%
+                          </span>
+                        </div>
+                        <Progress value={freqRate} className="h-1 mt-1" />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Strategic items within this level */}
+                <div className="mt-4 space-y-2">
+                  {levelData.slice(0, 5).map(({ item, tasks: itemTasks }) => {
+                    const itemAssignments = itemTasks.flatMap(t => t.assignments);
+                    const itemCompleted = itemAssignments.filter(a => a.status === 'completed').length;
+                    const itemTotal = itemAssignments.length;
+                    const itemRate = itemTotal > 0 ? Math.round((itemCompleted / itemTotal) * 100) : 0;
+
+                    // Get frequency distribution for this item
+                    const itemFreqCounts = {
+                      daily: itemTasks.filter(t => t.frequency === 'daily').length,
+                      weekly: itemTasks.filter(t => t.frequency === 'weekly').length,
+                      monthly: itemTasks.filter(t => t.frequency === 'monthly').length,
+                      annual: itemTasks.filter(t => t.frequency === 'annual').length,
+                      occasional: itemTasks.filter(t => t.frequency === 'occasional').length,
+                    };
+
+                    return (
+                      <div 
+                        key={item.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+                        onClick={() => onDrillDown?.({ type: 'planning', value: item.id })}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">{item.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-muted-foreground">{item.ownerName}</span>
+                            <span className="text-muted-foreground">•</span>
+                            <div className="flex items-center gap-1">
+                              {Object.entries(itemFreqCounts).map(([f, count]) => {
+                                if (count === 0) return null;
+                                return (
+                                  <span 
+                                    key={f}
+                                    className={cn(
+                                      "px-1.5 py-0.5 rounded text-xs",
+                                      frequencyConfig[f as keyof typeof frequencyConfig].color
+                                    )}
+                                  >
+                                    {count} {frequencyConfig[f as keyof typeof frequencyConfig].label.toLowerCase().slice(0, 3)}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 ml-4">
+                          <Progress value={itemRate} className="w-16 h-2" />
+                          <span className={cn(
+                            "text-sm font-semibold min-w-[3rem] text-right",
+                            itemRate >= 70 ? "text-success" : itemRate >= 40 ? "text-warning" : "text-destructive"
+                          )}>
+                            {itemRate}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {levelData.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center pt-2">
+                      +{levelData.length - 5} elementos más
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Unlinked Tasks in Combined View */}
+          {unlinkedTasks.length > 0 && (
+            <div className="kpi-card border-l-4 border-muted">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-muted">
+                    <Layers className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Sin vinculación estratégica</h3>
+                    <p className="text-sm text-muted-foreground">{unlinkedTasks.length} tareas operativas</p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {(Object.keys(frequencyConfig) as Array<keyof typeof frequencyConfig>).map(freq => {
+                  const freqTasks = unlinkedTasks.filter(t => t.frequency === freq);
+                  if (freqTasks.length === 0) return null;
+                  
+                  const freqAssignments = freqTasks.flatMap(t => t.assignments);
+                  const freqCompleted = freqAssignments.filter(a => a.status === 'completed').length;
+                  const freqTotal = freqAssignments.length;
+                  const freqRate = freqTotal > 0 ? Math.round((freqCompleted / freqTotal) * 100) : 0;
+
+                  return (
+                    <div 
+                      key={freq}
+                      className={cn("p-3 rounded-lg border", frequencyConfig[freq].color)}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span className="text-xs font-medium">{frequencyConfig[freq].label}</span>
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <span className="text-lg font-bold">{freqTasks.length}</span>
+                        <span className="text-xs">{freqRate}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
