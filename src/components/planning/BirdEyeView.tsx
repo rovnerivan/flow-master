@@ -62,21 +62,21 @@ const StrategyCard: React.FC<{
       onClick={() => onItemClick?.(strategy)}
     >
       {/* Strategy Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-2 mb-4">
+        <div className="flex items-start gap-3 min-w-0">
           <div 
-            className="p-3 rounded-xl"
+            className="p-2 sm:p-3 rounded-xl flex-shrink-0"
             style={{ backgroundColor: `${strategy.color}20` || 'hsl(var(--primary) / 0.1)' }}
           >
             <Compass 
-              className="w-6 h-6" 
+              className="w-5 h-5 sm:w-6 sm:h-6" 
               style={{ color: strategy.color || 'hsl(var(--primary))' }}
             />
           </div>
-          <div>
-            <h3 className="font-semibold text-foreground text-lg">{strategy.name}</h3>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-foreground text-base sm:text-lg break-words">{strategy.name}</h3>
             <span className={cn(
-              'px-2 py-0.5 rounded-full text-xs font-medium',
+              'inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1',
               planningStatusConfig[strategy.status].bgColor,
               planningStatusConfig[strategy.status].color
             )}>
@@ -84,7 +84,9 @@ const StrategyCard: React.FC<{
             </span>
           </div>
         </div>
-        {getTrendIcon(progress)}
+        <div className="flex-shrink-0">
+          {getTrendIcon(progress)}
+        </div>
       </div>
 
       {/* Progress */}
@@ -113,19 +115,19 @@ const StrategyCard: React.FC<{
       </div>
 
       {/* Quick Status */}
-      <div className="flex items-center justify-between text-sm border-t border-border pt-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm border-t border-border pt-3">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-success" />
-          <span className="text-muted-foreground">{completedObjectives} completados</span>
+          <span className="text-muted-foreground text-xs sm:text-sm">{completedObjectives} completados</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-primary" />
-          <span className="text-muted-foreground">{activeObjectives} activos</span>
+          <span className="text-muted-foreground text-xs sm:text-sm">{activeObjectives} activos</span>
         </div>
         {atRiskObjectives > 0 && (
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-destructive" />
-            <span className="text-destructive">{atRiskObjectives} en riesgo</span>
+            <span className="text-destructive text-xs sm:text-sm">{atRiskObjectives} en riesgo</span>
           </div>
         )}
       </div>
@@ -146,10 +148,10 @@ const StrategyCard: React.FC<{
                 }}
               >
                 <Target className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                <span className="text-sm text-foreground truncate flex-1">{obj.name}</span>
-                <div className="flex items-center gap-2">
-                  <Progress value={objProgress} className="w-16 h-1.5" />
-                  <span className="text-xs text-muted-foreground w-8">{objProgress}%</span>
+                <span className="text-xs sm:text-sm text-foreground line-clamp-1 flex-1 min-w-0">{obj.name}</span>
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                  <Progress value={objProgress} className="w-10 sm:w-16 h-1.5" />
+                  <span className="text-xs text-muted-foreground w-7 sm:w-8">{objProgress}%</span>
                 </div>
               </div>
             );
@@ -207,19 +209,20 @@ export const BirdEyeView: React.FC<BirdEyeViewProps> = ({ items, onItemClick }) 
     <div className="space-y-6">
       {/* Global Summary Bar */}
       <div className="kpi-card bg-gradient-to-r from-primary/5 to-transparent">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Main stats */}
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10">
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{globalStats.avgProgress}%</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{globalStats.avgProgress}%</p>
                 <p className="text-xs text-muted-foreground">Progreso global</p>
               </div>
             </div>
-            <div className="h-10 w-px bg-border" />
-            <div className="flex gap-6 text-sm">
+            <div className="hidden sm:block h-10 w-px bg-border" />
+            <div className="flex flex-wrap gap-3 sm:gap-6 text-xs sm:text-sm">
               <div>
                 <span className="font-semibold text-foreground">{globalStats.completed}</span>
                 <span className="text-muted-foreground ml-1">completados</span>
@@ -237,13 +240,14 @@ export const BirdEyeView: React.FC<BirdEyeViewProps> = ({ items, onItemClick }) 
               )}
             </div>
           </div>
-          <div className="flex gap-4 text-xs text-muted-foreground">
+          {/* Counts */}
+          <div className="flex flex-wrap gap-2 sm:gap-4 text-xs text-muted-foreground">
             <span>{globalStats.strategies} estrategias</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>{globalStats.objectives} objetivos</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>{globalStats.initiatives} iniciativas</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             <span>{globalStats.actions} acciones</span>
           </div>
         </div>

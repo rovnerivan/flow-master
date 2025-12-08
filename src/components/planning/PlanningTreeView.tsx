@@ -75,105 +75,111 @@ export const PlanningTreeNode: React.FC<PlanningTreeNodeProps> = ({
     <div className="select-none">
       <div
         className={cn(
-          'group flex items-center gap-2 py-2 px-3 rounded-lg transition-colors',
+          'group flex flex-col sm:flex-row sm:items-center gap-2 py-3 px-3 rounded-lg transition-colors',
           'hover:bg-secondary/50 cursor-pointer',
-          depth > 0 && 'ml-6 border-l-2 border-border'
+          depth > 0 && 'ml-4 sm:ml-6 border-l-2 border-border'
         )}
-        style={{ paddingLeft: `${depth * 8 + 12}px` }}
+        style={{ paddingLeft: `${Math.min(depth * 6, 24) + 8}px` }}
       >
-        {/* Expand/Collapse button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand(item.id);
-          }}
-          className={cn(
-            'p-1 rounded hover:bg-secondary transition-colors',
-            !hasChildren && 'opacity-0 pointer-events-none'
-          )}
-        >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          )}
-        </button>
+        {/* Top row - always visible */}
+        <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0">
+          {/* Expand/Collapse button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand(item.id);
+            }}
+            className={cn(
+              'p-1 rounded hover:bg-secondary transition-colors flex-shrink-0',
+              !hasChildren && 'opacity-0 pointer-events-none'
+            )}
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            )}
+          </button>
 
-        {/* Level icon */}
-        <div className={cn('p-1.5 rounded-md', config.bgColor, config.color)}>
-          {levelIcons[item.level]}
+          {/* Level icon */}
+          <div className={cn('p-1.5 rounded-md flex-shrink-0', config.bgColor, config.color)}>
+            {levelIcons[item.level]}
+          </div>
+
+          {/* Content - mobile optimized */}
+          <div className="flex-1 min-w-0" onClick={() => onEdit(item)}>
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              <span className="font-medium text-foreground text-sm sm:text-base break-words">{item.name}</span>
+              <span className={cn('px-1.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap', statusConfig.bgColor, statusConfig.color)}>
+                {statusConfig.label}
+              </span>
+            </div>
+            {item.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2 sm:truncate mt-0.5">
+                {item.description}
+              </p>
+            )}
+          </div>
+
+          {/* Actions - always visible on mobile */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit(item)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              {childLevel && (
+                <DropdownMenuItem onClick={() => onAddChild(item)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Agregar {planningLevelConfig[childLevel].label}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onLinkTask(item)}>
+                <CheckSquare className="w-4 h-4 mr-2" />
+                Vincular Tarea
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onLinkProcess(item)}>
+                <Link2 className="w-4 h-4 mr-2" />
+                Vincular Proceso
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onDelete(item)} className="text-destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0" onClick={() => onEdit(item)}>
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-foreground truncate">{item.name}</span>
-            <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusConfig.bgColor, statusConfig.color)}>
-              {statusConfig.label}
+        {/* Bottom row on mobile - Progress and links */}
+        <div className="flex items-center gap-3 pl-8 sm:pl-0 sm:min-w-[160px]">
+          {/* Progress */}
+          <div className="flex items-center gap-2 flex-1 sm:flex-initial sm:min-w-[100px]">
+            <Progress value={aggregatedProgress} className="h-2 flex-1 sm:w-20" />
+            <span className="text-xs font-medium text-muted-foreground w-8 text-right">
+              {aggregatedProgress}%
             </span>
           </div>
-          {item.description && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {item.description}
-            </p>
-          )}
+
+          {/* Links count */}
+          {(item.linkedTasks?.length || item.linkedProcesses?.length) ? (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Link2 className="w-3 h-3" />
+              {(item.linkedTasks?.length || 0) + (item.linkedProcesses?.length || 0)}
+            </div>
+          ) : null}
         </div>
-
-        {/* Progress */}
-        <div className="flex items-center gap-2 min-w-[120px]">
-          <Progress value={aggregatedProgress} className="h-2 flex-1" />
-          <span className="text-xs font-medium text-muted-foreground w-10 text-right">
-            {aggregatedProgress}%
-          </span>
-        </div>
-
-        {/* Links count */}
-        {(item.linkedTasks?.length || item.linkedProcesses?.length) ? (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Link2 className="w-3 h-3" />
-            {(item.linkedTasks?.length || 0) + (item.linkedProcesses?.length || 0)}
-          </div>
-        ) : null}
-
-        {/* Actions */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(item)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Editar
-            </DropdownMenuItem>
-            {childLevel && (
-              <DropdownMenuItem onClick={() => onAddChild(item)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Agregar {planningLevelConfig[childLevel].label}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onLinkTask(item)}>
-              <CheckSquare className="w-4 h-4 mr-2" />
-              Vincular Tarea
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onLinkProcess(item)}>
-              <Link2 className="w-4 h-4 mr-2" />
-              Vincular Proceso
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onDelete(item)} className="text-destructive">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Eliminar
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {/* Children */}
