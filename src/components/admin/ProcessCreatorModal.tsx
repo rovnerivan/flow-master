@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Mic, FileText, Plus, ArrowRight, Square, Loader2, FileAudio } from 'lucide-react';
+import { X, Upload, Mic, FileText, Plus, ArrowRight, Square, Loader2, FileAudio, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface ProcessCreatorModalProps {
   open: boolean;
@@ -18,6 +19,18 @@ interface Step {
   description: string;
   duration: string;
 }
+
+// Available tags for the system
+const availableTags = [
+  { id: 'operaciones', name: 'Operaciones', color: 'bg-blue-500/20 text-blue-400' },
+  { id: 'ventas', name: 'Ventas', color: 'bg-green-500/20 text-green-400' },
+  { id: 'atencion', name: 'Atención al Cliente', color: 'bg-purple-500/20 text-purple-400' },
+  { id: 'almacen', name: 'Almacén', color: 'bg-orange-500/20 text-orange-400' },
+  { id: 'finanzas', name: 'Finanzas', color: 'bg-yellow-500/20 text-yellow-400' },
+  { id: 'seguridad', name: 'Seguridad', color: 'bg-red-500/20 text-red-400' },
+  { id: 'calidad', name: 'Calidad', color: 'bg-teal-500/20 text-teal-400' },
+  { id: 'rrhh', name: 'RRHH', color: 'bg-pink-500/20 text-pink-400' },
+];
 
 export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
   open,
@@ -42,6 +55,8 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
     estimatedTime: '15',
   });
 
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
   const [steps, setSteps] = useState<Step[]>([
     { id: '1', title: '', description: '', duration: '2' },
   ]);
@@ -53,10 +68,19 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
 
   if (!open) return null;
 
+  const toggleTag = (tagId: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(t => t !== tagId) 
+        : [...prev, tagId]
+    );
+  };
+
   const resetState = () => {
     setMethod('select');
     setFormData({ name: '', description: '', importance: '', expectedResult: '', estimatedTime: '15' });
     setSteps([{ id: '1', title: '', description: '', duration: '2' }]);
+    setSelectedTags([]);
     setAudioBlob(null);
     setUploadedFile(null);
     setIsRecording(false);
@@ -287,6 +311,36 @@ export const ProcessCreatorModal: React.FC<ProcessCreatorModalProps> = ({
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={3}
           />
+        </div>
+
+        {/* Tags Section */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Tag className="w-4 h-4" />
+            Etiquetas
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {availableTags.map(tag => (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggleTag(tag.id)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                  selectedTags.includes(tag.id)
+                    ? tag.color + " ring-2 ring-offset-2 ring-offset-card ring-primary"
+                    : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                )}
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
+          {selectedTags.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {selectedTags.length} etiqueta{selectedTags.length > 1 ? 's' : ''} seleccionada{selectedTags.length > 1 ? 's' : ''}
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
