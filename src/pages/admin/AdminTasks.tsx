@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, Play, Pause, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw, UserPlus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Search, Filter, Calendar, Clock, User, MoreVertical, CheckCircle, Square, Link2, ChevronDown, ChevronLeft, ChevronRight, X, Edit, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,11 +171,6 @@ const formatTime = (minutes: number) => {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 };
 
-const formatSeconds = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
 
 const AdminTasks: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,12 +178,12 @@ const AdminTasks: React.FC = () => {
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [activeTimers, setActiveTimers] = useState<Record<string, { running: boolean; seconds: number }>>({});
   const [expandedProcess, setExpandedProcess] = useState<string | null>(null);
   const [showProcessViewer, setShowProcessViewer] = useState<{ taskId: string; processId: string; allProcesses: { id: string; name: string }[] } | null>(null);
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
   const [tasks, setTasks] = useState<Task[]>(initialMockTasks);
-  const timerRefs = useRef<Record<string, NodeJS.Timeout>>({});
+  const [showTimeInputModal, setShowTimeInputModal] = useState<{ taskId: string; assignment?: TaskAssignment } | null>(null);
+  const [manualTimeInput, setManualTimeInput] = useState({ hours: 0, minutes: 0 });
 
   const filterTasks = (frequency: string) => {
     let filtered = tasks;
@@ -219,74 +214,58 @@ const AdminTasks: React.FC = () => {
     return filtered;
   };
 
-  const startTimer = (taskId: string) => {
-    setActiveTimers(prev => ({
-      ...prev,
-      [taskId]: { running: true, seconds: prev[taskId]?.seconds || 0 }
-    }));
-    
-    timerRefs.current[taskId] = setInterval(() => {
-      setActiveTimers(prev => ({
-        ...prev,
-        [taskId]: { ...prev[taskId], seconds: (prev[taskId]?.seconds || 0) + 1 }
-      }));
-    }, 1000);
-    
-    // Update task status to in_progress
-    updateTaskStatus(taskId, 'in_progress');
-    toast.success('Temporizador iniciado');
-  };
-
-  const pauseTimer = (taskId: string) => {
-    if (timerRefs.current[taskId]) {
-      clearInterval(timerRefs.current[taskId]);
-      delete timerRefs.current[taskId];
-    }
-    setActiveTimers(prev => ({
-      ...prev,
-      [taskId]: { ...prev[taskId], running: false }
-    }));
-    toast.info('Temporizador pausado');
-  };
-
-  const updateTaskStatus = (taskId: string, newStatus: 'pending' | 'in_progress' | 'completed') => {
+  const updateTaskStatus = (taskId: string, newStatus: 'pending' | 'in_progress' | 'completed', assignmentUserId?: string) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
         return {
           ...task,
-          assignments: task.assignments.map(a => ({ ...a, status: newStatus }))
+          assignments: task.assignments.map(a => {
+            // If specific assignment, only update that one
+            if (assignmentUserId) {
+              return a.userId === assignmentUserId ? { ...a, status: newStatus } : a;
+            }
+            // Otherwise update all
+            return { ...a, status: newStatus };
+          })
         };
       }
       return task;
     }));
   };
 
-  const completeTask = (taskId: string) => {
-    if (timerRefs.current[taskId]) {
-      clearInterval(timerRefs.current[taskId]);
-      delete timerRefs.current[taskId];
-    }
-    const timer = activeTimers[taskId];
-    const timeSpent = timer ? Math.floor(timer.seconds / 60) : 0;
-    
-    // Update task status to completed
-    updateTaskStatus(taskId, 'completed');
-    
-    toast.success(`Tarea completada. Tiempo registrado: ${formatTime(timeSpent)}`);
-    setActiveTimers(prev => {
-      const { [taskId]: _, ...rest } = prev;
-      return rest;
-    });
+  const completeTask = (taskId: string, assignmentUserId?: string) => {
+    updateTaskStatus(taskId, 'completed', assignmentUserId);
+    toast.success('Tarea marcada como completada');
   };
 
-  const setTaskPending = (taskId: string) => {
-    updateTaskStatus(taskId, 'pending');
+  const setTaskPending = (taskId: string, assignmentUserId?: string) => {
+    updateTaskStatus(taskId, 'pending', assignmentUserId);
     toast.info('Tarea marcada como pendiente');
   };
 
-  const setTaskInProgress = (taskId: string) => {
-    updateTaskStatus(taskId, 'in_progress');
+  const setTaskInProgress = (taskId: string, assignmentUserId?: string) => {
+    updateTaskStatus(taskId, 'in_progress', assignmentUserId);
     toast.info('Tarea marcada en progreso');
+  };
+
+  const openTimeInputModal = (taskId: string, assignment?: TaskAssignment) => {
+    setManualTimeInput({ hours: 0, minutes: 0 });
+    setShowTimeInputModal({ taskId, assignment });
+  };
+
+  const saveManualTime = () => {
+    if (!showTimeInputModal) return;
+    
+    const totalMinutes = (manualTimeInput.hours * 60) + manualTimeInput.minutes;
+    const { taskId, assignment } = showTimeInputModal;
+    
+    // Here you would save to database - for now just show toast
+    const assigneeName = assignment?.userName || 'la tarea';
+    toast.success(`Tiempo registrado: ${formatTime(totalMinutes)} para ${assigneeName}`);
+    
+    // Also mark as completed if time is being registered
+    completeTask(taskId, assignment?.userId);
+    setShowTimeInputModal(null);
   };
 
   const handleEditTask = (task: Task) => {
@@ -298,16 +277,7 @@ const AdminTasks: React.FC = () => {
     setShowProcessViewer({ taskId, processId, allProcesses });
   };
 
-  useEffect(() => {
-    return () => {
-      Object.values(timerRefs.current).forEach(clearInterval);
-    };
-  }, []);
-
   const TaskCard = ({ task }: { task: Task }) => {
-    const timer = activeTimers[task.id];
-    const isRunning = timer?.running;
-    
     // Calculate overall task status based on assignments
     const completedCount = task.assignments.filter(a => a.status === 'completed').length;
     const inProgressCount = task.assignments.filter(a => a.status === 'in_progress').length;
@@ -400,17 +370,6 @@ const AdminTasks: React.FC = () => {
               )}
             </div>
 
-            {/* Timer display */}
-            {timer && (
-              <div className="mt-3 p-2 rounded-lg bg-primary/10 inline-flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                <span className="font-mono font-bold text-primary">
-                  {formatSeconds(timer.seconds)}
-                </span>
-                {isRunning && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
-              </div>
-            )}
-
             {/* Linked Processes - Dropdown */}
             {task.linkedProcesses && task.linkedProcesses.length > 0 && (
               <div className="mt-3 pt-3 border-t border-border">
@@ -455,17 +414,10 @@ const AdminTasks: React.FC = () => {
                   <Edit className="w-4 h-4 mr-2" />
                   Editar tarea
                 </DropdownMenuItem>
-                {!isRunning ? (
-                  <DropdownMenuItem onClick={() => startTimer(task.id)}>
-                    <Play className="w-4 h-4 mr-2" />
-                    Iniciar tiempo
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => pauseTimer(task.id)}>
-                    <Pause className="w-4 h-4 mr-2" />
-                    Pausar tiempo
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem onClick={() => openTimeInputModal(task.id)}>
+                  <Clock className="w-4 h-4 mr-2" />
+                  Registrar tiempo
+                </DropdownMenuItem>
                 <div className="h-px bg-border my-1" />
                 {overallStatus !== 'pending' && (
                   <DropdownMenuItem onClick={() => setTaskPending(task.id)}>
@@ -475,7 +427,7 @@ const AdminTasks: React.FC = () => {
                 )}
                 {overallStatus !== 'in_progress' && (
                   <DropdownMenuItem onClick={() => setTaskInProgress(task.id)}>
-                    <Play className="w-4 h-4 mr-2" />
+                    <Clock className="w-4 h-4 mr-2" />
                     Marcar en progreso
                   </DropdownMenuItem>
                 )}
@@ -488,21 +440,20 @@ const AdminTasks: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Quick timer buttons */}
-            <div className="flex flex-col gap-1">
-              {!isRunning ? (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startTimer(task.id)}>
-                  <Play className="w-4 h-4 text-success" />
-                </Button>
+            {/* Quick action button */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8" 
+              onClick={() => overallStatus === 'completed' ? setTaskPending(task.id) : completeTask(task.id)}
+              title={overallStatus === 'completed' ? 'Volver a pendiente' : 'Marcar completada'}
+            >
+              {overallStatus === 'completed' ? (
+                <RotateCcw className="w-4 h-4 text-muted-foreground" />
               ) : (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => pauseTimer(task.id)}>
-                  <Pause className="w-4 h-4 text-warning" />
-                </Button>
-              )}
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => completeTask(task.id)}>
                 <CheckCircle className="w-4 h-4 text-primary" />
-              </Button>
-            </div>
+              )}
+            </Button>
           </div>
         </div>
       </div>
@@ -1146,6 +1097,63 @@ const ProcessViewerOverlay: React.FC<{ taskId: string; processId: string; allPro
               >
                 Siguiente
                 <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Time Input Modal */}
+      {showTimeInputModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Registrar Tiempo</h3>
+              <button 
+                onClick={() => setShowTimeInputModal(null)}
+                className="p-1 rounded hover:bg-secondary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {showTimeInputModal.assignment && (
+              <p className="text-sm text-muted-foreground mb-4">
+                Para: <span className="text-foreground">{showTimeInputModal.assignment.userName}</span>
+              </p>
+            )}
+            
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground mb-1 block">Horas</label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="24"
+                  value={manualTimeInput.hours}
+                  onChange={(e) => setManualTimeInput(prev => ({ ...prev, hours: parseInt(e.target.value) || 0 }))}
+                  className="text-center"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground mb-1 block">Minutos</label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={manualTimeInput.minutes}
+                  onChange={(e) => setManualTimeInput(prev => ({ ...prev, minutes: parseInt(e.target.value) || 0 }))}
+                  className="text-center"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowTimeInputModal(null)}>
+                Cancelar
+              </Button>
+              <Button variant="hero" className="flex-1" onClick={saveManualTime}>
+                Guardar
               </Button>
             </div>
           </div>
