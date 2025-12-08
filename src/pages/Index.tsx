@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Play, Sparkles, Users, BarChart3, Zap, CheckCircle } from 'lucide-react';
+import { ArrowRight, Play, Sparkles, Users, BarChart3, Zap } from 'lucide-react';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 
@@ -12,17 +12,17 @@ const features = [
   },
   {
     icon: Zap,
-    title: 'Micro-Learning Diario',
-    description: 'Tips de 45 segundos que mantienen a tu equipo actualizado sin interrumpir.',
+    title: 'Aprendizajes Pequeños',
+    description: 'Tips de 45 segundos que impactan día a día sin interrumpir tu operación.',
   },
   {
     icon: BarChart3,
-    title: 'ROI Medible',
+    title: 'Inversión con Resultados',
     description: 'Dashboards que demuestran el impacto real en tu operación.',
   },
   {
     icon: Users,
-    title: 'Social Learning',
+    title: 'Desarrollo Grupal',
     description: 'Tu equipo aprende mejor cuando comparte logros y conocimiento.',
   },
 ];
@@ -46,7 +46,7 @@ const Index: React.FC = () => {
             Iniciar sesión
           </Button>
           <Button variant="hero" onClick={() => navigate('/register')}>
-            Comenzar gratis
+            Mejora tu empresa
           </Button>
         </div>
       </header>
@@ -71,7 +71,7 @@ const Index: React.FC = () => {
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             ProcessFlow convierte tus procesos en micro-videos que tu equipo realmente
-            completa. Menos errores, más consistencia, ROI medible.
+            completa. Menos errores, más consistencia, resultados medibles.
           </p>
 
           {/* CTA Buttons */}
@@ -82,27 +82,13 @@ const Index: React.FC = () => {
               onClick={() => navigate('/register')}
               className="gap-2"
             >
-              Comenzar prueba gratuita
+              Mejora tu empresa
               <ArrowRight className="w-5 h-5" />
             </Button>
             <Button variant="glass" size="xl" className="gap-2">
               <Play className="w-5 h-5" />
               Ver demo (2 min)
             </Button>
-          </div>
-
-          {/* Social Proof */}
-          <div className="flex items-center justify-center gap-8 mt-12 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            {[
-              { value: '500+', label: 'Empresas' },
-              { value: '10k+', label: 'Empleados' },
-              { value: '85%', label: 'Retención' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -144,10 +130,10 @@ const Index: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <div className="kpi-card text-center py-12 px-8">
             <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
-              Listo para transformar tu entrenamiento?
+              ¿Listo para transformar tu entrenamiento?
             </h2>
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-              Únete a más de 500 empresas que ya están ahorrando tiempo y reduciendo errores.
+              Comienza hoy y ve resultados reales en tu operación.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button
@@ -156,23 +142,9 @@ const Index: React.FC = () => {
                 onClick={() => navigate('/register')}
                 className="gap-2"
               >
-                Comenzar ahora
+                Mejora tu empresa
                 <ArrowRight className="w-5 h-5" />
               </Button>
-            </div>
-            <div className="flex items-center justify-center gap-6 mt-8 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-success" />
-                14 días gratis
-              </span>
-              <span className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-success" />
-                Sin tarjeta de crédito
-              </span>
-              <span className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-success" />
-                Soporte 24/7
-              </span>
             </div>
           </div>
         </div>
