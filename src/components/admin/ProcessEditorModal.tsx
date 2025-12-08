@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, GripVertical, Save } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, Save, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Process {
   id: string;
@@ -13,6 +14,7 @@ interface Process {
   compliance: number;
   status: 'published' | 'draft';
   lastUpdated: string;
+  tags?: string[];
 }
 
 interface Step {
@@ -28,6 +30,18 @@ interface ProcessEditorModalProps {
   onSave: (process: Process) => void;
 }
 
+// Available tags for the system
+const availableTags = [
+  { id: 'operaciones', name: 'Operaciones', color: 'bg-blue-500/20 text-blue-400' },
+  { id: 'ventas', name: 'Ventas', color: 'bg-green-500/20 text-green-400' },
+  { id: 'atencion', name: 'Atención al Cliente', color: 'bg-purple-500/20 text-purple-400' },
+  { id: 'almacen', name: 'Almacén', color: 'bg-orange-500/20 text-orange-400' },
+  { id: 'finanzas', name: 'Finanzas', color: 'bg-yellow-500/20 text-yellow-400' },
+  { id: 'seguridad', name: 'Seguridad', color: 'bg-red-500/20 text-red-400' },
+  { id: 'calidad', name: 'Calidad', color: 'bg-teal-500/20 text-teal-400' },
+  { id: 'rrhh', name: 'RRHH', color: 'bg-pink-500/20 text-pink-400' },
+];
+
 export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
   process,
   onClose,
@@ -41,9 +55,19 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
     estimatedTime: '15',
   });
 
+  const [selectedTags, setSelectedTags] = useState<string[]>(process.tags || []);
+
   const [steps, setSteps] = useState<Step[]>([
     { id: '1', title: 'Paso 1', description: 'Descripción del paso', duration: '2' },
   ]);
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(t => t !== tagId) 
+        : [...prev, tagId]
+    );
+  };
 
   const addStep = () => {
     const newStep: Step = {
@@ -75,6 +99,7 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
       name: formData.name,
       description: formData.description,
       steps: steps.length,
+      tags: selectedTags,
     });
   };
 
@@ -113,6 +138,36 @@ export const ProcessEditorModal: React.FC<ProcessEditorModalProps> = ({
                 placeholder="Describe el propósito del proceso..."
                 rows={3}
               />
+            </div>
+
+            {/* Tags Section */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Etiquetas
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {availableTags.map(tag => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleTag(tag.id)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                      selectedTags.includes(tag.id)
+                        ? tag.color + " ring-2 ring-offset-2 ring-offset-card ring-primary"
+                        : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                    )}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+              {selectedTags.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedTags.length} etiqueta{selectedTags.length > 1 ? 's' : ''} seleccionada{selectedTags.length > 1 ? 's' : ''}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

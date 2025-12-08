@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,6 +11,7 @@ import {
 import { ProcessCreatorModal } from '@/components/admin/ProcessCreatorModal';
 import { ProcessEditorModal } from '@/components/admin/ProcessEditorModal';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Process {
   id: string;
@@ -20,7 +21,20 @@ interface Process {
   compliance: number;
   status: 'published' | 'draft';
   lastUpdated: string;
+  tags: string[];
 }
+
+// Available tags for the system
+const availableTags = [
+  { id: 'operaciones', name: 'Operaciones', color: 'bg-blue-500/20 text-blue-400' },
+  { id: 'ventas', name: 'Ventas', color: 'bg-green-500/20 text-green-400' },
+  { id: 'atencion', name: 'Atención al Cliente', color: 'bg-purple-500/20 text-purple-400' },
+  { id: 'almacen', name: 'Almacén', color: 'bg-orange-500/20 text-orange-400' },
+  { id: 'finanzas', name: 'Finanzas', color: 'bg-yellow-500/20 text-yellow-400' },
+  { id: 'seguridad', name: 'Seguridad', color: 'bg-red-500/20 text-red-400' },
+  { id: 'calidad', name: 'Calidad', color: 'bg-teal-500/20 text-teal-400' },
+  { id: 'rrhh', name: 'RRHH', color: 'bg-pink-500/20 text-pink-400' },
+];
 
 const mockProcesses: Process[] = [
   {
@@ -31,6 +45,7 @@ const mockProcesses: Process[] = [
     compliance: 92,
     status: 'published',
     lastUpdated: '2024-01-15',
+    tags: ['operaciones', 'almacen'],
   },
   {
     id: '2',
@@ -40,6 +55,7 @@ const mockProcesses: Process[] = [
     compliance: 78,
     status: 'published',
     lastUpdated: '2024-01-10',
+    tags: ['atencion', 'ventas'],
   },
   {
     id: '3',
@@ -49,6 +65,7 @@ const mockProcesses: Process[] = [
     compliance: 95,
     status: 'published',
     lastUpdated: '2024-01-08',
+    tags: ['finanzas', 'operaciones'],
   },
   {
     id: '4',
@@ -58,6 +75,7 @@ const mockProcesses: Process[] = [
     compliance: 65,
     status: 'draft',
     lastUpdated: '2024-01-05',
+    tags: ['almacen', 'calidad'],
   },
 ];
 
@@ -67,10 +85,42 @@ const AdminProcesses: React.FC = () => {
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [showViewer, setShowViewer] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
 
-  const filteredProcesses = mockProcesses.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const toggleTagFilter = (tagId: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(t => t !== tagId) 
+        : [...prev, tagId]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setStatusFilter('all');
+    setSearchQuery('');
+  };
+
+  const filteredProcesses = mockProcesses.filter((p) => {
+    // Search filter
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          p.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Tags filter
+    const matchesTags = selectedTags.length === 0 || 
+                        selectedTags.some(tag => p.tags.includes(tag));
+    
+    // Status filter
+    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+
+    return matchesSearch && matchesTags && matchesStatus;
+  });
+
+  const getTagInfo = (tagId: string) => {
+    return availableTags.find(t => t.id === tagId) || { id: tagId, name: tagId, color: 'bg-muted text-muted-foreground' };
+  };
 
   const handleViewProcess = (process: Process) => {
     setSelectedProcess(process);
@@ -85,6 +135,8 @@ const AdminProcesses: React.FC = () => {
   const handleDeleteProcess = (process: Process) => {
     toast.success(`Proceso "${process.name}" eliminado`);
   };
+
+  const activeFiltersCount = selectedTags.length + (statusFilter !== 'all' ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -113,11 +165,122 @@ const AdminProcesses: React.FC = () => {
             className="pl-10"
           />
         </div>
-        <Button variant="outline" className="gap-2">
-          <Filter className="w-4 h-4" />
-          Filtrar
-        </Button>
+        <div className="relative">
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+          >
+            <Filter className="w-4 h-4" />
+            Filtrar
+            {activeFiltersCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary text-primary-foreground">
+                {activeFiltersCount}
+              </span>
+            )}
+            <ChevronDown className={cn("w-4 h-4 transition-transform", showFilterDropdown && "rotate-180")} />
+          </Button>
+
+          {/* Filter Dropdown */}
+          {showFilterDropdown && (
+            <div className="absolute right-0 top-full mt-2 w-72 bg-card border border-border rounded-xl shadow-lg z-50 p-4 space-y-4">
+              {/* Status Filter */}
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Estado</p>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'published', label: 'Publicados' },
+                    { value: 'draft', label: 'Borradores' },
+                  ].map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => setStatusFilter(option.value as typeof statusFilter)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-sm transition-colors",
+                        statusFilter === option.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags Filter */}
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Etiquetas</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableTags.map(tag => (
+                    <button
+                      key={tag.id}
+                      onClick={() => toggleTagFilter(tag.id)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+                        selectedTags.includes(tag.id)
+                          ? tag.color + " ring-2 ring-offset-2 ring-offset-card ring-primary"
+                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      )}
+                    >
+                      {tag.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clear Filters */}
+              {activeFiltersCount > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full text-muted-foreground"
+                  onClick={clearFilters}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Active Filters Display */}
+      {(selectedTags.length > 0 || statusFilter !== 'all') && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filtros activos:</span>
+          {statusFilter !== 'all' && (
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-secondary text-foreground flex items-center gap-1">
+              {statusFilter === 'published' ? 'Publicados' : 'Borradores'}
+              <button onClick={() => setStatusFilter('all')} className="hover:text-destructive">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {selectedTags.map(tagId => {
+            const tag = getTagInfo(tagId);
+            return (
+              <span 
+                key={tagId} 
+                className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1", tag.color)}
+              >
+                {tag.name}
+                <button onClick={() => toggleTagFilter(tagId)} className="hover:opacity-70">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+          <button 
+            onClick={clearFilters}
+            className="text-xs text-primary hover:underline"
+          >
+            Limpiar todo
+          </button>
+        </div>
+      )}
 
       {/* Processes Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -126,20 +289,20 @@ const AdminProcesses: React.FC = () => {
             key={process.id}
             className="kpi-card hover:border-primary/30 transition-colors"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground">{process.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                   {process.description}
                 </p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-1 rounded hover:bg-secondary">
+                  <button className="p-1 rounded hover:bg-secondary shrink-0">
                     <MoreVertical className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="bg-card border border-border">
                   <DropdownMenuItem onClick={() => handleViewProcess(process)}>
                     <Eye className="w-4 h-4 mr-2" />
                     Ver proceso
@@ -158,6 +321,23 @@ const AdminProcesses: React.FC = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+
+            {/* Tags */}
+            {process.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-3">
+                {process.tags.map(tagId => {
+                  const tag = getTagInfo(tagId);
+                  return (
+                    <span 
+                      key={tagId} 
+                      className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium", tag.color)}
+                    >
+                      {tag.name}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="flex items-center gap-4 text-sm">
               <span className="text-muted-foreground">
@@ -214,6 +394,32 @@ const AdminProcesses: React.FC = () => {
         ))}
       </div>
 
+      {/* Empty State */}
+      {filteredProcesses.length === 0 && (
+        <div className="text-center py-12">
+          <Tag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">No se encontraron procesos</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchQuery || selectedTags.length > 0 || statusFilter !== 'all'
+              ? 'Prueba ajustando los filtros de búsqueda'
+              : 'Crea tu primer proceso para comenzar'}
+          </p>
+          {(searchQuery || selectedTags.length > 0 || statusFilter !== 'all') && (
+            <Button variant="outline" onClick={clearFilters}>
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Click outside to close filter dropdown */}
+      {showFilterDropdown && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowFilterDropdown(false)} 
+        />
+      )}
+
       {/* Process Creator Modal */}
       <ProcessCreatorModal
         open={showCreator}
@@ -255,6 +461,10 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
   process,
   onClose,
 }) => {
+  const getTagInfo = (tagId: string) => {
+    return availableTags.find(t => t.id === tagId) || { id: tagId, name: tagId, color: 'bg-muted text-muted-foreground' };
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
@@ -267,6 +477,23 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
         </div>
         
         <div className="p-6 space-y-6">
+          {/* Tags */}
+          {process.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {process.tags.map(tagId => {
+                const tag = getTagInfo(tagId);
+                return (
+                  <span 
+                    key={tagId} 
+                    className={cn("px-3 py-1 rounded-full text-xs font-medium", tag.color)}
+                  >
+                    {tag.name}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-1">Descripción</h3>
             <p className="text-foreground">{process.description}</p>
@@ -310,3 +537,5 @@ const ProcessViewerModal: React.FC<{ process: Process; onClose: () => void }> = 
 };
 
 export default AdminProcesses;
+
+export { availableTags };
