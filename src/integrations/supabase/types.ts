@@ -416,6 +416,193 @@ export type Database = {
           },
         ]
       }
+      planning_items: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          current_value: number | null
+          description: string | null
+          end_date: string | null
+          id: string
+          level: Database["public"]["Enums"]["planning_level"]
+          name: string
+          order_index: number | null
+          owner_id: string | null
+          parent_id: string | null
+          progress_percentage: number | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["planning_status"]
+          target_value: number | null
+          team_id: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_value?: number | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          level: Database["public"]["Enums"]["planning_level"]
+          name: string
+          order_index?: number | null
+          owner_id?: string | null
+          parent_id?: string | null
+          progress_percentage?: number | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["planning_status"]
+          target_value?: number | null
+          team_id: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_value?: number | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          level?: Database["public"]["Enums"]["planning_level"]
+          name?: string
+          order_index?: number | null
+          owner_id?: string | null
+          parent_id?: string | null
+          progress_percentage?: number | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["planning_status"]
+          target_value?: number | null
+          team_id?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "planning_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_items_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planning_process_links: {
+        Row: {
+          created_at: string
+          id: string
+          planning_item_id: string
+          process_id: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          planning_item_id: string
+          process_id: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          planning_item_id?: string
+          process_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_process_links_planning_item_id_fkey"
+            columns: ["planning_item_id"]
+            isOneToOne: false
+            referencedRelation: "planning_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_process_links_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_process_links_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planning_task_links: {
+        Row: {
+          created_at: string
+          id: string
+          planning_item_id: string
+          task_id: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          planning_item_id: string
+          task_id: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          planning_item_id?: string
+          task_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_task_links_planning_item_id_fkey"
+            columns: ["planning_item_id"]
+            isOneToOne: false
+            referencedRelation: "planning_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_task_links_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_task_links_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       process_assignments: {
         Row: {
           assigned_at: string
@@ -1220,6 +1407,13 @@ export type Database = {
         | "specific_branches"
       feed_content_type: "tip" | "achievement" | "certification"
       hierarchy_level: "owner" | "admin" | "supervisor" | "employee"
+      planning_level: "strategy" | "objective" | "initiative" | "action"
+      planning_status:
+        | "draft"
+        | "active"
+        | "completed"
+        | "on_hold"
+        | "cancelled"
       priority_level: "high" | "medium" | "low"
       process_status: "draft" | "published" | "under_review" | "discontinued"
     }
@@ -1362,6 +1556,8 @@ export const Constants = {
       ],
       feed_content_type: ["tip", "achievement", "certification"],
       hierarchy_level: ["owner", "admin", "supervisor", "employee"],
+      planning_level: ["strategy", "objective", "initiative", "action"],
+      planning_status: ["draft", "active", "completed", "on_hold", "cancelled"],
       priority_level: ["high", "medium", "low"],
       process_status: ["draft", "published", "under_review", "discontinued"],
     },

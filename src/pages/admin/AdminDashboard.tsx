@@ -29,6 +29,7 @@ import AdminOnboardings from './AdminOnboardings';
 import AdminTasks from './AdminTasks';
 import AdminHierarchy from './AdminHierarchy';
 import VisionLeadership from './VisionLeadership';
+import AdminPlanning from './AdminPlanning';
 
 const mockProcessHealth = [
   {
@@ -228,6 +229,7 @@ const AdminDashboard: React.FC = () => {
       >
         <Routes>
           <Route path="/" element={<DashboardHome />} />
+          <Route path="/planning" element={<AdminPlanning />} />
           <Route path="/processes/*" element={<AdminProcesses />} />
           <Route path="/tasks" element={<AdminTasks />} />
           <Route path="/team/*" element={<AdminTeam />} />

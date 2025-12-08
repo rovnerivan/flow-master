@@ -16,6 +16,7 @@ import {
   Crown,
   Network,
   Heart,
+  Compass,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -30,6 +31,7 @@ interface OwnerSidebarProps {
 
 const ownerNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/owner' },
+  { icon: Compass, label: 'Gestión', path: '/owner/planning' },
   { icon: Layers, label: 'Procesos', path: '/owner/processes' },
   { icon: ListTodo, label: 'Tareas', path: '/owner/tasks' },
   { icon: Users, label: 'Equipo', path: '/owner/team' },

@@ -16,6 +16,7 @@ import {
   Shield,
   Network,
   Heart,
+  Compass,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -31,6 +32,7 @@ interface AdminSidebarProps {
 
 const adminNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+  { icon: Compass, label: 'Gestión', path: '/admin/planning' },
   { icon: Layers, label: 'Procesos', path: '/admin/processes' },
   { icon: ListTodo, label: 'Tareas', path: '/admin/tasks' },
   { icon: Users, label: 'Equipo', path: '/admin/team' },
@@ -44,6 +46,7 @@ const adminNavItems = [
 
 const supervisorNavItems = [
   { icon: LayoutDashboard, label: 'Mi Dashboard', path: '/supervisor' },
+  { icon: Compass, label: 'Gestión', path: '/supervisor/planning' },
   { icon: ListTodo, label: 'Mis Tareas', path: '/supervisor/my-tasks' },
   { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
   { icon: UserPlus, label: 'Onboardings', path: '/supervisor/onboardings' },
