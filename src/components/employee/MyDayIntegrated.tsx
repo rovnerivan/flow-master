@@ -11,7 +11,9 @@ import {
   Target,
   AlertTriangle,
   Send,
-  RotateCcw
+  RotateCcw,
+  Circle,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -19,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ProcessViewerModal } from '@/components/employee/ProcessViewerModal';
+import { toast } from '@/hooks/use-toast';
 
 // Types
 interface LinkedProcess {
@@ -38,13 +41,13 @@ interface TaskItem {
   estimatedMinutes: number;
   dueTime?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'needs_correction' | 'rejected';
-  linkedProcess?: LinkedProcess;
+  linkedProcesses?: LinkedProcess[]; // Support for multiple processes
   strategicContext?: StrategicContext;
   correctionNotes?: string;
   timeSpent?: number;
 }
 
-// Mock data
+// Mock data with multiple linked processes
 const mockTasks: TaskItem[] = [
   {
     id: '1',
@@ -54,7 +57,10 @@ const mockTasks: TaskItem[] = [
     dueTime: '10:00',
     status: 'needs_correction',
     correctionNotes: 'Faltó verificar la sección de electrónicos',
-    linkedProcess: { id: 'p1', name: 'Control de Inventario' },
+    linkedProcesses: [
+      { id: 'p1', name: 'Control de Inventario' },
+      { id: 'p4', name: 'Verificación de Precios' }
+    ],
     strategicContext: { 
       objectiveName: 'Reducir diferencias de inventario en 30%',
       contribution: 'Cada auditoría correcta reduce discrepancias'
@@ -67,7 +73,7 @@ const mockTasks: TaskItem[] = [
     estimatedMinutes: 15,
     dueTime: '18:00',
     status: 'pending',
-    linkedProcess: { id: 'p2', name: 'Proceso de Cierre' },
+    linkedProcesses: [{ id: 'p2', name: 'Proceso de Cierre' }],
     strategicContext: { 
       objectiveName: 'Reducir diferencias de caja en 50%',
       contribution: 'Tu precisión impacta directamente este objetivo'
@@ -106,7 +112,11 @@ const mockTasks: TaskItem[] = [
     dueTime: '11:00',
     status: 'completed',
     timeSpent: 25,
-    linkedProcess: { id: 'p3', name: 'Recepción de Mercancía' },
+    linkedProcesses: [
+      { id: 'p3', name: 'Recepción de Mercancía' },
+      { id: 'p5', name: 'Documentación de Entregas' },
+      { id: 'p6', name: 'Verificación de Calidad' }
+    ],
   },
 ];
 
@@ -121,13 +131,22 @@ interface TaskCardProps {
   task: TaskItem;
   onViewProcess?: (processId: string) => void;
   onStartTask?: (taskId: string) => void;
+  onCompleteTask?: (taskId: string) => void;
+  onCorrectTask?: (taskId: string) => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onViewProcess, onStartTask }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ 
+  task, 
+  onViewProcess, 
+  onStartTask, 
+  onCompleteTask,
+  onCorrectTask 
+}) => {
   const [expanded, setExpanded] = useState(false);
+  const [showProcesses, setShowProcesses] = useState(false);
   
   const statusConfig = {
-    pending: { bg: 'bg-muted', border: 'border-border', icon: Clock, iconColor: 'text-muted-foreground' },
+    pending: { bg: 'bg-muted', border: 'border-border', icon: Circle, iconColor: 'text-muted-foreground' },
     in_progress: { bg: 'bg-primary/5', border: 'border-primary/30', icon: PlayCircle, iconColor: 'text-primary' },
     completed: { bg: 'bg-success/5', border: 'border-success/30', icon: CheckCircle2, iconColor: 'text-success' },
     needs_correction: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', icon: AlertTriangle, iconColor: 'text-amber-500' },
@@ -136,6 +155,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onViewProcess, onStartTask })
 
   const config = statusConfig[task.status];
   const StatusIcon = config.icon;
+  const hasMultipleProcesses = task.linkedProcesses && task.linkedProcesses.length > 1;
+
+  // Handle clicking the status icon to complete task
+  const handleStatusClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (task.status === 'pending') {
+      onStartTask?.(task.id);
+    } else if (task.status === 'in_progress') {
+      onCompleteTask?.(task.id);
+    }
+  };
 
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded}>
@@ -147,7 +177,35 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onViewProcess, onStartTask })
       )}>
         <CollapsibleTrigger className="w-full">
           <div className="p-3 flex items-start gap-3">
-            <StatusIcon className={cn("w-5 h-5 mt-0.5 flex-shrink-0", config.iconColor)} />
+            {/* Clickable status icon for quick complete */}
+            <button
+              onClick={handleStatusClick}
+              className={cn(
+                "mt-0.5 flex-shrink-0 transition-all",
+                task.status === 'pending' && "hover:text-primary",
+                task.status === 'in_progress' && "hover:text-success"
+              )}
+            >
+              {task.status === 'pending' && (
+                <Circle className="w-5 h-5 text-muted-foreground hover:text-primary" />
+              )}
+              {task.status === 'in_progress' && (
+                <div className="relative">
+                  <Circle className="w-5 h-5 text-primary" />
+                  <Check className="w-3 h-3 text-primary absolute top-1 left-1 opacity-0 hover:opacity-100 transition-opacity" />
+                </div>
+              )}
+              {task.status === 'completed' && (
+                <CheckCircle2 className="w-5 h-5 text-success" />
+              )}
+              {task.status === 'needs_correction' && (
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              )}
+              {task.status === 'rejected' && (
+                <AlertCircle className="w-5 h-5 text-destructive" />
+              )}
+            </button>
+            
             <div className="flex-1 min-w-0 text-left">
               <div className="flex items-start justify-between gap-2">
                 <p className={cn(
@@ -165,10 +223,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onViewProcess, onStartTask })
                 {task.dueTime && <span>{task.dueTime}</span>}
                 <span>•</span>
                 <span>{formatDuration(task.estimatedMinutes)}</span>
-                {task.linkedProcess && (
+                {task.linkedProcesses && task.linkedProcesses.length > 0 && (
                   <>
                     <span>•</span>
-                    <span className="text-primary">{task.linkedProcess.name}</span>
+                    <span className="text-primary">
+                      {hasMultipleProcesses 
+                        ? `${task.linkedProcesses.length} procesos`
+                        : task.linkedProcesses[0].name
+                      }
+                    </span>
                   </>
                 )}
               </div>
@@ -203,25 +266,71 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onViewProcess, onStartTask })
                 </div>
               </div>
             )}
+
+            {/* Linked Processes - Expandable list for multiple */}
+            {task.linkedProcesses && task.linkedProcesses.length > 0 && (
+              <div className="space-y-2">
+                {hasMultipleProcesses ? (
+                  <Collapsible open={showProcesses} onOpenChange={setShowProcesses}>
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-primary" />
+                          <span className="text-xs font-medium">
+                            {task.linkedProcesses.length} procesos asociados
+                          </span>
+                        </div>
+                        <ChevronRight className={cn(
+                          "w-4 h-4 text-muted-foreground transition-transform",
+                          showProcesses && "rotate-90"
+                        )} />
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-1 mt-2">
+                        {task.linkedProcesses.map(process => (
+                          <button
+                            key={process.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewProcess?.(process.id);
+                            }}
+                            className="w-full flex items-center justify-between p-2 rounded-lg bg-background border border-border hover:border-primary/50 transition-all text-left"
+                          >
+                            <span className="text-xs font-medium truncate">{process.name}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-1.5 h-8 text-xs w-full justify-start"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewProcess?.(task.linkedProcesses![0].id);
+                    }}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Ver proceso: {task.linkedProcesses[0].name}
+                  </Button>
+                )}
+              </div>
+            )}
             
             {/* Actions */}
-            <div className="flex items-center gap-2">
-              {task.linkedProcess && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="gap-1.5 h-8 text-xs"
-                  onClick={() => onViewProcess?.(task.linkedProcess!.id)}
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Ver proceso
-                </Button>
-              )}
+            <div className="flex items-center gap-2 flex-wrap">
               {task.status === 'pending' && (
                 <Button 
                   size="sm" 
                   className="gap-1.5 h-8 text-xs"
-                  onClick={() => onStartTask?.(task.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartTask?.(task.id);
+                  }}
                 >
                   <PlayCircle className="w-3.5 h-3.5" />
                   Iniciar
@@ -231,7 +340,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onViewProcess, onStartTask })
                 <Button 
                   size="sm" 
                   className="gap-1.5 h-8 text-xs bg-amber-500 hover:bg-amber-600"
-                  onClick={() => onStartTask?.(task.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCorrectTask?.(task.id);
+                  }}
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   Corregir
@@ -239,13 +351,25 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onViewProcess, onStartTask })
               )}
               {task.status === 'in_progress' && (
                 <>
-                  <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-1.5 h-8 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <PauseCircle className="w-3.5 h-3.5" />
                     Pausar
                   </Button>
-                  <Button size="sm" className="gap-1.5 h-8 text-xs">
+                  <Button 
+                    size="sm" 
+                    className="gap-1.5 h-8 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCompleteTask?.(task.id);
+                    }}
+                  >
                     <Send className="w-3.5 h-3.5" />
-                    Enviar
+                    Completar
                   </Button>
                 </>
               )}
@@ -268,8 +392,7 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
 }) => {
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
-  
-  const tasks = mockTasks;
+  const [tasks, setTasks] = useState<TaskItem[]>(mockTasks);
   
   // Group tasks by status
   const urgentTasks = tasks.filter(t => t.status === 'needs_correction' || t.status === 'rejected');
@@ -287,6 +410,44 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
     if (hour < 12) return 'Buenos días';
     if (hour < 18) return 'Buenas tardes';
     return 'Buenas noches';
+  };
+
+  // Handle starting a task
+  const handleStartTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, status: 'in_progress' as const } : t
+    ));
+    toast({
+      title: "Tarea iniciada",
+      description: "El cronómetro ha comenzado. ¡Buena suerte!"
+    });
+  };
+
+  // Handle completing a task
+  const handleCompleteTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, status: 'completed' as const, timeSpent: t.estimatedMinutes } : t
+    ));
+    toast({
+      title: "¡Tarea completada!",
+      description: "Buen trabajo. La tarea ha sido marcada como completada."
+    });
+  };
+
+  // Handle correcting a task
+  const handleCorrectTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => 
+      t.id === taskId ? { ...t, status: 'in_progress' as const } : t
+    ));
+    toast({
+      title: "Corrección iniciada",
+      description: "Revisa las notas del supervisor y realiza los ajustes necesarios."
+    });
+  };
+
+  // Handle viewing a process
+  const handleViewProcess = (processId: string) => {
+    setSelectedProcess(processId);
   };
 
   return (
@@ -329,7 +490,10 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
               <TaskCard 
                 key={task.id} 
                 task={task} 
-                onViewProcess={setSelectedProcess}
+                onViewProcess={handleViewProcess}
+                onStartTask={handleStartTask}
+                onCompleteTask={handleCompleteTask}
+                onCorrectTask={handleCorrectTask}
               />
             ))}
           </div>
@@ -350,7 +514,10 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
               <TaskCard 
                 key={task.id} 
                 task={task} 
-                onViewProcess={setSelectedProcess}
+                onViewProcess={handleViewProcess}
+                onStartTask={handleStartTask}
+                onCompleteTask={handleCompleteTask}
+                onCorrectTask={handleCorrectTask}
               />
             ))}
           </div>
@@ -378,7 +545,10 @@ export const MyDayIntegrated: React.FC<MyDayIntegratedProps> = ({
                 <TaskCard 
                   key={task.id} 
                   task={task} 
-                  onViewProcess={setSelectedProcess}
+                  onViewProcess={handleViewProcess}
+                  onStartTask={handleStartTask}
+                  onCompleteTask={handleCompleteTask}
+                  onCorrectTask={handleCorrectTask}
                 />
               ))}
             </div>
