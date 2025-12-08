@@ -545,6 +545,63 @@ const AdminTasks: React.FC = () => {
         />
       )}
 
+      {/* Manual Time Input Modal */}
+      {showTimeInputModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Registrar Tiempo</h3>
+              <button 
+                onClick={() => setShowTimeInputModal(null)}
+                className="p-1 rounded hover:bg-secondary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {showTimeInputModal.assignment && (
+              <p className="text-sm text-muted-foreground mb-4">
+                Para: <span className="text-foreground">{showTimeInputModal.assignment.userName}</span>
+              </p>
+            )}
+            
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground mb-1 block">Horas</label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="24"
+                  value={manualTimeInput.hours}
+                  onChange={(e) => setManualTimeInput(prev => ({ ...prev, hours: parseInt(e.target.value) || 0 }))}
+                  className="text-center"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground mb-1 block">Minutos</label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={manualTimeInput.minutes}
+                  onChange={(e) => setManualTimeInput(prev => ({ ...prev, minutes: parseInt(e.target.value) || 0 }))}
+                  className="text-center"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowTimeInputModal(null)}>
+                Cancelar
+              </Button>
+              <Button variant="hero" className="flex-1" onClick={saveManualTime}>
+                Guardar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Process Viewer Overlay */}
       {showProcessViewer && (
         <ProcessViewerOverlay
@@ -1097,63 +1154,6 @@ const ProcessViewerOverlay: React.FC<{ taskId: string; processId: string; allPro
               >
                 Siguiente
                 <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Time Input Modal */}
-      {showTimeInputModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Registrar Tiempo</h3>
-              <button 
-                onClick={() => setShowTimeInputModal(null)}
-                className="p-1 rounded hover:bg-secondary"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            
-            {showTimeInputModal.assignment && (
-              <p className="text-sm text-muted-foreground mb-4">
-                Para: <span className="text-foreground">{showTimeInputModal.assignment.userName}</span>
-              </p>
-            )}
-            
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1">
-                <label className="text-sm text-muted-foreground mb-1 block">Horas</label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="24"
-                  value={manualTimeInput.hours}
-                  onChange={(e) => setManualTimeInput(prev => ({ ...prev, hours: parseInt(e.target.value) || 0 }))}
-                  className="text-center"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-sm text-muted-foreground mb-1 block">Minutos</label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="59"
-                  value={manualTimeInput.minutes}
-                  onChange={(e) => setManualTimeInput(prev => ({ ...prev, minutes: parseInt(e.target.value) || 0 }))}
-                  className="text-center"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowTimeInputModal(null)}>
-                Cancelar
-              </Button>
-              <Button variant="hero" className="flex-1" onClick={saveManualTime}>
-                Guardar
               </Button>
             </div>
           </div>
