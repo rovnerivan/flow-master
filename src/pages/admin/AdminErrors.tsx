@@ -53,7 +53,7 @@ const initialMockErrors: ErrorItem[] = [
     type: 'Error de registro',
     process: 'Cierre de Caja',
     task: 'Conteo de efectivo',
-    employee: 'Ana Martínez',
+    employee: 'Andrea Morales',
     description: 'Diferencia de $50 en el conteo final',
     employeeNotes: '',
     adminNotes: '',
@@ -61,7 +61,7 @@ const initialMockErrors: ErrorItem[] = [
     verticalId: 'v3',
     managementId: 'm5',
     departmentId: 'd6',
-    employeeId: 'e9',
+    employeeId: 'e9', // Andrea Morales - matches mockHierarchy
   },
   {
     id: '3',
@@ -74,10 +74,10 @@ const initialMockErrors: ErrorItem[] = [
     employeeNotes: 'No tenía acceso al sistema de tickets',
     adminNotes: 'Verificar permisos de acceso',
     status: 'resolved',
-    verticalId: 'v2',
-    managementId: 'm3',
-    departmentId: 'd4',
-    employeeId: 'e6',
+    verticalId: 'v1',
+    managementId: 'm1',
+    departmentId: 'd2',
+    employeeId: 'e3', // Pedro Sánchez - matches mockHierarchy
   },
   {
     id: '4',
@@ -85,15 +85,15 @@ const initialMockErrors: ErrorItem[] = [
     type: 'Incumplimiento de protocolo',
     process: 'Inventario Semanal',
     task: 'Registro de productos',
-    employee: 'María García',
+    employee: 'Laura García',
     description: 'Productos no registrados en sistema',
     employeeNotes: '',
     adminNotes: '',
     status: 'pending',
     verticalId: 'v1',
-    managementId: 'm1',
-    departmentId: 'd2',
-    employeeId: 'e3',
+    managementId: 'm2',
+    departmentId: 'd3',
+    employeeId: 'e4', // Laura García - matches mockHierarchy
   },
   {
     id: '5',
