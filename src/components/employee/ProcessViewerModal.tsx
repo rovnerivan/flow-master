@@ -52,7 +52,10 @@ const mockProcess = {
       title: 'Recibir y revisar la orden',
       description:
         'Verifica que tengas la orden impresa o en el sistema. Revisa todos los items, cantidades y especificaciones especiales.',
-      videoUrl: null,
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      audioUrl: null,
+      imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800',
+      documentUrl: null,
       duration: '2 min',
       extendedContent: [
         {
@@ -523,13 +526,64 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
         ) : (
           /* Normal Step View */
           <>
-            {/* Step Video/Content Placeholder - Smaller and better contained */}
-            <div className="w-full bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center mb-4" style={{ aspectRatio: '16/9', maxHeight: '35vh' }}>
-              <div className="text-center">
-                <Play className="w-12 h-12 text-primary/50 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Video del paso</p>
+            {/* Step Video - Primary content */}
+            {step.videoUrl ? (
+              <div className="w-full rounded-xl overflow-hidden mb-4" style={{ aspectRatio: '16/9', maxHeight: '35vh' }}>
+                {step.videoUrl.includes('youtube') || step.videoUrl.includes('youtu.be') ? (
+                  <iframe
+                    src={step.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                    className="w-full h-full"
+                    allowFullScreen
+                  />
+                ) : step.videoUrl.includes('vimeo') ? (
+                  <iframe
+                    src={step.videoUrl.replace('vimeo.com/', 'player.vimeo.com/video/')}
+                    className="w-full h-full"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video src={step.videoUrl} controls className="w-full h-full bg-black" />
+                )}
               </div>
-            </div>
+            ) : step.imageUrl ? (
+              <div className="w-full rounded-xl overflow-hidden mb-4" style={{ maxHeight: '35vh' }}>
+                <img src={step.imageUrl} alt={step.title} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-full bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl flex items-center justify-center mb-4" style={{ aspectRatio: '16/9', maxHeight: '35vh' }}>
+                <div className="text-center">
+                  <Play className="w-12 h-12 text-primary/50 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Sin contenido multimedia</p>
+                </div>
+              </div>
+            )}
+
+            {/* Audio player if available */}
+            {step.audioUrl && (
+              <div className="p-3 rounded-lg bg-secondary/50 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileAudio className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Audio del paso</span>
+                </div>
+                <audio src={step.audioUrl} controls className="w-full" />
+              </div>
+            )}
+
+            {/* Document link if available */}
+            {step.documentUrl && (
+              <a
+                href={step.documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors mb-4"
+              >
+                <File className="w-6 h-6 text-primary" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Documento adjunto</p>
+                  <p className="text-xs text-muted-foreground">Haz clic para abrir</p>
+                </div>
+              </a>
+            )}
 
             {/* Step Title and Description */}
             <div className="space-y-4">
