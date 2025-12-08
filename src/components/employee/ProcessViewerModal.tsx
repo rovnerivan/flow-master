@@ -41,6 +41,7 @@ interface ProcessViewerModalProps {
   processId: string;
   onClose: () => void;
   isSimulation?: boolean;
+  onNavigateToProcess?: (processId: string) => void;
 }
 
 // Mock process data with Phase 1 & 3 features
@@ -194,6 +195,7 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   processId,
   onClose,
   isSimulation = false,
+  onNavigateToProcess,
 }) => {
   const [view, setView] = useState<'overview' | 'learning'>('overview');
   const [currentStep, setCurrentStep] = useState(0);
@@ -202,11 +204,44 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   const [practiceMode, setPracticeMode] = useState(false);
   const [stepChecklists, setStepChecklists] = useState<Record<string, Record<string, boolean>>>({});
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  
+  // Navigation history stack for prerequisite navigation
+  const [processHistory, setProcessHistory] = useState<string[]>([]);
+  const [currentProcessId, setCurrentProcessId] = useState(processId);
 
+  // Get process data based on currentProcessId (would be real data from Supabase)
   const process = mockProcess;
   const step = process.steps[currentStep];
   const riskConfig = riskLevelConfig[process.riskLevel];
   const freqConfig = frequencyConfig[process.frequency];
+  
+  // Handle navigation to a prerequisite process
+  const navigateToPrerequisite = (prereqId: string) => {
+    // Save current process to history stack
+    setProcessHistory(prev => [...prev, currentProcessId]);
+    setCurrentProcessId(prereqId);
+    // Reset view state
+    setView('overview');
+    setCurrentStep(0);
+    setShowExtended(false);
+    setShowTroubleshooting(false);
+  };
+
+  // Handle going back to previous process
+  const navigateBack = () => {
+    if (processHistory.length > 0) {
+      const previousProcessId = processHistory[processHistory.length - 1];
+      setProcessHistory(prev => prev.slice(0, -1));
+      setCurrentProcessId(previousProcessId);
+      // Reset view state
+      setView('overview');
+      setCurrentStep(0);
+      setShowExtended(false);
+      setShowTroubleshooting(false);
+    }
+  };
+
+  const canGoBack = processHistory.length > 0;
 
   const handleNext = () => {
     if (currentStep < process.steps.length - 1) {
@@ -423,7 +458,7 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
           <PrerequisiteStatus 
             prerequisites={process.prerequisites}
             onProcessClick={(id) => {
-              console.log('Navigate to process:', id);
+              navigateToPrerequisite(id);
             }}
           />
         )}
@@ -747,6 +782,7 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Simulation Banner */}
+      {/* Simulation Banner */}
       {isSimulation && (
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-center gap-2 shrink-0">
           <Eye className="w-4 h-4 text-primary" />
@@ -756,13 +792,35 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
         </div>
       )}
 
+      {/* Navigation breadcrumb when viewing prerequisite */}
+      {canGoBack && (
+        <div className="bg-secondary/50 border-b border-border px-4 py-2 flex items-center gap-2 shrink-0">
+          <button
+            onClick={navigateBack}
+            className="flex items-center gap-1 text-sm text-primary hover:underline"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Volver al proceso anterior
+          </button>
+          <span className="text-xs text-muted-foreground">
+            ({processHistory.length} {processHistory.length === 1 ? 'nivel' : 'niveles'} de profundidad)
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <button
-          onClick={view === 'learning' ? () => setView('overview') : onClose}
+          onClick={
+            view === 'learning' 
+              ? () => setView('overview') 
+              : canGoBack 
+                ? navigateBack 
+                : onClose
+          }
           className="p-2 rounded-lg hover:bg-secondary transition-colors"
         >
-          {view === 'learning' ? (
+          {view === 'learning' || canGoBack ? (
             <ChevronLeft className="w-5 h-5 text-muted-foreground" />
           ) : (
             <X className="w-5 h-5 text-muted-foreground" />
@@ -771,16 +829,12 @@ export const ProcessViewerModal: React.FC<ProcessViewerModalProps> = ({
         <h1 className="font-semibold text-foreground">
           {view === 'overview' ? 'Detalle del Proceso' : process.name}
         </h1>
-        {view === 'learning' ? (
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        ) : (
-          <div className="w-9" />
-        )}
+        <button
+          onClick={onClose}
+          className="p-2 rounded-lg hover:bg-secondary transition-colors"
+        >
+          <X className="w-5 h-5 text-muted-foreground" />
+        </button>
       </header>
 
       {view === 'overview' ? renderOverview() : renderLearning()}
