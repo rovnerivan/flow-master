@@ -32,6 +32,10 @@ interface Task {
   linkedProcesses?: { id: string; name: string }[];
   estimatedTime: number;
   dueDate?: string;
+  // For shared tasks: who closed/completed the task
+  completedByUserId?: string;
+  completedByUserName?: string;
+  completedAt?: string;
   // Hierarchy info
   verticalId?: string;
   managementId?: string;
@@ -265,11 +269,14 @@ const AdminTasks: React.FC = () => {
   };
 
   const handleCompleteAction = (task: Task) => {
-    if (task.assignments.length > 1) {
-      // Multiple assignments - need to ask which one(s)
+    if (task.assignmentType === 'shared') {
+      // Shared task - need to ask who is completing/closing the task
+      setShowAssignmentSelector({ taskId: task.id, task, action: 'complete' });
+    } else if (task.assignments.length > 1) {
+      // Individual with multiple assignments - need to ask which one(s)
       setShowAssignmentSelector({ taskId: task.id, task, action: 'complete' });
     } else {
-      // Single assignment - complete directly
+      // Single individual assignment - complete directly
       completeTask(task.id, task.assignments[0].userId);
     }
   };
@@ -282,7 +289,28 @@ const AdminTasks: React.FC = () => {
   };
 
   const selectAssignmentForComplete = (assignment: TaskAssignment) => {
-    completeTask(showAssignmentSelector!.taskId, assignment.userId);
+    const task = showAssignmentSelector!.task;
+    
+    if (task.assignmentType === 'shared') {
+      // For shared tasks: mark ALL assignments as completed and record who closed it
+      setTasks(prev => prev.map(t => {
+        if (t.id === task.id) {
+          return {
+            ...t,
+            completedByUserId: assignment.userId,
+            completedByUserName: assignment.userName,
+            completedAt: new Date().toISOString(),
+            assignments: t.assignments.map(a => ({ ...a, status: 'completed' as const }))
+          };
+        }
+        return t;
+      }));
+      toast.success(`Tarea completada por ${assignment.userName}`);
+    } else {
+      // For individual tasks: only complete the selected assignment
+      completeTask(task.id, assignment.userId);
+    }
+    
     setShowAssignmentSelector(null);
   };
 
@@ -419,6 +447,15 @@ const AdminTasks: React.FC = () => {
                       <Clock className="w-3 h-3 text-primary" />
                       <span className="text-primary font-medium">
                         Total: {formatTime(task.assignments.reduce((sum, a) => sum + (a.timeSpentMinutes || 0), 0))}
+                      </span>
+                    </div>
+                  )}
+                  {/* Show who completed/closed the shared task */}
+                  {task.completedByUserName && overallStatus === 'completed' && (
+                    <div className="flex items-center gap-2 text-sm pt-1 border-t border-border/50 mt-1">
+                      <CheckCircle className="w-3 h-3 text-success" />
+                      <span className="text-success text-xs">
+                        Cerrada por: <span className="font-medium">{task.completedByUserName}</span>
                       </span>
                     </div>
                   )}
