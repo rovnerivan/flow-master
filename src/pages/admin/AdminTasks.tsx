@@ -17,6 +17,7 @@ import TaskViewToggle from '@/components/tasks/TaskViewToggle';
 import TaskCalendarView from '@/components/tasks/TaskCalendarView';
 import TaskKanbanView from '@/components/tasks/TaskKanbanView';
 import TaskMetricsDashboard from '@/components/tasks/TaskMetricsDashboard';
+import TasksBirdEyeView from '@/components/tasks/TasksBirdEyeView';
 import MetricConfigEditor from '@/components/metrics/MetricConfigEditor';
 import { TaskMetric } from '@/lib/metricTypes';
 import { ViewMode, Task as SharedTask } from '@/lib/taskTypes';
@@ -952,7 +953,17 @@ const AdminTasks: React.FC = () => {
       </div>
 
       {/* View modes */}
-      {viewMode === 'calendar' ? (
+      {viewMode === 'birdeye' ? (
+        <TasksBirdEyeView
+          tasks={filterTasks('all')}
+          onDrillDown={(filter) => {
+            if (filter.type === 'frequency') {
+              setSelectedFrequency(filter.value);
+              setViewMode('list');
+            }
+          }}
+        />
+      ) : viewMode === 'calendar' ? (
         <TaskCalendarView
           tasks={filterTasks('all').map(convertToSharedTask)}
           onTaskClick={handleTaskClickFromView}

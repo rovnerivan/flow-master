@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown, History, AlertTriangle, Archive, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Play, Edit, Trash2, Eye, Tag, X, ChevronDown, History, AlertTriangle, Archive, CheckCircle, Clock, Compass, Target, Rocket, CheckSquare as CheckSquareIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 import { defaultTags, customTagColors, TagInfo } from '@/lib/processTags';
+import { PlanningLevel, planningLevelConfig } from '@/lib/planningTypes';
 
 interface Process {
   id: string;
@@ -33,6 +34,9 @@ interface Process {
   verticalId?: string;
   managementId?: string;
   departmentId?: string;
+  // Planning links
+  linkedPlanningIds?: string[];
+  linkedPlanningLevel?: PlanningLevel;
   // Review details
   reviewDescription?: string;
   reviewReason?: string;
@@ -59,6 +63,7 @@ const initialProcesses: Process[] = [
     verticalId: 'v1',
     managementId: 'm1',
     departmentId: 'd1',
+    linkedPlanningLevel: 'initiative',
   },
   {
     id: '2',
@@ -144,6 +149,7 @@ const AdminProcesses: React.FC = () => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | ProcessStatus>('all');
+  const [planningLevelFilter, setPlanningLevelFilter] = useState<'all' | PlanningLevel>('all');
   const [processes, setProcesses] = useState<Process[]>(initialProcesses);
   const [availableTags, setAvailableTags] = useState<TagInfo[]>(defaultTags);
   const [newTagName, setNewTagName] = useState('');
@@ -163,6 +169,7 @@ const AdminProcesses: React.FC = () => {
   const clearFilters = () => {
     setSelectedTagFilters([]);
     setStatusFilter('all');
+    setPlanningLevelFilter('all');
     setSearchQuery('');
   };
 
@@ -246,6 +253,10 @@ const AdminProcesses: React.FC = () => {
     // Status filter
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
 
+    // Planning level filter
+    const matchesPlanningLevel = planningLevelFilter === 'all' || 
+                                  p.linkedPlanningLevel === planningLevelFilter;
+
     // Hierarchy filter
     const matchesHierarchy = matchesHierarchyFilter(hierarchyFilter, {
       verticalId: p.verticalId,
@@ -253,7 +264,7 @@ const AdminProcesses: React.FC = () => {
       departmentId: p.departmentId,
     });
 
-    return matchesSearch && matchesTags && matchesStatus && matchesHierarchy;
+    return matchesSearch && matchesTags && matchesStatus && matchesPlanningLevel && matchesHierarchy;
   });
 
   const getTagInfo = (tagId: string) => {
@@ -275,7 +286,7 @@ const AdminProcesses: React.FC = () => {
     toast.success(`Proceso "${process.name}" eliminado`);
   };
 
-  const activeFiltersCount = selectedTagFilters.length + (statusFilter !== 'all' ? 1 : 0);
+  const activeFiltersCount = selectedTagFilters.length + (statusFilter !== 'all' ? 1 : 0) + (planningLevelFilter !== 'all' ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -353,6 +364,43 @@ const AdminProcesses: React.FC = () => {
                       {option.label}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Planning Level Filter */}
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Vinculado a Gestión</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setPlanningLevelFilter('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-sm transition-colors",
+                      planningLevelFilter === 'all'
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Todos
+                  </button>
+                  {(['strategy', 'objective', 'initiative', 'action'] as PlanningLevel[]).map(level => {
+                    const config = planningLevelConfig[level];
+                    const Icon = level === 'strategy' ? Compass : level === 'objective' ? Target : level === 'initiative' ? Rocket : CheckSquareIcon;
+                    return (
+                      <button
+                        key={level}
+                        onClick={() => setPlanningLevelFilter(level)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1.5",
+                          planningLevelFilter === level
+                            ? cn(config.bgColor, config.color, "ring-2 ring-offset-2 ring-offset-card ring-primary")
+                            : "bg-secondary text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {config.labelPlural}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
