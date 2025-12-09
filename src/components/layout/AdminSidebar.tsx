@@ -17,6 +17,7 @@ import {
   Network,
   Heart,
   Compass,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons/Logo';
@@ -40,6 +41,7 @@ const adminNavItems = [
   { icon: Heart, label: 'Visión y Liderazgo', path: '/admin/vision' },
   { icon: UserPlus, label: 'Onboardings', path: '/admin/onboardings' },
   { icon: AlertTriangle, label: 'Errores', path: '/admin/errors' },
+  { icon: Bell, label: 'Alertas', path: '/admin/alerts' },
   { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
   { icon: FileText, label: 'Reportes', path: '/admin/reports' },
 ];
