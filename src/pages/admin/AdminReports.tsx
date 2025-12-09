@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { FileText, Download, Calendar, Filter, Plus, X, Loader2 } from 'lucide-react';
+import { FileText, Download, Calendar, Plus, X, Loader2, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/components/admin/HierarchyFilter';
+import { HierarchyFilter, HierarchySelection } from '@/components/admin/HierarchyFilter';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import SmartReportGenerator from '@/components/analytics/SmartReportGenerator';
 
 interface Report {
   id: string;
@@ -70,6 +72,7 @@ const AdminReports: React.FC = () => {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
+  const [activeTab, setActiveTab] = useState('smart');
 
   const filteredReports = selectedType === 'all' 
     ? mockReports 
@@ -78,10 +81,8 @@ const AdminReports: React.FC = () => {
   const handleDownload = async (report: Report) => {
     setDownloading(report.id);
     
-    // Simulate download
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Create a fake file download
     const blob = new Blob([`Reporte: ${report.name}\n\nContenido del reporte...`], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -103,7 +104,7 @@ const AdminReports: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Reportes</h1>
           <p className="text-muted-foreground">
-            Genera y descarga reportes de tu operación
+            Reportes inteligentes con análisis y recomendaciones
           </p>
         </div>
         <Button variant="hero" className="gap-2" onClick={() => setShowGenerateModal(true)}>
@@ -118,70 +119,90 @@ const AdminReports: React.FC = () => {
         onChange={setHierarchyFilter}
       />
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <Button variant="outline" className="gap-2">
-          <Calendar className="w-4 h-4" />
-          Rango de fechas
-        </Button>
-        <select
-          value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value)}
-          className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-        >
-          {reportTypes.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="smart" className="gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Reporte Inteligente
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <FileText className="w-4 h-4" />
+            Historial
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Reports List */}
-      <div className="kpi-card">
-        <div className="space-y-4">
-          {filteredReports.map((report) => (
-            <div
-              key={report.id}
-              className="flex items-start justify-between p-4 rounded-lg border border-border hover:bg-secondary/30 transition-colors gap-4"
+        <TabsContent value="smart" className="mt-6">
+          <SmartReportGenerator />
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-6">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <Button variant="outline" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Rango de fechas
+            </Button>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="h-10 px-3 rounded-md border border-input bg-background text-sm"
             >
-              <div className="flex items-start gap-4 flex-1">
-                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                  <FileText className="w-5 h-5 text-primary" />
+              {reportTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Reports List */}
+          <div className="kpi-card">
+            <div className="space-y-4">
+              {filteredReports.map((report) => (
+                <div
+                  key={report.id}
+                  className="flex items-start justify-between p-4 rounded-lg border border-border hover:bg-secondary/30 transition-colors gap-4"
+                >
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                      <FileText className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-foreground">{report.name}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {report.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Generado el {report.generatedAt} • {report.size}
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 shrink-0"
+                    onClick={() => handleDownload(report)}
+                    disabled={downloading === report.id}
+                  >
+                    {downloading === report.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Descargando...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Descargar
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-foreground">{report.name}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {report.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Generado el {report.generatedAt} • {report.size}
-                  </p>
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-2 shrink-0"
-                onClick={() => handleDownload(report)}
-                disabled={downloading === report.id}
-              >
-                {downloading === report.id ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Descargando...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Descargar
-                  </>
-                )}
-              </Button>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Generate Report Modal */}
       {showGenerateModal && (
