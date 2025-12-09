@@ -18,6 +18,7 @@ import {
   FileText,
   Crown,
   Compass,
+  Bell,
 } from 'lucide-react';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { ProcessHealthCard } from '@/components/dashboard/ProcessHealthCard';
@@ -37,6 +38,7 @@ import AdminTasksRefactored from '@/components/tasks/AdminTasksRefactored';
 import AdminHierarchy from '../admin/AdminHierarchy';
 import VisionLeadership from '../admin/VisionLeadership';
 import AdminPlanning from '../admin/AdminPlanning';
+import AdminAlerts from '../admin/AdminAlerts';
 
 const mockProcessHealth = [
   {
@@ -79,6 +81,7 @@ const ownerNavItems = [
   { icon: Heart, label: 'Visión y Liderazgo', path: '/owner/vision' },
   { icon: UserPlus, label: 'Onboardings', path: '/owner/onboardings' },
   { icon: AlertTriangle, label: 'Errores', path: '/owner/errors' },
+  { icon: Bell, label: 'Alertas', path: '/owner/alerts' },
   { icon: BarChart3, label: 'Analytics', path: '/owner/analytics' },
   { icon: FileText, label: 'Reportes', path: '/owner/reports' },
 ];
@@ -251,6 +254,7 @@ const OwnerDashboard: React.FC = () => {
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/errors" element={<AdminErrors />} />
         <Route path="/onboardings" element={<AdminOnboardings />} />
+        <Route path="/alerts" element={<AdminAlerts />} />
       </Routes>
     </DashboardLayout>
   );
