@@ -23,6 +23,8 @@ import {
   FileText,
   Heart,
   ChevronRight,
+  UserPlus,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -1429,9 +1431,19 @@ const supervisorNavItems = [
   { icon: Calendar, label: 'Tareas del Equipo', path: '/supervisor/team-tasks' },
   { icon: Users, label: 'Mi Equipo', path: '/supervisor/team' },
   { icon: Heart, label: 'Visión y Liderazgo', path: '/supervisor/vision' },
-  { icon: BarChart3, label: 'Desempeño', path: '/supervisor/performance' },
+  { icon: UserPlus, label: 'Onboardings', path: '/supervisor/onboardings' },
+  { icon: AlertTriangle, label: 'Errores', path: '/supervisor/errors' },
+  { icon: Bell, label: 'Alertas', path: '/supervisor/alerts' },
+  { icon: BarChart3, label: 'Analytics', path: '/supervisor/analytics' },
   { icon: Briefcase, label: 'Mi Cargo', path: '/supervisor/my-cargo' },
 ];
+
+// Import admin pages for reuse
+import AdminErrors from '../admin/AdminErrors';
+import AdminOnboardings from '../admin/AdminOnboardings';
+import AdminAnalytics from '../admin/AdminAnalytics';
+import AdminAlerts from '../admin/AdminAlerts';
+import AdminTeam from '../admin/AdminTeam';
 
 // Main Supervisor Dashboard
 const SupervisorDashboard: React.FC = () => {
@@ -1465,9 +1477,12 @@ const SupervisorDashboard: React.FC = () => {
         <Route index element={<SupervisorHome />} />
         <Route path="processes" element={<AdminProcesses />} />
         <Route path="team-tasks" element={<AdminTasksRefactored />} />
-        <Route path="team" element={<SupervisorTeamPage />} />
+        <Route path="team/*" element={<AdminTeam />} />
         <Route path="vision" element={<VisionLeadershipPage />} />
-        <Route path="performance" element={<PerformancePage />} />
+        <Route path="onboardings" element={<AdminOnboardings />} />
+        <Route path="errors" element={<AdminErrors />} />
+        <Route path="alerts" element={<AdminAlerts />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="my-cargo" element={<MyCargoPage />} />
         <Route path="settings" element={<SupervisorSettingsPage />} />
         <Route path="*" element={<SupervisorHome />} />
