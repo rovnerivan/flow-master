@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, UserCog, Mail, Trash2, Eye, Calendar, BarChart3, X, Users, TrendingUp } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, UserCog, Mail, Trash2, X, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,30 +12,29 @@ import {
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TeamPerformanceMatrix from '@/components/analytics/TeamPerformanceMatrix';
+import EmployeeProfileCard, { EmployeeData } from '@/components/team/EmployeeProfileCard';
+import EmployeeDetailModal from '@/components/team/EmployeeDetailModal';
 
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  jobTitle: string;
-  compliance: number;
-  status: 'active' | 'onboarding';
-  processesCompleted: number;
-  tasksToday: { completed: number; total: number };
-}
-
-const mockTeamMembers: TeamMember[] = [
+// Transform mock data to EmployeeData format
+const mockEmployees: EmployeeData[] = [
   {
     id: '1',
     name: 'María García',
     email: 'maria@empresa.com',
     role: 'supervisor',
     jobTitle: 'Supervisora de Operaciones',
-    compliance: 95,
-    status: 'active',
-    processesCompleted: 12,
+    tenureDays: 180,
+    efficiency: 95,
+    efficiencyTrend: 'up',
+    efficiencyChange: 5,
+    volume: 45,
     tasksToday: { completed: 5, total: 6 },
+    workloadHours: 38,
+    capacityHours: 40,
+    status: 'active',
+    quadrant: 'star',
+    alerts: [],
+    achievements: ['Completó certificación en Cierre de Caja', '0 errores en 2 semanas'],
   },
   {
     id: '2',
@@ -43,10 +42,18 @@ const mockTeamMembers: TeamMember[] = [
     email: 'carlos@empresa.com',
     role: 'employee',
     jobTitle: 'Operador de Almacén',
-    compliance: 88,
-    status: 'active',
-    processesCompleted: 8,
+    tenureDays: 120,
+    efficiency: 68,
+    efficiencyTrend: 'down',
+    efficiencyChange: -12,
+    volume: 52,
     tasksToday: { completed: 3, total: 5 },
+    workloadHours: 44,
+    capacityHours: 40,
+    status: 'active',
+    quadrant: 'coaching',
+    alerts: [{ type: 'warning', message: 'Eficiencia cayó 12% esta semana' }],
+    achievements: [],
   },
   {
     id: '3',
@@ -54,10 +61,18 @@ const mockTeamMembers: TeamMember[] = [
     email: 'ana@empresa.com',
     role: 'employee',
     jobTitle: 'Atención al Cliente',
-    compliance: 72,
-    status: 'active',
-    processesCompleted: 5,
+    tenureDays: 90,
+    efficiency: 72,
+    efficiencyTrend: 'down',
+    efficiencyChange: -8,
+    volume: 28,
     tasksToday: { completed: 2, total: 4 },
+    workloadHours: 32,
+    capacityHours: 40,
+    status: 'active',
+    quadrant: 'attention',
+    alerts: [{ type: 'critical', message: 'Bajo rendimiento sostenido' }],
+    achievements: [],
   },
   {
     id: '4',
@@ -65,12 +80,72 @@ const mockTeamMembers: TeamMember[] = [
     email: 'pedro@empresa.com',
     role: 'employee',
     jobTitle: 'Cajero',
-    compliance: 91,
-    status: 'onboarding',
-    processesCompleted: 3,
+    tenureDays: 15,
+    efficiency: 65,
+    efficiencyTrend: 'up',
+    efficiencyChange: 15,
+    volume: 18,
     tasksToday: { completed: 1, total: 3 },
+    workloadHours: 30,
+    capacityHours: 40,
+    status: 'onboarding',
+    quadrant: 'potential',
+    alerts: [],
+    achievements: ['Mejora de 15% en primera semana'],
+  },
+  {
+    id: '5',
+    name: 'Laura Fernández',
+    email: 'laura@empresa.com',
+    role: 'employee',
+    jobTitle: 'Supervisora de Turno',
+    tenureDays: 200,
+    efficiency: 91,
+    efficiencyTrend: 'stable',
+    efficiencyChange: 1,
+    volume: 38,
+    tasksToday: { completed: 4, total: 5 },
+    workloadHours: 36,
+    capacityHours: 40,
+    status: 'active',
+    quadrant: 'star',
+    alerts: [],
+    achievements: ['Mentor de 3 empleados nuevos'],
+  },
+  {
+    id: '6',
+    name: 'Diego Ruiz',
+    email: 'diego@empresa.com',
+    role: 'employee',
+    jobTitle: 'Auxiliar de Inventario',
+    tenureDays: 60,
+    efficiency: 85,
+    efficiencyTrend: 'up',
+    efficiencyChange: 3,
+    volume: 55,
+    tasksToday: { completed: 6, total: 7 },
+    workloadHours: 42,
+    capacityHours: 40,
+    status: 'active',
+    quadrant: 'potential',
+    alerts: [{ type: 'info', message: 'Carga de trabajo sobre capacidad' }],
+    achievements: [],
   },
 ];
+
+// Mock data for performance matrix
+const mockPerformanceData = mockEmployees.map(emp => ({
+  id: emp.id,
+  name: emp.name,
+  efficiency: emp.efficiency,
+  volume: emp.volume,
+  trend: emp.efficiencyTrend,
+  trendValue: emp.efficiencyChange,
+  weeklyHistory: [emp.efficiency - 10, emp.efficiency - 7, emp.efficiency - 3, emp.efficiency],
+  tenureDays: emp.tenureDays,
+  workloadHours: emp.workloadHours,
+  capacityHours: emp.capacityHours,
+}));
 
 const roleLabels: Record<string, string> = {
   business_admin: 'Administrador',
@@ -84,103 +159,23 @@ const roleOptions = [
   { value: 'business_admin', label: 'Administrador' },
 ];
 
-// Mock data for performance matrix
-const mockPerformanceData = [
-  {
-    id: '1',
-    name: 'María García',
-    efficiency: 95,
-    volume: 45,
-    trend: 'up' as const,
-    trendValue: 5,
-    weeklyHistory: [88, 90, 92, 95],
-    tenureDays: 180,
-    workloadHours: 38,
-    capacityHours: 40,
-  },
-  {
-    id: '2',
-    name: 'Carlos López',
-    efficiency: 68,
-    volume: 52,
-    trend: 'down' as const,
-    trendValue: -12,
-    weeklyHistory: [82, 78, 72, 68],
-    tenureDays: 120,
-    workloadHours: 44,
-    capacityHours: 40,
-  },
-  {
-    id: '3',
-    name: 'Ana Martínez',
-    efficiency: 72,
-    volume: 28,
-    trend: 'down' as const,
-    trendValue: -8,
-    weeklyHistory: [80, 78, 75, 72],
-    tenureDays: 90,
-    workloadHours: 32,
-    capacityHours: 40,
-  },
-  {
-    id: '4',
-    name: 'Pedro Sánchez',
-    efficiency: 65,
-    volume: 18,
-    trend: 'up' as const,
-    trendValue: 15,
-    weeklyHistory: [50, 55, 60, 65],
-    tenureDays: 15,
-    workloadHours: 30,
-    capacityHours: 40,
-  },
-  {
-    id: '5',
-    name: 'Laura Fernández',
-    efficiency: 91,
-    volume: 38,
-    trend: 'stable' as const,
-    trendValue: 1,
-    weeklyHistory: [90, 91, 90, 91],
-    tenureDays: 200,
-    workloadHours: 36,
-    capacityHours: 40,
-  },
-  {
-    id: '6',
-    name: 'Diego Ruiz',
-    efficiency: 85,
-    volume: 55,
-    trend: 'up' as const,
-    trendValue: 3,
-    weeklyHistory: [80, 82, 84, 85],
-    tenureDays: 60,
-    workloadHours: 42,
-    capacityHours: 40,
-  },
-];
-
 const AdminTeam: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [editRoleModal, setEditRoleModal] = useState<TeamMember | null>(null);
+  const [editRoleModal, setEditRoleModal] = useState<EmployeeData | null>(null);
   const [selectedRole, setSelectedRole] = useState('');
-  const [memberDetailModal, setMemberDetailModal] = useState<TeamMember | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeData | null>(null);
 
-  const filteredMembers = mockTeamMembers.filter(
+  const filteredMembers = mockEmployees.filter(
     (m) =>
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase();
   };
 
-  const openEditRole = (member: TeamMember) => {
+  const openEditRole = (member: EmployeeData) => {
     setEditRoleModal(member);
     setSelectedRole(member.role);
   };
@@ -189,10 +184,6 @@ const AdminTeam: React.FC = () => {
     if (!editRoleModal) return;
     toast.success(`Rol de ${editRoleModal.name} actualizado a ${roleLabels[selectedRole] || selectedRole}`);
     setEditRoleModal(null);
-  };
-
-  const openMemberDetail = (member: TeamMember) => {
-    setMemberDetailModal(member);
   };
 
   return (
@@ -242,130 +233,24 @@ const AdminTeam: React.FC = () => {
             </Button>
           </div>
 
-          {/* Team Members Table */}
-          <div className="kpi-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                      Miembro
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                      Rol
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                      Cargo
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                      Cumplimiento
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                      Estado
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.map((member) => (
-                    <tr
-                      key={member.id}
-                      className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors"
-                    >
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src="" />
-                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                              {getInitials(member.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-foreground">
-                              {member.name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {member.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm text-foreground">
-                          {roleLabels[member.role] || member.role}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm text-muted-foreground">
-                          {member.jobTitle}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 rounded-full bg-secondary overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${member.compliance}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium text-foreground">
-                            {member.compliance}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            member.status === 'active'
-                              ? 'bg-success/20 text-success'
-                              : 'bg-warning/20 text-warning'
-                          }`}
-                        >
-                          {member.status === 'active' ? 'Activo' : 'En onboarding'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => openMemberDetail(member)}
-                            className="gap-1"
-                          >
-                            <Eye className="w-4 h-4" />
-                            Ver más
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="p-1 rounded hover:bg-secondary">
-                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditRole(member)}>
-                                <UserCog className="w-4 h-4 mr-2" />
-                                Editar rol
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => toast.info('Función de mensaje próximamente')}>
-                                <Mail className="w-4 h-4 mr-2" />
-                                Enviar mensaje
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {/* Team Members Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredMembers.map((employee) => (
+              <EmployeeProfileCard
+                key={employee.id}
+                employee={employee}
+                onClick={() => setSelectedEmployee(employee)}
+                isSelected={selectedEmployee?.id === employee.id}
+              />
+            ))}
           </div>
+
+          {filteredMembers.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No se encontraron miembros</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="performance">
@@ -428,181 +313,13 @@ const AdminTeam: React.FC = () => {
         </div>
       )}
 
-      {/* Member Detail Modal */}
-      {memberDetailModal && (
-        <MemberDetailModal member={memberDetailModal} onClose={() => setMemberDetailModal(null)} />
+      {/* Employee Detail Modal */}
+      {selectedEmployee && (
+        <EmployeeDetailModal
+          employee={selectedEmployee}
+          onClose={() => setSelectedEmployee(null)}
+        />
       )}
-    </div>
-  );
-};
-
-// Member Detail Modal with tasks, history, KPIs
-const MemberDetailModal: React.FC<{ member: TeamMember; onClose: () => void }> = ({ member, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'today' | 'history' | 'kpis' | 'processes'>('today');
-
-  const mockTodayTasks = [
-    { id: '1', title: 'Verificar inventario', status: 'completed', time: '08:30' },
-    { id: '2', title: 'Preparar pedidos zona A', status: 'completed', time: '09:15' },
-    { id: '3', title: 'Revisión de calidad', status: 'in_progress', time: '10:00' },
-    { id: '4', title: 'Cierre de caja', status: 'pending', time: '18:00' },
-  ];
-
-  const mockHistory = [
-    { date: '2024-01-15', tasksCompleted: 5, tasksTotal: 5, time: '7h 30m' },
-    { date: '2024-01-14', tasksCompleted: 4, tasksTotal: 5, time: '8h 15m' },
-    { date: '2024-01-13', tasksCompleted: 5, tasksTotal: 5, time: '7h 45m' },
-    { date: '2024-01-12', tasksCompleted: 3, tasksTotal: 4, time: '6h 20m' },
-  ];
-
-  const mockProcesses = [
-    { id: '1', name: 'Cierre de Caja', progress: 100, certified: true },
-    { id: '2', name: 'Atención al Cliente', progress: 80, certified: false },
-    { id: '3', name: 'Preparación de Pedidos', progress: 60, certified: false },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl mx-4 bg-card border border-border rounded-2xl shadow-xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-14 w-14">
-              <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                {member.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">{member.name}</h2>
-              <p className="text-sm text-muted-foreground">{member.jobTitle}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-border px-6">
-          {[
-            { key: 'today', label: 'Tareas Hoy', icon: Calendar },
-            { key: 'history', label: 'Historial', icon: Calendar },
-            { key: 'kpis', label: 'Desempeño', icon: BarChart3 },
-            { key: 'processes', label: 'Procesos', icon: Eye },
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key as typeof activeTab)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'today' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground">Tareas de hoy</h3>
-                <span className="text-sm text-muted-foreground">
-                  {member.tasksToday.completed}/{member.tasksToday.total} completadas
-                </span>
-              </div>
-              {mockTodayTasks.map((task) => (
-                <div key={task.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      task.status === 'completed' ? 'bg-success' :
-                      task.status === 'in_progress' ? 'bg-primary' : 'bg-muted'
-                    }`} />
-                    <span className="text-foreground">{task.title}</span>
-                  </div>
-                  <span className="text-sm text-muted-foreground">{task.time}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'history' && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground mb-4">Historial de días</h3>
-              {mockHistory.map((day) => (
-                <div key={day.date} className="flex items-center justify-between p-3 rounded-lg border border-border">
-                  <div>
-                    <p className="font-medium text-foreground">{day.date}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {day.tasksCompleted}/{day.tasksTotal} tareas • {day.time} trabajadas
-                    </p>
-                  </div>
-                  <div className="w-16 h-2 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${(day.tasksCompleted / day.tasksTotal) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'kpis' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-secondary/30">
-                  <p className="text-sm text-muted-foreground">Cumplimiento</p>
-                  <p className="text-3xl font-bold text-foreground">{member.compliance}%</p>
-                </div>
-                <div className="p-4 rounded-lg bg-secondary/30">
-                  <p className="text-sm text-muted-foreground">Procesos completados</p>
-                  <p className="text-3xl font-bold text-foreground">{member.processesCompleted}</p>
-                </div>
-                <div className="p-4 rounded-lg bg-secondary/30">
-                  <p className="text-sm text-muted-foreground">Tareas esta semana</p>
-                  <p className="text-3xl font-bold text-foreground">23</p>
-                </div>
-                <div className="p-4 rounded-lg bg-secondary/30">
-                  <p className="text-sm text-muted-foreground">Errores este mes</p>
-                  <p className="text-3xl font-bold text-foreground">2</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'processes' && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground mb-4">Procesos aprendidos</h3>
-              {mockProcesses.map((proc) => (
-                <div key={proc.id} className="p-4 rounded-lg border border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-foreground">{proc.name}</span>
-                    {proc.certified && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-success/20 text-success">
-                        Certificado
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${proc.progress}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-muted-foreground">{proc.progress}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
