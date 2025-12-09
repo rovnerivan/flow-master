@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreVertical, UserCog, Mail, Trash2, Eye, Calendar, BarChart3, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, UserCog, Mail, Trash2, Eye, Calendar, BarChart3, X, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TeamPerformanceMatrix from '@/components/analytics/TeamPerformanceMatrix';
 
 interface TeamMember {
   id: string;
@@ -82,6 +84,82 @@ const roleOptions = [
   { value: 'business_admin', label: 'Administrador' },
 ];
 
+// Mock data for performance matrix
+const mockPerformanceData = [
+  {
+    id: '1',
+    name: 'María García',
+    efficiency: 95,
+    volume: 45,
+    trend: 'up' as const,
+    trendValue: 5,
+    weeklyHistory: [88, 90, 92, 95],
+    tenureDays: 180,
+    workloadHours: 38,
+    capacityHours: 40,
+  },
+  {
+    id: '2',
+    name: 'Carlos López',
+    efficiency: 68,
+    volume: 52,
+    trend: 'down' as const,
+    trendValue: -12,
+    weeklyHistory: [82, 78, 72, 68],
+    tenureDays: 120,
+    workloadHours: 44,
+    capacityHours: 40,
+  },
+  {
+    id: '3',
+    name: 'Ana Martínez',
+    efficiency: 72,
+    volume: 28,
+    trend: 'down' as const,
+    trendValue: -8,
+    weeklyHistory: [80, 78, 75, 72],
+    tenureDays: 90,
+    workloadHours: 32,
+    capacityHours: 40,
+  },
+  {
+    id: '4',
+    name: 'Pedro Sánchez',
+    efficiency: 65,
+    volume: 18,
+    trend: 'up' as const,
+    trendValue: 15,
+    weeklyHistory: [50, 55, 60, 65],
+    tenureDays: 15,
+    workloadHours: 30,
+    capacityHours: 40,
+  },
+  {
+    id: '5',
+    name: 'Laura Fernández',
+    efficiency: 91,
+    volume: 38,
+    trend: 'stable' as const,
+    trendValue: 1,
+    weeklyHistory: [90, 91, 90, 91],
+    tenureDays: 200,
+    workloadHours: 36,
+    capacityHours: 40,
+  },
+  {
+    id: '6',
+    name: 'Diego Ruiz',
+    efficiency: 85,
+    volume: 55,
+    trend: 'up' as const,
+    trendValue: 3,
+    weeklyHistory: [80, 82, 84, 85],
+    tenureDays: 60,
+    workloadHours: 42,
+    capacityHours: 40,
+  },
+];
+
 const AdminTeam: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editRoleModal, setEditRoleModal] = useState<TeamMember | null>(null);
@@ -124,7 +202,7 @@ const AdminTeam: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Equipo</h1>
           <p className="text-muted-foreground">
-            Gestiona los miembros de tu equipo
+            Gestiona los miembros y rendimiento de tu equipo
           </p>
         </div>
         <Button variant="hero" className="gap-2">
@@ -133,147 +211,171 @@ const AdminTeam: React.FC = () => {
         </Button>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre o email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Button variant="outline" className="gap-2">
-          <Filter className="w-4 h-4" />
-          Filtrar
-        </Button>
-      </div>
+      {/* Main Tabs */}
+      <Tabs defaultValue="members" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="members" className="gap-2">
+            <Users className="w-4 h-4" />
+            Miembros
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Rendimiento
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Team Members Table */}
-      <div className="kpi-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                  Miembro
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                  Rol
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                  Cargo
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                  Cumplimiento
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
-                  Estado
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMembers.map((member) => (
-                <tr
-                  key={member.id}
-                  className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src="" />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {getInitials(member.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {member.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {member.email}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="text-sm text-foreground">
-                      {roleLabels[member.role] || member.role}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="text-sm text-muted-foreground">
-                      {member.jobTitle}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 rounded-full bg-secondary overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${member.compliance}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium text-foreground">
-                        {member.compliance}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        member.status === 'active'
-                          ? 'bg-success/20 text-success'
-                          : 'bg-warning/20 text-warning'
-                      }`}
+        <TabsContent value="members" className="space-y-4">
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre o email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button variant="outline" className="gap-2">
+              <Filter className="w-4 h-4" />
+              Filtrar
+            </Button>
+          </div>
+
+          {/* Team Members Table */}
+          <div className="kpi-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Miembro
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Rol
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Cargo
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Cumplimiento
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Estado
+                    </th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map((member) => (
+                    <tr
+                      key={member.id}
+                      className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors"
                     >
-                      {member.status === 'active' ? 'Activo' : 'En onboarding'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => openMemberDetail(member)}
-                        className="gap-1"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Ver más
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-1 rounded hover:bg-secondary">
-                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditRole(member)}>
-                            <UserCog className="w-4 h-4 mr-2" />
-                            Editar rol
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.info('Función de mensaje próximamente')}>
-                            <Mail className="w-4 h-4 mr-2" />
-                            Enviar mensaje
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src="" />
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                              {getInitials(member.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {member.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {member.email}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-foreground">
+                          {roleLabels[member.role] || member.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-muted-foreground">
+                          {member.jobTitle}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-2 rounded-full bg-secondary overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${member.compliance}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-foreground">
+                            {member.compliance}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            member.status === 'active'
+                              ? 'bg-success/20 text-success'
+                              : 'bg-warning/20 text-warning'
+                          }`}
+                        >
+                          {member.status === 'active' ? 'Activo' : 'En onboarding'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => openMemberDetail(member)}
+                            className="gap-1"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Ver más
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="p-1 rounded hover:bg-secondary">
+                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditRole(member)}>
+                                <UserCog className="w-4 h-4 mr-2" />
+                                Editar rol
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => toast.info('Función de mensaje próximamente')}>
+                                <Mail className="w-4 h-4 mr-2" />
+                                Enviar mensaje
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <TeamPerformanceMatrix
+            employees={mockPerformanceData}
+            averageEfficiency={80}
+            averageVolume={40}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Role Modal */}
       {editRoleModal && (
