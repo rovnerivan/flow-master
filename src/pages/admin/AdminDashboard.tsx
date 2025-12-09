@@ -24,6 +24,7 @@ import { ProcessHealthCard } from '@/components/dashboard/ProcessHealthCard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import ExecutiveDashboard from '@/components/analytics/ExecutiveDashboard';
 
 // Import admin pages
 import AdminProcesses from './AdminProcesses';
@@ -83,6 +84,44 @@ const adminNavItems = [
   { icon: FileText, label: 'Reportes', path: '/admin/reports' },
 ];
 
+// Mock data for Executive Dashboard
+const mockPriorityAlerts = [
+  {
+    id: '1',
+    type: 'critical' as const,
+    title: 'Proceso "Inventario" con 45% confusión',
+    description: 'El proceso ha superado el umbral de confusión aceptable. Requiere revisión urgente.',
+    action: { label: 'Revisar', path: '/admin/processes' },
+  },
+  {
+    id: '2',
+    type: 'warning' as const,
+    title: '2 empleados bajo mínimo en métricas',
+    description: 'Carlos López y Ana Martínez están por debajo del 70% de eficiencia esta semana.',
+    action: { label: 'Ver equipo', path: '/admin/team' },
+  },
+  {
+    id: '3',
+    type: 'warning' as const,
+    title: 'Tarea "Cierre de caja" vencida ayer',
+    description: 'La tarea programada para ayer no fue completada por el responsable asignado.',
+    action: { label: 'Ver tareas', path: '/admin/tasks' },
+  },
+];
+
+const mockPredictions = [
+  {
+    area: 'Atención al Cliente',
+    riskLevel: 'high' as const,
+    reason: 'Patrón estacional detectado (próxima semana)',
+  },
+  {
+    area: 'Inventario',
+    riskLevel: 'medium' as const,
+    reason: 'Proceso sin actualizar por 60+ días',
+  },
+];
+
 const DashboardHome: React.FC = () => {
   const navigate = useNavigate();
   const [codeCopied, setCodeCopied] = useState(false);
@@ -95,14 +134,21 @@ const DashboardHome: React.FC = () => {
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
+  // Determine operation status based on alerts
+  const operationStatus = mockPriorityAlerts.some(a => a.type === 'critical') 
+    ? 'yellow' as const
+    : mockPriorityAlerts.length > 0 
+    ? 'yellow' as const 
+    : 'green' as const;
+
   return (
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard Ejecutivo</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Vista general de tu operación
+            Vista general de tu operación en 30 segundos
           </p>
         </div>
         <Button variant="hero" className="gap-2 w-full sm:w-auto" onClick={() => navigate('/admin/processes')}>
@@ -111,43 +157,21 @@ const DashboardHome: React.FC = () => {
         </Button>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div onClick={() => navigate('/admin/onboardings')} className="cursor-pointer">
-          <KPICard
-            title="Onboardings Activos"
-            value="5"
-            subtitle="3 nuevos esta semana"
-            icon={UserPlus}
-            trend={{ value: 2, isPositive: true }}
-          />
-        </div>
-        <div onClick={() => navigate('/admin/errors')} className="cursor-pointer">
-          <KPICard
-            title="Errores Detectados"
-            value="24"
-            subtitle="este mes"
-            icon={AlertTriangle}
-            trend={{ value: 15, isPositive: false }}
-            variant="warning"
-          />
-        </div>
-        <KPICard
-          title="Tiempo Salvado"
-          value="47h"
-          subtitle="vs mes anterior"
-          icon={Clock}
-          trend={{ value: 23, isPositive: true }}
-          variant="success"
-        />
-        <KPICard
-          title="Cumplimiento"
-          value="87%"
-          subtitle="promedio del equipo"
-          icon={TrendingUp}
-          trend={{ value: 5, isPositive: true }}
-        />
-      </div>
+      {/* Executive Dashboard - Traffic Light */}
+      <ExecutiveDashboard
+        operationStatus={operationStatus}
+        globalEfficiency={87}
+        efficiencyTrend={5}
+        efficiencyTarget={85}
+        priorityAlerts={mockPriorityAlerts}
+        predictions={mockPredictions}
+        quickStats={{
+          tasksCompleted: 89,
+          tasksTotal: 102,
+          errorsToday: 2,
+          employeesActive: 24,
+        }}
+      />
 
       {/* Process Health Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">

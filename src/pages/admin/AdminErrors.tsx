@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Filter, Search, ChevronDown, Calendar, User, Layers, MessageSquare, XCircle, CheckCircle, Plus } from 'lucide-react';
+import { AlertTriangle, Filter, Search, ChevronDown, Calendar, User, Layers, MessageSquare, XCircle, CheckCircle, Plus, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,8 @@ import { HierarchyFilter, HierarchySelection, matchesHierarchyFilter } from '@/c
 import { DateRangeFilter, useDateRangeFilter } from '@/components/filters/DateRangeFilter';
 import { ComparisonBadge } from '@/components/filters/ComparisonBadge';
 import { toast } from 'sonner';
+import ParetoErrorAnalysis from '@/components/analytics/ParetoErrorAnalysis';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ErrorItem {
   id: string;
@@ -140,6 +142,21 @@ const AdminErrors: React.FC = () => {
   const [newNote, setNewNote] = useState('');
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchySelection>({ level: 'all' });
   const { dateRange, setDateRange, filterByDateRange, getComparisonItems } = useDateRangeFilter(30);
+  const [activeTab, setActiveTab] = useState('list');
+
+  // Transform errors for Pareto analysis
+  const paretoErrors = errors.map((err, idx) => ({
+    id: err.id,
+    type: err.type,
+    process: err.process,
+    employee: err.employee,
+    date: err.date,
+    dayOfWeek: new Date(err.date).getDay(),
+    hourOfDay: 10 + (idx % 12), // Mock hour data
+    estimatedCost: 50 + Math.random() * 150, // Mock cost
+    isAvoidable: Math.random() > 0.4,
+    employeeTenure: 15 + Math.floor(Math.random() * 180), // Mock tenure
+  }));
 
   // Filter by date range first
   const dateFilteredErrors = filterByDateRange(errors);
@@ -299,146 +316,135 @@ const AdminErrors: React.FC = () => {
         </div>
       </div>
 
-      {/* Impact by Employee */}
-      <div className="kpi-card">
-        <h3 className="font-semibold text-foreground mb-4">Impacto por Empleado</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.entries(errorsByEmployee).map(([employee, stats]) => (
-            <div key={employee} className="p-3 rounded-lg bg-secondary/30">
-              <p className="font-medium text-foreground text-sm">{employee}</p>
-              <div className="flex gap-3 mt-2 text-xs">
-                <span className="text-muted-foreground">Total: {stats.total}</span>
-                <span className="text-success">Resueltos: {stats.resolved}</span>
-                <span className="text-destructive">No salv: {stats.unsolvable}</span>
-              </div>
+      {/* Tabs for List vs Analysis */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="list" className="gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Lista de Errores
+          </TabsTrigger>
+          <TabsTrigger value="analysis" className="gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Análisis Pareto
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="analysis" className="mt-6">
+          <ParetoErrorAnalysis errors={paretoErrors} hourlyRate={15} />
+        </TabsContent>
+
+        <TabsContent value="list" className="mt-6 space-y-4">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por descripción, empleado o proceso..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por descripción, empleado o proceso..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Filter className="w-4 h-4" />
-              {selectedType}
-              <ChevronDown className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {errorTypes.map((type) => (
-              <DropdownMenuItem key={type} onClick={() => setSelectedType(type)}>
-                {type}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Errors List */}
-      <div className="space-y-4">
-        {filteredErrors.map((error) => (
-          <div
-            key={error.id}
-            className="kpi-card hover:border-primary/30 transition-colors cursor-pointer"
-            onClick={() => setExpandedError(expandedError === error.id ? null : error.id)}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusLabels[error.status].class}`}>
-                    {statusLabels[error.status].label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{error.date}</span>
-                </div>
-                <h4 className="font-medium text-foreground mb-1">{error.description}</h4>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Layers className="w-3 h-3" />
-                    {error.process}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {error.employee}
-                  </span>
-                </div>
-              </div>
-              <span className="px-3 py-1 rounded-lg bg-secondary text-xs font-medium text-foreground">
-                {error.type}
-              </span>
-            </div>
-
-            {/* Expanded Details */}
-            {expandedError === error.id && (
-              <div className="mt-4 pt-4 border-t border-border space-y-4" onClick={(e) => e.stopPropagation()}>
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-1">Tarea afectada</p>
-                  <p className="text-sm text-muted-foreground">{error.task}</p>
-                </div>
-                
-                {error.employeeNotes && (
-                  <div className="p-3 rounded-lg bg-secondary/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                      <MessageSquare className="w-3 h-3" />
-                      Nota del empleado
-                    </p>
-                    <p className="text-sm text-foreground">{error.employeeNotes}</p>
-                  </div>
-                )}
-
-                {error.adminNotes && (
-                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                    <p className="text-xs font-medium text-primary mb-1 flex items-center gap-1">
-                      <MessageSquare className="w-3 h-3" />
-                      Nota del administrador
-                    </p>
-                    <p className="text-sm text-foreground whitespace-pre-line">{error.adminNotes}</p>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleAddNote(error.id)} className="gap-1">
-                    <Plus className="w-3 h-3" />
-                    Agregar nota
-                  </Button>
-                  {error.status !== 'resolved' && error.status !== 'unsolvable' && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => markAsResolved(error.id)}
-                        className="gap-1 text-success hover:text-success"
-                      >
-                        <CheckCircle className="w-3 h-3" />
-                        Marcar resuelto
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => markAsUnsolvable(error.id)}
-                        className="gap-1 text-destructive hover:text-destructive"
-                      >
-                        <XCircle className="w-3 h-3" />
-                        No salvable
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="w-4 h-4" />
+                  {selectedType}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {errorTypes.map((type) => (
+                  <DropdownMenuItem key={type} onClick={() => setSelectedType(type)}>
+                    {type}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        ))}
-      </div>
+
+          {/* Errors List */}
+          <div className="space-y-4">
+            {filteredErrors.map((error) => (
+              <div
+                key={error.id}
+                className="kpi-card hover:border-primary/30 transition-colors cursor-pointer"
+                onClick={() => setExpandedError(expandedError === error.id ? null : error.id)}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusLabels[error.status].class}`}>
+                        {statusLabels[error.status].label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{error.date}</span>
+                    </div>
+                    <h4 className="font-medium text-foreground mb-1">{error.description}</h4>
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Layers className="w-3 h-3" />
+                        {error.process}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {error.employee}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 rounded-lg bg-secondary text-xs font-medium text-foreground">
+                    {error.type}
+                  </span>
+                </div>
+
+                {expandedError === error.id && (
+                  <div className="mt-4 pt-4 border-t border-border space-y-4" onClick={(e) => e.stopPropagation()}>
+                    <div>
+                      <p className="text-sm font-medium text-foreground mb-1">Tarea afectada</p>
+                      <p className="text-sm text-muted-foreground">{error.task}</p>
+                    </div>
+                    {error.employeeNotes && (
+                      <div className="p-3 rounded-lg bg-secondary/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          Nota del empleado
+                        </p>
+                        <p className="text-sm text-foreground">{error.employeeNotes}</p>
+                      </div>
+                    )}
+                    {error.adminNotes && (
+                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        <p className="text-xs font-medium text-primary mb-1 flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          Nota del administrador
+                        </p>
+                        <p className="text-sm text-foreground whitespace-pre-line">{error.adminNotes}</p>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleAddNote(error.id)} className="gap-1">
+                        <Plus className="w-3 h-3" />
+                        Agregar nota
+                      </Button>
+                      {error.status !== 'resolved' && error.status !== 'unsolvable' && (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => markAsResolved(error.id)} className="gap-1 text-success hover:text-success">
+                            <CheckCircle className="w-3 h-3" />
+                            Marcar resuelto
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => markAsUnsolvable(error.id)} className="gap-1 text-destructive hover:text-destructive">
+                            <XCircle className="w-3 h-3" />
+                            No salvable
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Note Modal */}
       {noteModal && (
@@ -452,11 +458,11 @@ const AdminErrors: React.FC = () => {
               placeholder="Escribe tu nota aquí..."
               rows={4}
             />
-            <div className="flex gap-3 mt-4">
-              <Button variant="outline" onClick={() => setNoteModal(null)} className="flex-1">
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" className="flex-1" onClick={() => setNoteModal(null)}>
                 Cancelar
               </Button>
-              <Button variant="hero" onClick={saveNote} className="flex-1">
+              <Button className="flex-1" onClick={saveNote}>
                 Guardar
               </Button>
             </div>
